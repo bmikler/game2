@@ -3,7 +3,7 @@ id: 36
 title: Przebudowa światła wnętrza na jeden bufor z cieniami
 labels: [wayfinder:prototype]
 status: open
-assignee:
+assignee: claude
 blocked_by: []
 ---
 
