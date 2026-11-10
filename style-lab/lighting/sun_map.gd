@@ -36,6 +36,10 @@ enum SkyLight { PILLOW, GEOMETRY, NONE }
 ## How the map lights the actor: not at all (the old pillows' ActorLight twins), the floor's light at
 ## its feet on the whole body, or the body: the sun at each body point, the sky round it, the floor bounce.
 enum ActorMap { TWINS, FEET, BODY }
+## Ticket 35 (one shadow model): the actor apart (ticket 33: the furniture hard in the map), or the actor
+## and the furniture by the same rules: A4 (the human's actor shadow: a lamp counted farther, longer, the
+## sun as a near point, softer away from the occluder) or physical (the sources as they are).
+enum ShadowModel { SEPARATE, SHARED_A4, SHARED_PHYSICAL }
 
 const MAP_SHADER: Shader = preload("res://lighting/sun_map.gdshader")
 const AIR_SHADER: Shader = preload("res://lighting/sun_air.gdshader")
@@ -83,6 +87,7 @@ const ROOM_LAMP_MAP_HEIGHT: float = 7700.0
 const MAX_ROOM_LAMPS: int = 16
 const LAMP_SIZE_M: float = 0.1 ## A bulb this wide: the furniture's shadows a little soft.
 const LAMP_SOFT: int = 6
+const MAP_SAMPLES: int = 12 ## A source's samples for the furniture in the house maps (shared model).
 
 ## Variants (F1 on the Poligon).
 static var enabled: bool = false ## Off: the hand-tuned WindowLight / SideWindowLight shapes.
@@ -101,6 +106,11 @@ static var sky_shadow_soft: float = 0.05
 static var sky_shadow_gradient: float = 0.5
 static var sky_shadow_reach: float = 3.0
 static var sky_shadow_contact: float = 0.5
+static var shadow_model: ShadowModel = ShadowModel.SEPARATE
+## The sky's shadow fades out between these heights above the floor (shared model; a sharp rectangle on
+## a bed's front behind the actor, ticket 33).
+static var sky_shadow_low: float = 0.5
+static var sky_shadow_high: float = 1.5
 static var shadow_look: int = 0 ## 0 smooth, 1 three levels dithered, 2 two levels hard (lit.gdshader).
 static var shadow_gradient_soft: bool = true ## The gradient by softness, not strength (window bars showed through).
 static var shadow_k: float = 0.75 ## The light it takes, × this.
@@ -433,12 +443,20 @@ func _set_shadow_sources() -> void:
 	_sun_material.set_shader_parameter(&"shadow_sources", sun_bits)
 	_lamp_material.set_shader_parameter(&"shadow_sources", 1 if shadow_sources & SHADOW_NIGHT != 0 else 0)
 	_room_lamp_material.set_shader_parameter(&"shadow_sources", 4 if shadow_sources & SHADOW_LAMPS != 0 else 0)
+	var shared: bool = shadow_model != ShadowModel.SEPARATE
+	var physical: bool = shadow_model == ShadowModel.SHARED_PHYSICAL
+	Lit.set_all(&"objects_look", 1 if shared and enabled else 0)
 	for material: ShaderMaterial in [_sun_material, _lamp_material, _room_lamp_material]:
+		material.set_shader_parameter(&"shared_model", 1 if shared else 0)
+		material.set_shader_parameter(&"objects_apart", 1 if shared else 0)
+		material.set_shader_parameter(&"map_samples", MAP_SAMPLES)
+		material.set_shader_parameter(&"sky_shadow_low", sky_shadow_low)
+		material.set_shader_parameter(&"sky_shadow_high", sky_shadow_high)
 		material.set_shader_parameter(&"shadow_angle", shadow_angle)
-		material.set_shader_parameter(&"shadow_stretch", shadow_stretch)
-		material.set_shader_parameter(&"shadow_sun_point", shadow_sun_point)
-		material.set_shader_parameter(&"shadow_lamp_length", shadow_lamp_length)
-		material.set_shader_parameter(&"shadow_gradient", shadow_gradient)
+		material.set_shader_parameter(&"shadow_stretch", 1.0 if physical else shadow_stretch)
+		material.set_shader_parameter(&"shadow_sun_point", 0.0 if physical else shadow_sun_point)
+		material.set_shader_parameter(&"shadow_lamp_length", 1.0 if physical else shadow_lamp_length)
+		material.set_shader_parameter(&"shadow_gradient", 0.0 if physical else shadow_gradient)
 		material.set_shader_parameter(&"shadow_gradient_soft", 1 if shadow_gradient_soft else 0)
 		material.set_shader_parameter(&"sky_shadow_k", sky_shadow_k)
 		material.set_shader_parameter(&"sky_shadow_soft", sky_shadow_soft)
@@ -694,6 +712,7 @@ func _set_boxes() -> void:
 	var lows: PackedVector3Array = PackedVector3Array()
 	var highs: PackedVector3Array = PackedVector3Array()
 	var tops: PackedFloat32Array = PackedFloat32Array()
+	var objects: PackedInt32Array = PackedInt32Array() ## Ticket 35: furniture (1) or architecture (0).
 	var shown: PackedFloat32Array = geometry.shown_tops()
 	if shown != _shown_tops:
 		_shown_tops = shown
@@ -710,6 +729,7 @@ func _set_boxes() -> void:
 		lows.append(box.position)
 		highs.append(box.end)
 		tops.append(shown[index])
+		objects.append(0 if partition else 1)
 	var shape: int = int(actor_shadow) if is_instance_valid(actor) else 0
 	var body: Vector4 = Vector4.ZERO
 	var half_depth: float = ACTOR_SIZE_M.y / 2.0
@@ -726,11 +746,13 @@ func _set_boxes() -> void:
 	lows.resize(SunGeometry.MAX_BOXES + 1)
 	highs.resize(SunGeometry.MAX_BOXES + 1)
 	tops.resize(SunGeometry.MAX_BOXES + 1)
+	objects.resize(SunGeometry.MAX_BOXES + 1)
 	for material: ShaderMaterial in _materials:
 		material.set_shader_parameter(&"box_count", count)
 		material.set_shader_parameter(&"box_min", lows)
 		material.set_shader_parameter(&"box_max", highs)
 		material.set_shader_parameter(&"box_top", tops)
+		material.set_shader_parameter(&"box_object", objects)
 		material.set_shader_parameter(&"actor_shape", shape)
 		material.set_shader_parameter(&"actor_body", body)
 		material.set_shader_parameter(&"actor_half_depth", half_depth)
@@ -776,7 +798,8 @@ func _viewport(material: ShaderMaterial, actor_strip: bool = false, shadow: bool
 		view.size = SHADOW_WIN
 	view.disable_3d = true
 	view.use_hdr_2d = true
-	view.transparent_bg = false
+	# The house maps keep the objects' shadow share in alpha (ticket 35): an opaque viewport drops it.
+	view.transparent_bg = not actor_strip and not shadow
 	view.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	var rect: ColorRect = ColorRect.new()

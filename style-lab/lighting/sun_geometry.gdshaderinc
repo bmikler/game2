@@ -20,6 +20,11 @@ uniform int actor_shape = 0; // 0 none, 1 cylinder, 2 box, 3 flat rectangle faci
 uniform vec4 actor_body = vec4(0.0, 0.0, 0.22, 1.8); // feet x, feet d, half width, height
 uniform float actor_half_depth = 0.15; // the box and the cylinder: their middle this far behind the feet line
 uniform int actor_in_map = 0;
+// Ticket 35 (one shadow model): 1 furniture (an object: the light maps shade it with the actor's
+// rules), 0 architecture (partitions, stairs, lifted blocks: hard, as the walls). objects_apart 1:
+// blocked() leaves the objects and the actor out (the map tests them itself, sun_map.gdshader).
+uniform int box_object[64];
+uniform int objects_apart = 0;
 uniform int room_count = 0;
 uniform vec4 room_rect[4]; // x0, d0, x1, d1
 uniform vec3 room_light[4]; // colour × energy at that room's exposure
@@ -159,12 +164,15 @@ bool blocked(vec3 o, vec3 dir, float t_max) {
 			abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
 			abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
 	for (int i = 0; i < box_count; i++) {
+		if (objects_apart == 1 && box_object[i] == 1) {
+			continue;
+		}
 		if (hit_box(o, inv, box_min[i], box_max[i], t_max)) {
 			return true;
 		}
 	}
 	// A point on the actor's body (the actor's light) is not shadowed by the actor itself.
-	if (actor_in_map == 1 && actor_shape > 0 && distance(o.xy, actor_middle()) > actor_body.z + 0.05 && hit_actor(o, dir, t_max)) {
+	if (objects_apart == 0 && actor_in_map == 1 && actor_shape > 0 && distance(o.xy, actor_middle()) > actor_body.z + 0.05 && hit_actor(o, dir, t_max)) {
 		return true;
 	}
 	return false;

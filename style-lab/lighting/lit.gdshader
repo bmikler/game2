@@ -24,6 +24,12 @@ uniform vec4 shadow_rect = vec4(0.0); // world px: x, y, width, height
 // many levels (2: hard; 3: none, half, full), dithered Bayer 4×4 on the world's pixels (dither 1).
 uniform int shadow_levels = 0;
 uniform int shadow_dither = 1;
+// Ticket 35 (one shadow model): the house maps' alpha holds the share of light the objects take; the
+// look (levels, dither) quantizes it together with the actor's, so every shadow looks alike.
+uniform int objects_look = 0;
+// The dither band round each step, shared model (0.6: the actor alone; every faint sky shadow of the
+// furniture became sparse dots over the floor, so narrower: faint shadows drop out).
+uniform float dither_band = 0.35;
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -49,9 +55,30 @@ void light() {
 			map = h < 7250.0 ? texture(actor_sun_map, uv).rgb : texture(actor_lamp_map, uv).rgb;
 		} else {
 			vec2 uv = (floor(world_pos) + 0.5 - map_rect.xy) / map_size;
-			map = h < 7250.0 ? texture(sun_map, uv).rgb : (h < 7600.0 ? texture(lamp_map, uv).rgb : texture(room_lamp_map, uv).rgb);
+			vec4 house = h < 7250.0 ? texture(sun_map, uv) : (h < 7600.0 ? texture(lamp_map, uv) : texture(room_lamp_map, uv));
+			map = house.rgb;
+			float objects = objects_look == 1 ? clamp(house.a, 0.0, 1.0) : 0.0;
 			vec2 sp = floor(world_pos) + 0.5 - shadow_rect.xy;
-			if (shadow_rect.z > 0.0 && all(greaterThanEqual(sp, vec2(0.0))) && all(lessThan(sp, shadow_rect.zw))) {
+			bool in_window = shadow_rect.z > 0.0 && all(greaterThanEqual(sp, vec2(0.0))) && all(lessThan(sp, shadow_rect.zw));
+			if (objects_look == 1) {
+				vec3 lost = vec3(0.0);
+				if (in_window) {
+					vec2 suv = sp / shadow_rect.zw;
+					lost = h < 7250.0 ? texture(shadow_sun_map, suv).rgb : (h < 7600.0 ? texture(shadow_lamp_map, suv).rgb : texture(shadow_room_map, suv).rgb);
+				}
+				if (shadow_levels >= 2 && objects < 0.995) {
+					// The light before any object or the actor, and the share all of them take.
+					vec3 free = map / (1.0 - objects);
+					float free_l = max(dot(free, vec3(0.333)), 1e-5);
+					float share = clamp(objects + dot(lost, vec3(0.333)) / free_l, 0.0, 1.0);
+					float steps = float(shadow_levels - 1);
+					float t = shadow_dither == 1 ? 0.5 + (bayer4(floor(world_pos)) - 0.5) * dither_band : 0.5;
+					share = clamp(floor(share * steps + t), 0.0, steps) / steps;
+					map = free * (1.0 - share);
+				} else if (shadow_levels < 2) {
+					map = max(map - lost, vec3(0.0));
+				}
+			} else if (in_window) {
 				vec2 suv = sp / shadow_rect.zw;
 				vec3 lost = h < 7250.0 ? texture(shadow_sun_map, suv).rgb : (h < 7600.0 ? texture(shadow_lamp_map, suv).rgb : texture(shadow_room_map, suv).rgb);
 				if (shadow_levels >= 2) {
