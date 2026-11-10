@@ -44,8 +44,9 @@ void light() {
 			if (shadow_rect.z > 0.0 && all(greaterThanEqual(sp, vec2(0.0))) && all(lessThan(sp, shadow_rect.zw))) {
 				vec2 suv = sp / shadow_rect.zw;
 				vec3 near = h < 7250.0 ? texture(shadow_sun_map, suv).rgb : (h < 7600.0 ? texture(shadow_lamp_map, suv).rgb : texture(shadow_room_map, suv).rgb);
-				vec2 edge = min(sp, shadow_rect.zw - sp);
-				map = mix(map, near, smoothstep(0.0, SHADOW_EDGE, min(edge.x, edge.y)));
+				// The window spans the house's height: faded in over its sides only.
+				float edge = min(sp.x, shadow_rect.z - sp.x);
+				map = mix(map, near, smoothstep(0.0, SHADOW_EDGE, edge));
 			}
 		}
 		LIGHT = vec4(map * COLOR.rgb * LIGHT_ENERGY, LIGHT_COLOR.a);

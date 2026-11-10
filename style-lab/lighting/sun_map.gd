@@ -17,8 +17,10 @@ const SHADOW_SUN: int = 1
 const SHADOW_SKY: int = 2
 const SHADOW_LAMPS: int = 4
 const SHADOW_NIGHT: int = 8
-const SHADOW_WIN: Vector2i = Vector2i(320, 320) ## The shadow window (px): 8 m across round the feet...
-const SHADOW_ABOVE: int = 220 ## ... most of it above the feet: the floor behind and the back wall (2.2 m = 88 px).
+## The shadow window (px): SHADOW_WIDTH across round the feet, the house's whole height (ticket 35: a
+## long shadow down the screen ended where a window 100 px below the feet did, the human).
+const SHADOW_WIDTH: int = 400
+var _shadow_win: Vector2i = Vector2i(SHADOW_WIDTH, 320)
 ## Night through the bottom windows: none; the street evenly (a far light straight in, every window
 ## the same); a street lamp in front of each window; one lamp in front of the middle of the house.
 enum Night { NONE, STREET, EACH, CENTRE }
@@ -81,7 +83,7 @@ const SUN_MAP_HEIGHT: float = 7000.0
 const LAMP_MAP_HEIGHT: float = 7500.0
 const ROOM_LAMP_MAP_HEIGHT: float = 7700.0
 const MAX_ROOM_LAMPS: int = 16
-const LAMP_SIZE_M: float = 0.1 ## A bulb this wide: the furniture's shadows a little soft.
+static var lamp_size_m: float = 0.1 ## A bulb this wide: the shadows' softness from lamps (F1, ticket 35).
 const LAMP_SOFT: int = 6
 
 ## Variants (F1 on the Poligon).
@@ -104,6 +106,8 @@ static var sky_shadow_contact: float = 0.5
 static var shadow_look: int = 0 ## 0 smooth, 1 three levels dithered, 2 two levels hard (per source, in the maps).
 ## Ticket 35: furniture shadows from lamps longer too (shadow_lamp_length), or that only for the actor.
 static var object_length: bool = true
+## Physics only: every hand-made shadow rule off (sun_map.gdshader: physical).
+static var physical: bool = true
 static var shadow_gradient_soft: bool = true ## The gradient by softness, not strength (window bars showed through).
 static var shadow_k: float = 0.75 ## The light it takes, × this.
 static var soft_deg: float = 0.8 ## Decided (the human, 2026-11-09).
@@ -192,6 +196,7 @@ func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, wi
 			data.floor_y + data.shell_max.y * config.px_per_m * config.depth_factor)
 	_rect = Rect2i(Vector2i(floori(low.x), floori(low.y)), Vector2i(ceili(high.x - low.x), ceili(high.y - low.y)))
 	_map_size = _rect.size
+	_shadow_win = Vector2i(SHADOW_WIDTH, _rect.size.y)
 	var mask: int = 0
 	for slot: int in LightMasks.SLOTS:
 		mask |= LightMasks.of(slot, LightMasks.Receiver.FLOOR | LightMasks.Receiver.SOLID)
@@ -204,7 +209,7 @@ func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, wi
 	_lamp_actor_view = _viewport(_lamp_material, true)
 	_room_lamp_material = _map_material()
 	_room_lamp_material.set_shader_parameter(&"point_source", 3)
-	_room_lamp_material.set_shader_parameter(&"lamp_size", LAMP_SIZE_M)
+	_room_lamp_material.set_shader_parameter(&"lamp_size", lamp_size_m)
 	_room_lamp_material.set_shader_parameter(&"lamp_soft", LAMP_SOFT)
 	_room_lamp_view = _viewport(_room_lamp_material)
 	_room_lamp_view.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -214,7 +219,7 @@ func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, wi
 		var view: SubViewport = _viewport(maps[index], false, true)
 		_shadow_views.append(view)
 		Lit.set_all(shadow_params[index], view.get_texture())
-		maps[index].set_shader_parameter(&"shadow_size", Vector2(SHADOW_WIN))
+		maps[index].set_shader_parameter(&"shadow_size", Vector2(_shadow_win))
 	for room: RoomLighting in rooms:
 		for fixture: LightFixture in room.fixtures():
 			if fixture.def.map_source:
@@ -424,7 +429,7 @@ func _window_on() -> bool:
 
 
 func _set_shadow_rect() -> void:
-	Lit.set_all(&"shadow_rect", Vector4(_shadow_origin.x, _shadow_origin.y, SHADOW_WIN.x, SHADOW_WIN.y) if _window_on() else Vector4.ZERO)
+	Lit.set_all(&"shadow_rect", Vector4(_shadow_origin.x, _shadow_origin.y, _shadow_win.x, _shadow_win.y) if _window_on() else Vector4.ZERO)
 
 
 ## Which of each map's lights the actor shadows (the shader's bits: 1 direct, 2 sky, 4 rooms' lamps).
@@ -448,6 +453,9 @@ func _set_shadow_sources() -> void:
 		material.set_shader_parameter(&"shadow_k", shadow_k)
 		material.set_shader_parameter(&"shadow_look", shadow_look)
 		material.set_shader_parameter(&"object_length", 1 if object_length else 0)
+		material.set_shader_parameter(&"physical", 1 if physical else 0)
+		material.set_shader_parameter(&"lamp_size", lamp_size_m)
+		material.set_shader_parameter(&"shadow_k", 1.0 if physical else shadow_k)
 
 
 ## Side windows as game1-proto (SideWindowLight, research 47 pattern A): a ribbon per sash from the
@@ -643,7 +651,7 @@ func _set_room_lamps(on: bool) -> void:
 	_sun_material.set_shader_parameter(&"room_lamps", bulbs)
 	_sun_material.set_shader_parameter(&"room_lamp_color", colors)
 	_sun_material.set_shader_parameter(&"room_lamp_reach", reaches)
-	_sun_material.set_shader_parameter(&"lamp_size", LAMP_SIZE_M)
+	_sun_material.set_shader_parameter(&"lamp_size", lamp_size_m)
 	_sun_material.set_shader_parameter(&"lamp_soft", LAMP_SOFT)
 	_sun_material.set_shader_parameter(&"actor_sky_k", actor_sky_k)
 	_sun_material.set_shader_parameter(&"actor_lamp_k", actor_lamp_k)
@@ -662,7 +670,7 @@ func _set_actor() -> void:
 	_lamp_material.set_shader_parameter(&"actor_feet", feet)
 	var corner: Vector2 = actor.global_position - Vector2(ACTOR_STRIP.x / 2.0, ACTOR_STRIP.y)
 	Lit.actor_material().set_shader_parameter(&"actor_rect", Vector4(corner.x, corner.y, ACTOR_STRIP.x, ACTOR_STRIP.y))
-	_shadow_origin = (actor.global_position - Vector2(SHADOW_WIN.x / 2.0, SHADOW_ABOVE)).round()
+	_shadow_origin = Vector2(roundf(actor.global_position.x - _shadow_win.x / 2.0), _rect.position.y)
 	for material: ShaderMaterial in [_sun_material, _lamp_material, _room_lamp_material]:
 		material.set_shader_parameter(&"shadow_origin", _shadow_origin)
 	_set_shadow_rect()
@@ -779,7 +787,7 @@ func _viewport(material: ShaderMaterial, actor_strip: bool = false, shadow: bool
 	var view: SubViewport = SubViewport.new()
 	view.size = ACTOR_STRIP if actor_strip else _map_size
 	if shadow:
-		view.size = SHADOW_WIN
+		view.size = _shadow_win
 	view.disable_3d = true
 	view.use_hdr_2d = true
 	view.transparent_bg = false
@@ -793,7 +801,7 @@ func _viewport(material: ShaderMaterial, actor_strip: bool = false, shadow: bool
 	if shadow:
 		var skip: float = _rect.size.x + ACTOR_STRIP.x
 		rect.position = Vector2(-skip, 0.0)
-		rect.size = Vector2(skip + SHADOW_WIN.x, maxf(SHADOW_WIN.y, _rect.size.y))
+		rect.size = Vector2(skip + _shadow_win.x, maxf(_shadow_win.y, _rect.size.y))
 	rect.material = material
 	view.add_child(rect)
 	add_child(view)

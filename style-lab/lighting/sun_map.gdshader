@@ -102,6 +102,10 @@ uniform float sky_shadow_reach = 3.0;
 uniform float sky_shadow_contact = 0.5;
 uniform int sky_grid = 4; // rays per glass: sky_grid × sky_grid
 uniform int shadow_look = 0; // 0 smooth, 1 three levels dithered, 2 two levels hard
+// 1: physics only (the human: every hand-made rule off): each source as it is (the sun's disc
+// soft_radius, a bulb lamp_size across), no stretch, no longer shadow, no near sun, no softness
+// growing, the sky's shadow full strength at any distance, no contact oval.
+uniform int physical = 0;
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -157,6 +161,51 @@ bool occluder_hit(int i, vec3 ro, vec3 rd, float reach) {
 	return hit_box(ro, inv, box_min[i], box_max[i], reach);
 }
 
+// Occluder i grown by g m on every side (g < 0: shrunk); the actor as a cylinder (other shapes as they are).
+bool occluder_hit_grown(int i, vec3 ro, vec3 rd, float reach, float g) {
+	if (i < 0) {
+		if (actor_shape != 1) {
+			return hit_actor(ro, rd, reach);
+		}
+		return hit_cylinder(ro, rd, reach, vec4(actor_middle(), max(actor_body.z + g, 0.01), max(actor_body.w + g, 0.05)));
+	}
+	vec3 lo = box_min[i] - g;
+	vec3 hi = box_max[i] + g;
+	if (any(greaterThan(lo, hi))) {
+		return false;
+	}
+	vec3 inv = vec3(
+			abs(rd.x) > 1e-8 ? 1.0 / rd.x : 1e8,
+			abs(rd.y) > 1e-8 ? 1.0 / rd.y : 1e8,
+			abs(rd.z) > 1e-8 ? 1.0 / rd.z : 1e8);
+	return hit_box(ro, inv, lo, hi, reach);
+}
+
+// How much of a ray's share of the source occluder i covers (0..1): the occluder shrunk and grown by
+// up to g (half the gap between neighbouring rays where they pass it), five tests. Neighbouring rays
+// blend instead of each casting its own sharp copy (16 rays drew fingers and steps, the human).
+float soft_hit(int i, vec3 ro, vec3 rd, float reach, float g) {
+	float c = 0.0;
+	for (int k = -2; k <= 2; k++) {
+		c += occluder_hit_grown(i, ro, rd, reach, g * float(k) * 0.5) ? 0.2 : 0.0;
+	}
+	return c;
+}
+
+vec3 occluder_centre(int i) {
+	return i < 0 ? vec3(actor_middle(), actor_body.w * 0.5) : (box_min[i] + box_max[i]) * 0.5;
+}
+
+// Rays from o along `to` (a point source: t 0..1 reaches it; a far one: unit) spaced `spacing` apart
+// at the source (point: m) or per metre (far: rad): half that gap where they pass occluder i.
+float ray_gap(int i, vec3 o, vec3 to, int point, float spacing) {
+	vec3 c = occluder_centre(i) - o;
+	if (point == 1) {
+		return 0.5 * spacing * clamp(dot(c, to) / max(dot(to, to), 1e-6), 0.0, 1.0);
+	}
+	return 0.5 * spacing * max(dot(c, normalize(to)), 0.0);
+}
+
 // A lamp's own pole and shade (the bulb inside or just above it) cast nothing.
 bool own_fixture(int i, vec3 bulb) {
 	return all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)));
@@ -171,6 +220,22 @@ int occluder_mask(int i, vec3 o, vec3 src, int point) {
 	vec3 to;
 	float reach = 1.0;
 	bool parallel = false;
+	if (physical == 1) {
+		to = point == 1 ? src - o : normalize(src);
+		reach = point == 1 ? 1.0 : 1e8;
+		float spread_p = point == 1 ? lamp_size * 0.5 : soft_radius;
+		vec3 ax = normalize(to);
+		vec3 pu = any_side(ax);
+		vec3 pv = cross(ax, pu);
+		int bits = 0;
+		for (int s = 0; s < shadow_samples; s++) {
+			vec2 j = vogel(s, shadow_samples) * spread_p;
+			if (occluder_hit(i, o, to + pu * j.x + pv * j.y, reach)) {
+				bits |= 1 << s;
+			}
+		}
+		return bits;
+	}
 	if (point == 1) {
 		if (i < 0 || object_length == 1) {
 			// Drawn back towards the occluder along the lamp's direction: the shadow longer, not wider.
@@ -210,6 +275,32 @@ int occluder_mask(int i, vec3 o, vec3 src, int point) {
 
 // The share of the source the occluders (with_actor: and the actor) hide from o.
 float occluders_share(vec3 o, vec3 src, int point, bool with_actor) {
+	if (physical == 1) {
+		// The source as it is; one ray bundle for every occluder, each ray covered softly (soft_hit).
+		vec3 to = point == 1 ? src - o : normalize(src);
+		float reach = point == 1 ? 1.0 : 1e8;
+		float spread = point == 1 ? lamp_size * 0.5 : soft_radius;
+		vec3 ax = normalize(to);
+		vec3 u = any_side(ax);
+		vec3 v = cross(ax, u);
+		float spacing = spread * 1.77 / sqrt(float(shadow_samples));
+		bool actor_on = with_actor && actor_shape > 0;
+		float g_actor = actor_on ? ray_gap(-1, o, to, point, spacing) : 0.0;
+		float total = 0.0;
+		for (int s = 0; s < shadow_samples; s++) {
+			vec2 j = vogel(s, shadow_samples) * spread;
+			vec3 rd = to + u * j.x + v * j.y;
+			float cover = actor_on ? soft_hit(-1, o, rd, reach, g_actor) : 0.0;
+			for (int i = 0; i < box_count && cover < 1.0; i++) {
+				if (box_object[i] == 0 || (point == 1 && own_fixture(i, src))) {
+					continue;
+				}
+				cover = max(cover, soft_hit(i, o, rd, reach, ray_gap(i, o, to, point, spacing)));
+			}
+			total += cover;
+		}
+		return total / float(shadow_samples);
+	}
 	int mask = 0;
 	if (with_actor && actor_shape > 0) {
 		mask = occluder_mask(-1, o, src, point);
@@ -298,9 +389,9 @@ vec2 sky_light(vec3 o, vec3 n, bool with_actor, vec2 px) {
 		}
 		float gap;
 		occluder_anchor(id, o, gap);
-		weight[i] = sky_shadow_k * (1.0 - smoothstep(0.5 * sky_shadow_reach, sky_shadow_reach, gap));
+		weight[i] = physical == 1 ? 1.0 : sky_shadow_k * (1.0 - smoothstep(0.5 * sky_shadow_reach, sky_shadow_reach, gap));
 		// Contact: an oval of sky taken round its base, on the floor (as ambient occlusion).
-		if (o.z < 0.05) {
+		if (o.z < 0.05 && physical == 0) {
 			float g;
 			if (id < 0) {
 				g = length((o.xy - actor_middle()) * vec2(1.0, 1.6)) - actor_body.z;
@@ -321,8 +412,10 @@ vec2 sky_light(vec3 o, vec3 n, bool with_actor, vec2 px) {
 		}
 		total += s;
 		// The glass's bounds with o: an occluder outside them cannot cut a ray to it.
-		vec3 lo = min(min(o, c[0]), min(min(c[1], c[2]), c[3]));
-		vec3 hi = max(max(o, c[0]), max(max(c[1], c[2]), c[3]));
+		vec3 lo = min(min(o, c[0]), min(min(c[1], c[2]), c[3])) - 0.1;
+		vec3 hi = max(max(o, c[0]), max(max(c[1], c[2]), c[3])) + 0.1;
+		// The gap between neighbouring rays at the glass (m).
+		float cell = max(distance(c[0], c[1]), distance(c[1], c[2])) * step_k;
 		float hidden = 0.0;
 		for (int gx = 0; gx < sky_grid; gx++) {
 			for (int gy = 0; gy < sky_grid; gy++) {
@@ -338,9 +431,7 @@ vec2 sky_light(vec3 o, vec3 n, bool with_actor, vec2 px) {
 					if (id >= 0 && (any(greaterThan(box_min[id], hi)) || any(lessThan(box_max[id], lo)))) {
 						continue;
 					}
-					if (occluder_hit(id, o, to, 0.999)) {
-						ray = weight[k];
-					}
+					ray = max(ray, weight[k] * soft_hit(id, o, to, 0.999, ray_gap(id, o, to, 1, cell)));
 				}
 				hidden += ray;
 			}

@@ -114,18 +114,23 @@ const SHADOW_GRADIENT: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 
 const SHADOW_GAIN: PackedFloat32Array = [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
 ## The critic's actor-shadow presets (ticket 33, round 3 with the sky's shadow: shots/t33/krytyk3/; A3
 ## recommended), and A2 without the sky (the human's pick before): option id → index.
-const SHADOW_PRESET_NAMES: PackedStringArray = ["wlasne (suwaki)", "A4 Oddech okna, poprawiony (polecany)", "B3 Dlugi chlod", "C3 Kontakt AO", "A2 bez nieba"]
+const SHADOW_PRESET_NAMES: PackedStringArray = ["wlasne (suwaki)", "A4 Oddech okna, poprawiony (polecany)", "B3 Dlugi chlod", "C3 Kontakt AO", "A2 bez nieba", "Fizyka: tylko mapa swiatla"]
 const SHADOW_PRESETS: Array[Dictionary] = [{},
 		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 3, &"cien_sila": 15, &"cien_gradient": 3, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 20, &"niebo_miekkosc": 3, &"niebo_gradient": 4, &"niebo_zasieg": 14, &"niebo_kontakt": 10, &"cien_wyglad": 1},
 		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 20, &"niebo_miekkosc": 4, &"niebo_gradient": 3, &"niebo_zasieg": 18, &"niebo_kontakt": 0},
 		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 14, &"niebo_miekkosc": 20, &"niebo_gradient": 9, &"niebo_zasieg": 6, &"niebo_kontakt": 12},
-		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 1}]
+		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 1},
+		# Ticket 35 (the human): every hand-made rule off, only what the map computes; no blob under the feet.
+		{&"mapa_postac": 1, &"cien_zrodla": 0, &"plamka": 2, &"cien_wyglad": 0}]
+const PHYSICS_PRESET: int = 5
 const BLOBS: PackedStringArray = ["stala (dzis)", "miekka kontaktowa", "brak"]
 const ACTOR_MAPS: PackedStringArray = ["stare (blizniaki poduszek)", "swiatlo podlogi pod stopami", "bryla (slonce na ciele, niebo, odbicie)"]
 const ACTOR_GAINS: PackedStringArray = ["x0,5", "x1", "x1,5", "x2"]
 const ACTOR_GAIN_K: PackedFloat32Array = [0.5, 1.0, 1.5, 2.0]
 const SUN_SOFT: PackedStringArray = ["ostra", "0,8 st.", "1 st.", "1,2 st."]
 const SUN_SOFT_DEG: PackedFloat32Array = [0.0, 0.8, 1.0, 1.2]
+static var SUN_DISC_DEG: PackedFloat32Array = _steps(0.0, 4.0, 0.2)
+static var BULB_M: PackedFloat32Array = _steps(0.02, 0.6, 0.02)
 const SUN_AIR: PackedStringArray = ["brak", "x0,5", "x1", "x2"]
 const SUN_AIR_K: PackedFloat32Array = [0.0, 0.5, 1.0, 2.0]
 ## Window size (the human, 2026-11-09): bigger windows, less real, a better mood of light; every wall.
@@ -282,7 +287,7 @@ func _add_layout_options() -> void:
 ## The human (ticket 31): only the frame and the clock; the light is the critic's C („Pośredni”).
 ## Ticket 33 (the human: too many sliders to see the options): only the critic's shadow presets and
 ## the shadow's look; the shadow sliders stay hidden (--set= still sets them).
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cienie_krytyk", &"cien_wyglad", &"meble_dlugosc"]
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cienie_krytyk", &"cien_wyglad", &"meble_dlugosc", &"slonce_tarcza", &"zarowka"]
 const SLIDER_OPTIONS: Array[StringName] = [&"mapa_postac_swiatlo", &"mapa_postac_jasnosc",
 		&"postac_niebo", &"postac_lampy", &"lampy_mapa", &"lampy_jasnosc", &"lampy_rozlewanie", &"noc_okna",
 		&"ambient_dzien", &"ambient_noc", &"ekspozycja_dzien", &"ekspozycja_noc"]
@@ -443,7 +448,10 @@ func _add_sun_map_options() -> void:
 		Figure.blob = index as Figure.Blob
 		if is_instance_valid(player):
 			player.queue_redraw())
-	DebugRegistry.add_variant(self, &"cienie_krytyk", "Cienie: ustawienia krytyka", SHADOW_PRESET_NAMES, 1, func(index: int) -> void:
+	DebugRegistry.add_variant(self, &"cienie_krytyk", "Cienie: model", SHADOW_PRESET_NAMES, PHYSICS_PRESET, func(index: int) -> void:
+		if SunMap.physical != (index == PHYSICS_PRESET):
+			SunMap.physical = index == PHYSICS_PRESET
+			_refresh_sun()
 		# Applied once per pick, as the light presets: a reload keeps the sliders as edited since.
 		if index == _shadow_preset_applied:
 			return
@@ -455,6 +463,19 @@ func _add_sun_map_options() -> void:
 			var value: int = preset[id]
 			DebugRegistry.set_value(id, value)
 		DebugRegistry.options_changed.emit.call_deferred())
+	# Ticket 35: the sources' size, the only softness in the physics model (the sun: × SunMap.SOFT_SCALE).
+	var discs: PackedStringArray = PackedStringArray()
+	for deg: float in SUN_DISC_DEG:
+		discs.append("%s st." % String.num(deg, 1).replace(".", ","))
+	DebugRegistry.add_slider(self, &"slonce_tarcza", "Słońce: wielkość tarczy (miękkość)", discs, _nearest(SUN_DISC_DEG, 0.8), func(index: int) -> void:
+		SunMap.soft_deg = SUN_DISC_DEG[index]
+		_refresh_sun())
+	var bulbs: PackedStringArray = PackedStringArray()
+	for size: float in BULB_M:
+		bulbs.append("%s cm" % String.num(size * 100.0, 0))
+	DebugRegistry.add_slider(self, &"zarowka", "Żarówka: wielkość (miękkość cieni lamp)", bulbs, _nearest(BULB_M, 0.1), func(index: int) -> void:
+		SunMap.lamp_size_m = BULB_M[index]
+		_refresh_sun())
 	DebugRegistry.add_variant(self, &"mapa_miekkosc", "Mapa: miękkość", SUN_SOFT, 1, func(index: int) -> void:
 		SunMap.soft_deg = SUN_SOFT_DEG[index]
 		_refresh_sun())
