@@ -242,7 +242,16 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 	float jx = bayer4(px);
 	float jz = bayer4(px + vec2(2.0, 1.0));
 	float cells = float(sky_grid * sky_grid);
+	// Each window (its panes together) one source in the look: per pane, an actor in front of the
+	// mullion hid under half of each pane and a lit wedge showed straight behind it (the human).
+	vec2 pane_sum = vec2(0.0); // the window so far: arch, lit (smooth)
+	int window = -1;
 	for (int i = 0; i < sash_count; i++) {
+		if (sash_window[i] != window) {
+			al += vec2(pane_sum.x, pane_sum.x * kept(pane_sum, px));
+			pane_sum = vec2(0.0);
+			window = sash_window[i];
+		}
 		vec3 c[4];
 		for (int k = 0; k < 4; k++) {
 			c[k] = sash_corner(i, k);
@@ -290,10 +299,11 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		if (open <= 0.0) {
 			continue;
 		}
-		// Each sash its own source in the look: the actor hiding only the faint light through a doorway
-		// took a hard bite out of the whole sky there (the human).
-		al += w * open * vec2(1.0, look(1.0 - objects_hide(o, i, with_actor), px));
+		// Each window its own source in the look: the actor hiding only the faint light through a
+		// doorway took a hard bite out of the whole sky there (the human).
+		pane_sum += w * open * vec2(1.0, 1.0 - objects_hide(o, i, with_actor));
 	}
+	al += vec2(pane_sum.x, pane_sum.x * kept(pane_sum, px));
 	return al / sky_ref;
 }
 

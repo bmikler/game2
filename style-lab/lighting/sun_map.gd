@@ -688,6 +688,16 @@ func _set_geometry() -> void:
 	_set_all(&"sash_count", geometry.sashes.size())
 	_set_all(&"sashes", PackedVector4Array(geometry.sashes))
 	_set_all(&"sash_wall", walls)
+	# A window's panes: the same wall and middle, one after another.
+	var windows: PackedInt32Array = PackedInt32Array()
+	var window: int = -1
+	for index: int in geometry.sashes.size():
+		if index == 0 or geometry.sash_walls[index] != geometry.sash_walls[index - 1] \
+				or not is_equal_approx(geometry.sash_middles[index], geometry.sash_middles[index - 1]):
+			window += 1
+		windows.append(window)
+	windows.resize(SunGeometry.MAX_SASHES)
+	_set_all(&"sash_window", windows)
 	_set_boxes()
 
 

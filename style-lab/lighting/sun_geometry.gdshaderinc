@@ -12,6 +12,7 @@ uniform vec3 shell_max;
 uniform int sash_count = 0;
 uniform vec4 sashes[64]; // u from, u to (x for back and front walls, d for side walls), z from, z to
 uniform int sash_wall[64]; // 0 back (d min), 1 front (d max), 2 left (x min), 3 right (x max)
+uniform int sash_window[64]; // the window a sash (a pane) belongs to: its panes are one source
 uniform int box_count = 0;
 uniform vec3 box_min[64];
 uniform vec3 box_max[64];
