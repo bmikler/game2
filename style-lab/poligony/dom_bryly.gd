@@ -19,7 +19,6 @@ const ROOM_PROFILE: RoomLightingProfile = preload("res://lighting/data/evening_l
 const WINDOW_PROFILE: WindowLightProfile = preload("res://lighting/data/window_light.tres")
 const FLOOR_LAMP: FixtureDef = preload("res://lighting/data/floor_lamp.tres")
 const CEILING_BULB: FixtureDef = preload("res://lighting/data/cell_bulb.tres")
-const DOOR_LIGHT: FixtureDef = preload("res://lighting/data/entrance_spill.tres")
 const PARTER_SCENE: String = "res://poligony/dom_parter.tscn"
 const PIETRO_SCENE: String = "res://poligony/dom_pietro.tscn"
 const STREET_SCENE: String = "res://poligony/ulica_bryly.tscn"
@@ -82,51 +81,6 @@ const BAYER: PackedInt32Array = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 
 const TONGUE_M: Vector2 = Vector2(1.3, 0.7)
 ## Unseen windows: the window-shaped patch on the floor (times the sun's energy).
 const PATCH_K: float = 1.0
-## Window light (ticket 27): unseen windows' sun beams, times the profile's; the sun patch on the floor;
-## the window's shape by night; unseen windows' sky pillows by night.
-const SIDE_BEAMS: PackedStringArray = ["brak", "boczne", "boczne i dolne"]
-## The window patch by day (the human): with north on top only bottom windows draw it, with south only
-## back windows (the ones the sun comes through); side windows never, only beams at sunrise and sunset.
-const DAY_PATCHES: PackedStringArray = ["wl", "wyl"]
-const NIGHT_PATCHES: PackedStringArray = ["brak", "dolne (latarnia)", "gorne (chlodne)", "dolne i gorne"]
-const NIGHT_PILLOWS: PackedStringArray = ["x1", "x0,5", "x0"]
-const NIGHT_PILLOW_SCALES: PackedFloat32Array = [1.0, 0.5, 0.0]
-## Ticket 31 (window sun from a light map, SunMap): switched live, no rebuild.
-const SUN_MODES: PackedStringArray = ["reczne", "mapa swiatla"]
-## Ticket 33: the actor's shadow from the light map (SunMap.ActorShadow order).
-const SUN_ACTOR: PackedStringArray = ["brak", "walec", "pudelko", "plaski prostokat", "plaska sylwetka"]
-const SHADOW_SOURCES: PackedStringArray = ["wszystkie", "bez nieba", "tylko lampy", "tylko okna (slonce, niebo, noc)", "tylko slonce"]
-const SHADOW_SOURCE_BITS: PackedInt32Array = [15, 13, 4, 11, 1]
-const SHADOW_COMPUTE: PackedStringArray = ["okno wokol postaci", "cala mapa co klatke"]
-## Every source's angle for the actor's shadow (tan of its radius): the lamp's bulb seen from ~2 m was
-## ~0.025, the window's sun ~0.04 (+ the sky's blur): the middle by default (the human).
-const SHADOW_SOFT: PackedStringArray = ["posrodku (0,03)", "jak okno (0,045)"]
-const SHADOW_SOFT_K: PackedFloat32Array = [0.03, 0.045]
-## Fine steps (the human: the sliders jumped): built in _steps().
-static var SHADOW_STRETCH_K: PackedFloat32Array = _steps(1.0, 4.0, 0.1)
-static var SHADOW_RADIUS_M: PackedFloat32Array = _steps(0.12, 0.4, 0.01)
-static var SHADOW_LENGTH_K: PackedFloat32Array = _steps(1.0, 3.0, 0.1)
-const SHADOW_SUN_POINT_M: PackedFloat32Array = [0.0, 15.0, 12.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5]
-const SHADOW_LOOKS: PackedStringArray = ["gladki", "3 poziomy z ditherem", "2 poziomy twarde"]
-const GRADIENT_MODES: PackedStringArray = ["sile (szpros przebija)", "miekkosc (pelny cien)"]
-const SHADOW_GRADIENT: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-const SHADOW_GAIN: PackedFloat32Array = [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
-## The critic's actor-shadow presets (ticket 33, round 3 with the sky's shadow: shots/t33/krytyk3/; A3
-## recommended), and A2 without the sky (the human's pick before): option id → index.
-const SHADOW_PRESET_NAMES: PackedStringArray = ["wlasne (suwaki)", "A4 Oddech okna, poprawiony (polecany)", "B3 Dlugi chlod", "C3 Kontakt AO", "A2 bez nieba"]
-const SHADOW_PRESETS: Array[Dictionary] = [{},
-		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 3, &"cien_sila": 15, &"cien_gradient": 3, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 20, &"niebo_miekkosc": 3, &"niebo_gradient": 4, &"niebo_zasieg": 14, &"niebo_kontakt": 10, &"cien_wyglad": 1},
-		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 20, &"niebo_miekkosc": 4, &"niebo_gradient": 3, &"niebo_zasieg": 18, &"niebo_kontakt": 0},
-		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 0, &"niebo_sila": 14, &"niebo_miekkosc": 20, &"niebo_gradient": 9, &"niebo_zasieg": 6, &"niebo_kontakt": 12},
-		{&"mapa_postac": 1, &"cien_miekkosc": 0, &"cien_lampy": 4, &"cien_dlugosc": 6, &"cien_promien": 15, &"cien_okno": 11, &"cien_sila": 15, &"cien_gradient": 7, &"cien_gradient_tryb": 1, &"ziarno": 2, &"plamka": 1, &"cien_zrodla": 1}]
-const BLOBS: PackedStringArray = ["stala (dzis)", "miekka kontaktowa", "brak"]
-const ACTOR_MAPS: PackedStringArray = ["stare (blizniaki poduszek)", "swiatlo podlogi pod stopami", "bryla (slonce na ciele, niebo, odbicie)"]
-const ACTOR_GAINS: PackedStringArray = ["x0,5", "x1", "x1,5", "x2"]
-const ACTOR_GAIN_K: PackedFloat32Array = [0.5, 1.0, 1.5, 2.0]
-const SUN_SOFT: PackedStringArray = ["ostra", "0,8 st.", "1 st.", "1,2 st."]
-const SUN_SOFT_DEG: PackedFloat32Array = [0.0, 0.8, 1.0, 1.2]
-const SUN_AIR: PackedStringArray = ["brak", "x0,5", "x1", "x2"]
-const SUN_AIR_K: PackedFloat32Array = [0.0, 0.5, 1.0, 2.0]
 ## Window size (the human, 2026-11-09): bigger windows, less real, a better mood of light; every wall.
 const WINDOW_SIZES: PackedStringArray = ["obecne", "srednie", "wieksze"]
 ## Per size (index 1, 2; 0: the old windows): back window width, sill above the floor, head below the ceiling.
@@ -139,60 +93,16 @@ const SIZE_FLUX_K: PackedFloat32Array = [1.0, 0.7, 0.55]
 ## painted view has mean 123 (peak ~207) at the same view_k 1.6 (measured): × 0.55 matches its mean.
 const VIEW_LEVELS: PackedStringArray = ["placeholder", "x0,7", "srednia jak game1 (x0,55)"]
 const VIEW_LEVEL_K: PackedFloat32Array = [1.0, 0.7, 0.55]
-## The renderer's glow bloomed the window glass onto the wall round the frame (the human: unreal); it
-## stays even at an HDR threshold of 2, so it is a switch (off: clean frames, lamps lose nothing).
-const VIEW_ENVIRONMENT: Environment = preload("res://lighting/data/view_environment.tres")
-## Sky brighter towards the sun: a window facing it gets 1 + k·cos, the opposite one less.
-const SKY_DIRS: PackedStringArray = ["rowne (x0)", "lekko (0,4)", "mocno (0,7)"]
-const SKY_DIR_K: PackedFloat32Array = [0.0, 0.4, 0.7]
 ## Window division, every wall (columns × rows; 2 rows: a transom, the window cross).
 const DIVISIONS: PackedStringArray = ["2 skrzydla", "krzyz 2x2", "6 szybek 3x2"]
 const DIVISION_COLS: PackedInt32Array = [2, 2, 3]
 const DIVISION_ROWS: PackedInt32Array = [1, 2, 2]
-const SUN_NIGHT: PackedStringArray = ["brak", "ulica rowno", "latarnia przed kazdym oknem", "jedna latarnia na srodku"]
-const SUN_SKY: PackedStringArray = ["poduszka (stara)", "z geometrii okna", "brak"]
-## Side windows (the map's variants first; the old ribbons for comparison).
-const SUN_SIDE: PackedStringArray = ["wstega z mapy (cienie mebli)", "wstegi dlugie (game1-proto)", "wstegi krotkie (v7)"]
-const SUN_SIDE_MODE: Array[SunMap.SideBeams] = [SunMap.SideBeams.RIBBON, SunMap.SideBeams.WALL_LINE, SunMap.SideBeams.WALL_LINE_SHORT]
-const SUN_SIDE_GAIN: PackedStringArray = ["x0,12", "x0,2 (jak smugi gorne)", "x0,3", "x0,5"]
-const SUN_SIDE_GAIN_K: PackedFloat32Array = [0.12, 0.2, 0.3, 0.5]
-const SKY_OTHER: PackedStringArray = ["tylko wlasny pokoj", "przez przejscie x0,3", "przez przejscie x1 (dotad)"]
-const SKY_OTHER_K: PackedFloat32Array = [0.0, 0.3, 1.0]
-const SUN_SIDE_REACH: PackedStringArray = ["x0,6", "x1 (do ladowania swiatla przez nadproze)", "x1,5"]
-const SUN_SIDE_REACH_K: PackedFloat32Array = [0.6, 1.0, 1.5]
-const SUN_TOP: PackedStringArray = ["wielokat (zweza sie do plamy)", "wolumetryczne"]
-const SUN_SIDE_W: PackedStringArray = ["x0,6 (glebia)", "x1 (jak gorne)", "x1,3", "x2"]
-const SUN_SIDE_W_K: PackedFloat32Array = [0.6, 1.0, 1.3, 2.0]
-## The glow of the windows not drawn (bottom and side walls alike, the human: in sync).
-const SUN_GLOW: PackedStringArray = ["brak (x1)", "delikatna (x2)", "wyrazna (x3,5)"]
-const SUN_GLOW_K: PackedFloat32Array = [1.0, 2.0, 3.5]
-## The street door with the map: a steady glow (the player sees the way out), weaker than the first
-## spill (90 lx, overdone), in the colour of the light outside.
-const DOOR_DAY_LUX: float = 42.0 ## 70 at the old day exposure ×0.6; the same glow at ×1 (game1's)...
-const DOOR_MAP_SCALE: float = 1.5 ## Narrower than the spill's 2.4 (the human: too wide).
-## Ticket 31: the street door's light, the old spill (a trapezium, hard sides) or a soft glow.
 ## Ticket 31: the doorways between columns, a hole in the black wall top the player can read: the old gap
 ## (floor in the wall, threshold lines, one room's light) or the hole (floor without lines, lit by both rooms).
 const SIDE_GAPS: PackedStringArray = ["jak dotad", "dziura (podloga obu pokoi)"]
-const DOOR_GLOWS: PackedStringArray = ["trapez ostry", "trapez miekki, krotszy", "miekka poswiata", "z mapy (jak okna dolne)"]
-const DOOR_SASH_W: float = 0.9 ## The street door as an opening in the bottom wall (variant "z mapy").
+const VIEW_ENVIRONMENT: Environment = preload("res://lighting/data/view_environment.tres")
+const DOOR_SASH_W: float = 0.9 ## The street door as an opening in the bottom wall (its light from the buffer).
 const DOOR_SASH_H: float = 1.9
-const FRONT_GAMMAS: PackedStringArray = ["przy oknie (x1)", "glebiej (0,7)", "jeszcze glebiej (0,5)"]
-const FRONT_GAMMA_K: PackedFloat32Array = [1.0, 0.7, 0.5]
-const DOOR_KS: PackedStringArray = ["x0,2", "x0,35", "x0,5 (widac wyjscie)", "x0,6"]
-const DOOR_K_K: PackedFloat32Array = [0.2, 0.35, 0.5, 0.6]
-const DOOR_GLOW_SCALE: float = 1.6
-const DOOR_NIGHT_LUX: float = 22.0 ## ... and less by night (the human: steady, clear, not overdone).
-const DAY_EXPOSURES: PackedStringArray = ["x1", "x0,75", "x0,6", "x0,45"]
-const DAY_EXPOSURE_K: PackedFloat32Array = [1.0, 0.75, 0.6, 0.45]
-const NIGHT_WALLS: PackedStringArray = ["dolne (ulica)", "gorne (chlodne)", "wylaczona"]
-## Weather: game1's curve (overcast 11:00-13:30); research 22c (game1): the sun only in the clear spells
-## 8:30-9:45 and 14:45-16:45, between them a flat cool sky; or the sun weaker all day.
-const CLOUDS: PackedStringArray = ["jak game1 (pochmurno 11-13:30)", "jak research 22c (slonce 8:30-9:45, 14:45-16:45)", "czesciowe (slonce x0,5)", "pochmurno (slonce x0,2)"]
-const CLOUDS_K: PackedFloat32Array = [1.0, 1.0, 0.5, 0.2]
-const CLEAR_22C: PackedVector2Array = [Vector2(0.0, 1.0), Vector2(9.75, 1.0), Vector2(10.25, 0.0), Vector2(14.25, 0.0), Vector2(14.75, 1.0), Vector2(24.0, 1.0)]
-const SUN_SCALES: PackedStringArray = ["x0,25", "x0,35", "x0,5", "x0,75"]
-const SUN_SCALE_K: PackedFloat32Array = [0.25, 0.35, 0.5, 0.75]
 
 const WALL_COLOR: Color = Color("8c8a80")
 const WALL_TOP: Color = Color("2b2a2e")
@@ -225,8 +135,6 @@ const VIEW_HORIZON: int = 38
 
 ## Lamps of all the rooms (on unless switched off in F1); ulica_bryly lights the facade windows by it.
 static var lamps: Dictionary[StringName, bool] = {}
-static var _preset_applied: int = 0 ## The critic's preset last set on the sliders.
-static var _shadow_preset_applied: int = 0 ## The critic's shadow preset last set (ticket 33).
 
 var _room_w: float = 5.0
 var _depth: float = 8.0
@@ -240,9 +148,6 @@ var _back_room: RoomLighting
 var _edge: int = 1
 var _sun_map: SunMap
 ## The street door's spill light: off with the map, whose door glazing glows as the bottom windows do.
-var _door_spill: Node2D
-var _door_fixture: LightFixture
-var _door_def: FixtureDef
 var _door_x_m: float = NAN ## The street door's middle, house metres.
 var _stairs: Array[Block] = [] ## Steps: occluders only on the map (their faces cut a beam into stripes).
 var _window_size: int = 1
@@ -262,204 +167,78 @@ func _character_options() -> bool:
 func _add_layout_options() -> void:
 	_layout_option(&"gora_mapy", "Góra ekranu", TOPS, 1) # ticket 31: the human leans to south on top
 	_layout_option(&"brzeg", "Brzeg w czerń", EDGES, 1)
-	_layout_option(&"smugi_bok", "Smugi okien niewidocznych", SIDE_BEAMS, 2)
-	_layout_option(&"plama_dzien", "Plama okna w dzień", DAY_PATCHES, 1)
-	_layout_option(&"plama_noc", "Noc: rzut okna", NIGHT_PATCHES, 1)
-	_layout_option(&"poduszki_noc", "Noc: poduszki nieba", NIGHT_PILLOWS, 0)
 	for room: String in _room_names():
 		_layout_option(StringName("lampa_" + room), "Lampa: " + room, ON_OFF, 0)
 	_layout_option(&"okna", "Okna (wszystkie ściany)", WINDOW_SIZES, 1) # the human: big ones a little too big
 	_layout_option(&"podzial", "Podział okien", DIVISIONS, 1)
 	_layout_option(&"przejscia", "Przejścia boczne", SIDE_GAPS, 1)
-	_layout_option(&"drzwi_swiatlo", "Drzwi: światło", DOOR_GLOWS, 3) # the map, as the bottom windows (the human)
 	_layout_option(&"widok", "Widok za oknem: jasność", VIEW_LEVELS, 2)
 	_add_sun_map_options()
 
 
-## Ticket 31: the panel shows only what the human is testing now (the human: only those); every other
-## option keeps its value, hidden. The interior frame (resolution) stays.
-## The human (ticket 31): only the frame and the clock; the light is the critic's C („Pośredni”).
-## Ticket 33 (the human: too many sliders to see the options): only the critic's shadow presets and
-## the shadow's look; the shadow sliders stay hidden (--set= still sets them).
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cienie_krytyk", &"cien_wyglad"]
-const SLIDER_OPTIONS: Array[StringName] = [&"mapa_postac_swiatlo", &"mapa_postac_jasnosc",
-		&"postac_niebo", &"postac_lampy", &"lampy_mapa", &"lampy_jasnosc", &"lampy_rozlewanie", &"noc_okna",
-		&"ambient_dzien", &"ambient_noc", &"ekspozycja_dzien", &"ekspozycja_noc"]
-## The critic's light settings (ticket 31): option id → index, set on the sliders when picked.
-## Indices on the sliders (the critic's second round, shots/t31/krytyk/r2_*; C recommended), and round 1's B.
-## Picking one sets the sliders once (_preset_applied): a reload keeps the slider edits.
-const PRESET_NAMES: PackedStringArray = ["wlasne (suwaki)", "A Zimne okna", "B Rozlana lampa", "C Posredni (polecany)", "B z 1. rundy (Lampa w mroku)"]
-const PRESETS: Array[Dictionary] = [{},
-		{&"ambient_dzien": 7, &"ambient_noc": 4, &"ekspozycja_dzien": 4, &"ekspozycja_noc": 4, &"lampy_jasnosc": 6, &"lampy_rozlewanie": 4, &"noc_okna": 5, &"postac_niebo": 5, &"postac_lampy": 9, &"mapa_postac_jasnosc": 2},
-		{&"ambient_dzien": 7, &"ambient_noc": 4, &"ekspozycja_dzien": 4, &"ekspozycja_noc": 4, &"lampy_jasnosc": 6, &"lampy_rozlewanie": 6, &"noc_okna": 3, &"postac_niebo": 5, &"postac_lampy": 9, &"mapa_postac_jasnosc": 2},
-		{&"ambient_dzien": 7, &"ambient_noc": 4, &"ekspozycja_dzien": 4, &"ekspozycja_noc": 4, &"lampy_jasnosc": 6, &"lampy_rozlewanie": 5, &"noc_okna": 4, &"postac_niebo": 5, &"postac_lampy": 9, &"mapa_postac_jasnosc": 2},
-		{&"ambient_dzien": 8, &"ambient_noc": 3, &"ekspozycja_dzien": 5, &"ekspozycja_noc": 3, &"lampy_jasnosc": 6, &"lampy_rozlewanie": 4, &"noc_okna": 2, &"postac_niebo": 5, &"postac_lampy": 9, &"mapa_postac_jasnosc": 2}]
-const ACTOR_STEPS: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5]
+## Ticket 36 (the human: the old variants out of F1): the panel shows the light's look and the quality
+## checks; every other option keeps its value, hidden. The interior frame (resolution) stays.
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cien_wyglad", &"slonce_tarcza", &"zarowka",
+		&"widok_debug", &"smugi_gorne", &"test_cienia"]
+const ACTOR_STEPS: PackedFloat32Array = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
 const FILL_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
 const NIGHT_WINDOW_STEPS: PackedFloat32Array = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0]
 const LAMP_STEPS: PackedFloat32Array = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0]
 ## Sliders for how dark the game is (the human: lights should tell more, by night above all).
 const AMBIENT_STEPS: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5]
 const EXPOSURE_STEPS: PackedFloat32Array = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5]
+## Ticket 36: the light buffer's variants and checks.
+const LOOKS: PackedStringArray = ["gladki", "3 poziomy z ditherem", "2 poziomy twarde"]
+static var SUN_DISC_STEPS: PackedFloat32Array = _steps(0.2, 4.0, 0.2)
+static var BULB_STEPS: PackedFloat32Array = _steps(0.02, 0.4, 0.02)
+const DEBUG_VIEWS: PackedStringArray = ["swiatlo", "tylko slonce (i wstegi)", "tylko niebo", "tylko noc", "tylko lampy",
+		"udzial cienia (R slonce, G niebo, B noc)"]
+const TOP_BEAM_MODES: PackedStringArray = ["wielokat z cieniem (jak t27)", "wolumetryczne"]
+const TESTS: PackedStringArray = ["brak", "postac jako pudelko", "pudelko w miejscu postaci (postac bez cienia)",
+		"pudelko przed drzwiami", "pudelko przed oknem"]
+const COMPUTES: PackedStringArray = ["okno wokol postaci", "caly dom co klatke"]
 
 
-## Ticket 31: the light-map variants, live (each re-applies the light).
+## Ticket 36: the light buffer's options, live (each re-applies the light). The light's levels are the
+## critic's C (ticket 31), on hidden sliders (--set= still sets them).
 func _add_sun_map_options() -> void:
-	DebugRegistry.add_variant(self, &"slonce", "Słońce okien", SUN_MODES, 1, func(index: int) -> void:
-		SunMap.enabled = index == 1
-		_refresh_sun())
-	DebugRegistry.add_toggle(self, &"mapa_meble", "Mapa: cienie mebli", true, func(on: bool) -> void:
-		SunMap.furniture_shadows = on
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_jasnosc", "Mapa: jasność dnia (słońce i niebo)", SUN_SCALES, 0, func(index: int) -> void:
-		SunMap.sun_scale = SUN_SCALE_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_niebo", "Mapa: światło nieba", SUN_SKY, 1, func(index: int) -> void:
-		SunMap.sky = index as SunMap.SkyLight
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"ekspozycja", "Dzień: ekspozycja", DAY_EXPOSURES, 0, func(index: int) -> void:
-		RoomLighting.day_exposure_k = DAY_EXPOSURE_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"noc_plama", "Noc: plama światła", NIGHT_WALLS, 1, func(index: int) -> void:
-		SunMap.night_wall = index
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"zachmurzenie", "Dzień: zachmurzenie", CLOUDS, 0, func(index: int) -> void:
-		LightingDirector.sun_k = CLOUDS_K[index]
-		LightingDirector.clear_override = _clear_curve(CLEAR_22C) if index == 1 else null
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_poswiata", "Mapa: poświata okien (wszystkie ściany)", SUN_GLOW, 1, func(index: int) -> void:
-		SunMap.front_glow = SUN_GLOW_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_gorne_smugi", "Mapa: smugi okien górnych", SUN_TOP, 0, func(index: int) -> void:
-		SunMap.top_beams = index as SunMap.TopBeams
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_boczne_szer", "Mapa: szerokość smug bocznych", SUN_SIDE_W, 3, func(index: int) -> void:
-		SunMap.side_width = SUN_SIDE_W_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_niebo_przejscia", "Mapa: niebo z okien innych pokoi", SKY_OTHER, 0, func(index: int) -> void:
-		SunMap.sky_other_k = SKY_OTHER_K[index]
-		_refresh_sun())
-	DebugRegistry.add_toggle(self, &"glow", "Glow (poświata jasnych pikseli)", false, func(on: bool) -> void:
-		var environment: Environment = VIEW_ENVIRONMENT
-		environment.glow_enabled = on)
-	DebugRegistry.add_variant(self, &"mapa_niebo_kierunek", "Mapa: niebo jaśniejsze od strony słońca", SKY_DIRS, 1, func(index: int) -> void:
-		SunMap.sky_dir_k = SKY_DIR_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_poswiata_glab", "Mapa: poświata okien i drzwi w głąb", FRONT_GAMMAS, 1, func(index: int) -> void:
-		SunMap.front_gamma = FRONT_GAMMA_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_drzwi", "Mapa: jasność drzwi (wariant z mapy)", DOOR_KS, 2, func(index: int) -> void:
-		SunMap.door_k = DOOR_K_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_boczne_jasnosc", "Mapa: jasność wstęg bocznych", SUN_SIDE_GAIN, 1, func(index: int) -> void:
-		SunMap.side_ribbon_k = SUN_SIDE_GAIN_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_boczne_zasieg", "Mapa: zasięg wstęg bocznych", SUN_SIDE_REACH, 1, func(index: int) -> void:
-		SunMap.side_reach = SUN_SIDE_REACH_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_boczne_smugi", "Mapa: smugi okien bocznych", SUN_SIDE, 0, func(index: int) -> void:
-		SunMap.side_beams = SUN_SIDE_MODE[index]
-		_refresh_sun())
-	DebugRegistry.add_toggle(self, &"lampy_mapa", "Lampy w pokojach z mapy (cienie mebli)", true, func(on: bool) -> void:
-		SunMap.room_lamps = on
-		_refresh_sun())
-	_darkness_slider(&"lampy_jasnosc", "Lampy z mapy: jasność", LAMP_STEPS, func(k: float) -> void: SunMap.room_lamp_k = k)
-	DebugRegistry.add_variant(self, &"ustawienia", "Ustawienia krytyka (A/B/C różnią się nocą)", PRESET_NAMES, 3, func(index: int) -> void:
-		# Applied once per pick: a reload (another frame) keeps the sliders as edited since.
-		if index == _preset_applied:
-			return
-		_preset_applied = index
-		var preset: Dictionary = PRESETS[index]
-		if preset.is_empty():
-			return
-		for id: StringName in preset:
-			var value: int = preset[id]
-			DebugRegistry.set_value(id, value)
-		DebugRegistry.options_changed.emit.call_deferred())
-	_darkness_slider(&"postac_niebo", "Postać: niebo z okien", ACTOR_STEPS, func(k: float) -> void: SunMap.actor_sky_k = k, 0.5)
-	_darkness_slider(&"postac_lampy", "Postać: lampy z mapy", ACTOR_STEPS, func(k: float) -> void: SunMap.actor_lamp_k = k, 0.7)
-	_darkness_slider(&"lampy_rozlewanie", "Lampy: rozlewanie na pokój (poza plamą)", FILL_STEPS, func(k: float) -> void: RoomLighting.art_fill_k = k)
-	_darkness_slider(&"noc_okna", "Noc: zimne światło z okien (śnieg, latarnie)", NIGHT_WINDOW_STEPS, func(k: float) -> void: SunMap.night_window_k = k)
-	_darkness_slider(&"ambient_dzien", "Ambient pokoju w dzień", AMBIENT_STEPS, func(k: float) -> void: RoomLighting.day_ambient_k = k)
-	_darkness_slider(&"ambient_noc", "Ambient pokoju w nocy", AMBIENT_STEPS, func(k: float) -> void: RoomLighting.night_ambient_k = k)
-	_darkness_slider(&"ekspozycja_dzien", "Ekspozycja w dzień (całość)", EXPOSURE_STEPS, func(k: float) -> void: RoomLighting.day_exposure_k = k)
-	_darkness_slider(&"ekspozycja_noc", "Ekspozycja w nocy (całość)", EXPOSURE_STEPS, func(k: float) -> void: RoomLighting.night_exposure_k = k)
-	DebugRegistry.add_variant(self, &"mapa_postac_swiatlo", "Mapa: światło na postaci", ACTOR_MAPS, 2, func(index: int) -> void:
-		SunMap.actor_map = index as SunMap.ActorMap
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_postac_jasnosc", "Mapa: jasność postaci", ACTOR_GAINS, 1, func(index: int) -> void:
-		SunMap.actor_gain = ACTOR_GAIN_K[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_postac", "Cień postaci: kształt", SUN_ACTOR, 1, func(index: int) -> void:
-		SunMap.actor_shadow = index as SunMap.ActorShadow
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"cien_zrodla", "Cień postaci: od czego", SHADOW_SOURCES, 1, func(index: int) -> void:
-		SunMap.shadow_sources = SHADOW_SOURCE_BITS[index]
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"cien_liczenie", "Cień postaci: liczenie (koszt)", SHADOW_COMPUTE, 0, func(index: int) -> void:
-		SunMap.shadow_compute = index as SunMap.ShadowCompute
-		_refresh_sun())
-	DebugRegistry.add_variant(self, &"cien_miekkosc", "Cień postaci: miękkość (wszystkie źródła)", SHADOW_SOFT, 0, func(index: int) -> void:
-		SunMap.shadow_angle = SHADOW_SOFT_K[index]
-		_refresh_sun())
-	# Sliders (the human): the lamp counted farther (x1 = where it is: the widest fan) and the cylinder's radius.
-	_darkness_slider(&"cien_lampy", "Cień od lamp: lampa liczona dalej (x1 szeroki wachlarz)", SHADOW_STRETCH_K,
-			func(k: float) -> void: SunMap.shadow_stretch = k, 1.5)
-	_darkness_slider(&"cien_dlugosc", "Cień od lamp: długość (nie szerokość)", SHADOW_LENGTH_K,
-			func(k: float) -> void: SunMap.shadow_lamp_length = k)
-	var points: PackedStringArray = PackedStringArray()
-	for metres: float in SHADOW_SUN_POINT_M:
-		points.append("rownolegle" if metres <= 0.0 else "%s m" % String.num(metres, 1).replace(".", ","))
-	DebugRegistry.add_slider(self, &"cien_okno", "Cień od okna: rozszerzanie (słońce jak punkt)", points, _nearest(SHADOW_SUN_POINT_M, 4.0), func(index: int) -> void:
-		SunMap.shadow_sun_point = SHADOW_SUN_POINT_M[index]
-		_refresh_sun())
-	var radii: PackedStringArray = PackedStringArray()
-	for radius: float in SHADOW_RADIUS_M:
-		radii.append("%s m" % String.num(radius, 2).replace(".", ","))
-	DebugRegistry.add_slider(self, &"cien_promien", "Cień postaci: promień walca", radii, _nearest(SHADOW_RADIUS_M, 0.26), func(index: int) -> void:
-		SunMap.shadow_radius = SHADOW_RADIUS_M[index]
-		_refresh_sun())
-	_darkness_slider(&"cien_gradient", "Cień postaci: gradient (ciemniej przy stopach, gaśnie dalej)", SHADOW_GRADIENT,
-			func(k: float) -> void: SunMap.shadow_gradient = k, 0.0)
-	DebugRegistry.add_variant(self, &"cien_gradient_tryb", "Cień postaci: gradient przez", GRADIENT_MODES, 1, func(index: int) -> void:
-		SunMap.shadow_gradient_soft = index == 1
-		_refresh_sun())
-	# The sky's shadow, its own sliders (ticket 33: a separate preset).
-	_darkness_slider(&"niebo_sila", "Cień nieba: siła", _steps(0.0, 1.0, 0.05), func(k: float) -> void: SunMap.sky_shadow_k = k, 0.6)
-	_darkness_slider(&"niebo_miekkosc", "Cień nieba: miękkość (kąt, rad)", _steps(0.0, 0.3, 0.01), func(k: float) -> void: SunMap.sky_shadow_soft = k, 0.05)
-	_darkness_slider(&"niebo_gradient", "Cień nieba: gradient przez miękkość", _steps(0.0, 1.0, 0.1), func(k: float) -> void: SunMap.sky_shadow_gradient = k, 0.5)
-	_darkness_slider(&"niebo_zasieg", "Cień nieba: zasięg od stóp (m)", _steps(0.5, 6.0, 0.25), func(k: float) -> void: SunMap.sky_shadow_reach = k, 3.0)
-	_darkness_slider(&"niebo_kontakt", "Cień nieba: AO pod stopami (owal)", _steps(0.0, 1.0, 0.05), func(k: float) -> void: SunMap.sky_shadow_contact = k, 0.5)
-	DebugRegistry.add_variant(self, &"cien_wyglad", "Cień postaci: wygląd", SHADOW_LOOKS, 0, func(index: int) -> void:
+	DebugRegistry.add_variant(self, &"cien_wyglad", "Cienie: wygląd", LOOKS, 1, func(index: int) -> void:
 		SunMap.shadow_look = index
 		_refresh_sun())
-	_darkness_slider(&"cien_sila", "Cień postaci: siła", SHADOW_GAIN, func(k: float) -> void: SunMap.shadow_k = k, 0.75)
-	DebugRegistry.add_variant(self, &"plamka", "Plamka pod stopami", BLOBS, 1, func(index: int) -> void:
-		Figure.blob = index as Figure.Blob
-		if is_instance_valid(player):
-			player.queue_redraw())
-	DebugRegistry.add_variant(self, &"cienie_krytyk", "Cienie: ustawienia krytyka", SHADOW_PRESET_NAMES, 1, func(index: int) -> void:
-		# Applied once per pick, as the light presets: a reload keeps the sliders as edited since.
-		if index == _shadow_preset_applied:
-			return
-		_shadow_preset_applied = index
-		var preset: Dictionary = SHADOW_PRESETS[index]
-		if preset.is_empty():
-			return
-		for id: StringName in preset:
-			var value: int = preset[id]
-			DebugRegistry.set_value(id, value)
-		DebugRegistry.options_changed.emit.call_deferred())
-	DebugRegistry.add_variant(self, &"mapa_miekkosc", "Mapa: miękkość", SUN_SOFT, 1, func(index: int) -> void:
-		SunMap.soft_deg = SUN_SOFT_DEG[index]
+	var discs: PackedStringArray = PackedStringArray()
+	for degrees: float in SUN_DISC_STEPS:
+		discs.append("%s st." % String.num(degrees, 1).replace(".", ","))
+	DebugRegistry.add_slider(self, &"slonce_tarcza", "Tarcza słońca (promień): miękkość cieni okien", discs,
+			_nearest(SUN_DISC_STEPS, 2.4), func(index: int) -> void:
+		SunMap.sun_disc_deg = SUN_DISC_STEPS[index]
 		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_smuga", "Mapa: smuga w powietrzu", SUN_AIR, 2, func(index: int) -> void:
-		SunMap.air_on = index > 0
-		SunMap.air_k = SUN_AIR_K[index]
+	var bulbs: PackedStringArray = PackedStringArray()
+	for metres: float in BULB_STEPS:
+		bulbs.append("%s m" % String.num(metres, 2).replace(".", ","))
+	DebugRegistry.add_slider(self, &"zarowka", "Żarówka (średnica): miękkość cieni lamp", bulbs,
+			_nearest(BULB_STEPS, 0.1), func(index: int) -> void:
+		SunMap.bulb_m = BULB_STEPS[index]
 		_refresh_sun())
-	DebugRegistry.add_variant(self, &"mapa_noc", "Mapa: noc przez okna dolne", SUN_NIGHT, 1, func(index: int) -> void:
-		SunMap.night = index as SunMap.Night
+	DebugRegistry.add_variant(self, &"widok_debug", "Widok debug (bufor)", DEBUG_VIEWS, 0, func(index: int) -> void:
+		SunMap.debug_view = index
 		_refresh_sun())
+	DebugRegistry.add_variant(self, &"smugi_gorne", "Smugi okien górnych", TOP_BEAM_MODES, 0, func(index: int) -> void:
+		SunMap.top_beams = index as SunMap.TopBeams
+		_refresh_sun())
+	DebugRegistry.add_variant(self, &"test_cienia", "Test cieni", TESTS, 0, func(index: int) -> void:
+		SunMap.test = index as SunMap.Test
+		_refresh_sun())
+	DebugRegistry.add_variant(self, &"liczenie", "Liczenie (koszt)", COMPUTES, 0, func(index: int) -> void:
+		SunMap.whole_every_frame = index == 1
+		_refresh_sun())
+	_darkness_slider(&"lampy_jasnosc", "Lampy z mapy: jasność", LAMP_STEPS, func(k: float) -> void: SunMap.room_lamp_k = k, 2.0)
+	_darkness_slider(&"postac_jasnosc", "Postać: światło na ciele", ACTOR_STEPS, func(k: float) -> void: SunMap.actor_k = k, 1.5)
+	_darkness_slider(&"lampy_rozlewanie", "Lampy: rozlewanie na pokój (poza plamą)", FILL_STEPS, func(k: float) -> void: RoomLighting.art_fill_k = k, 1.5)
+	_darkness_slider(&"noc_okna", "Noc: zimne światło z okien (śnieg, latarnie)", NIGHT_WINDOW_STEPS, func(k: float) -> void: SunMap.night_window_k = k, 2.0)
+	_darkness_slider(&"ambient_dzien", "Ambient pokoju w dzień", AMBIENT_STEPS, func(k: float) -> void: RoomLighting.day_ambient_k = k, 0.7)
+	_darkness_slider(&"ambient_noc", "Ambient pokoju w nocy", AMBIENT_STEPS, func(k: float) -> void: RoomLighting.night_ambient_k = k, 0.4)
+	_darkness_slider(&"ekspozycja_dzien", "Ekspozycja w dzień (całość)", EXPOSURE_STEPS, func(k: float) -> void: RoomLighting.day_exposure_k = k, 0.7)
+	_darkness_slider(&"ekspozycja_noc", "Ekspozycja w nocy (całość)", EXPOSURE_STEPS, func(k: float) -> void: RoomLighting.night_exposure_k = k, 0.7)
 
 
 ## A slider over `steps` (× values, starting at ×1); `set_k` stores the chosen one.
@@ -475,25 +254,6 @@ func _darkness_slider(id: StringName, label: String, steps: PackedFloat32Array, 
 	DebugRegistry.add_slider(self, id, label, names, first, func(index: int) -> void:
 		set_k.call(steps[index])
 		_refresh_sun())
-
-
-## The street door: with the map a weaker, steady glow in the colour of the light outside.
-func _set_door() -> void:
-	# The rooms' lamps: their hand-made pools step aside before the rooms apply (ticket 31).
-	LightFixture.map_lamps = SunMap.enabled and SunMap.room_lamps
-	LightFixture.map_actor = LightFixture.map_lamps and SunMap.actor_map != SunMap.ActorMap.TWINS
-	if _door_def == null:
-		return
-	_door_def.lux = DOOR_LIGHT.lux
-	if SunMap.enabled and director.sun != null:
-		_door_def.lux = lerpf(DOOR_NIGHT_LUX, DOOR_DAY_LUX, director.sun.day)
-	if SunMap.enabled and _value(&"drzwi_swiatlo") == 3:
-		_door_def.lux = 0.0 # the map's door opening glows instead
-	var color: Color = DOOR_LIGHT.color
-	if SunMap.enabled and director.sun != null:
-		var outside: Color = _window_profile.sky_glow_color(director.profile.sample(director.sun.hour))
-		color = outside / maxf(outside.r, maxf(outside.g, outside.b))
-	_door_fixture.set_color(color)
 
 
 ## The index of the value in `steps` nearest to `value`.
@@ -513,15 +273,7 @@ static func _steps(from: float, to: float, step: float) -> PackedFloat32Array:
 	return values
 
 
-static func _clear_curve(points: PackedVector2Array) -> Curve:
-	var curve: Curve = Curve.new()
-	for point: Vector2 in points:
-		curve.add_point(Vector2(point.x / 24.0, point.y), 0.0, 0.0, Curve.TANGENT_LINEAR, Curve.TANGENT_LINEAR)
-	return curve
-
-
 func _refresh_sun() -> void:
-	_set_door()
 	if director != null and director.sun != null:
 		director.apply_time(director.sun.hour)
 		if _sun_map != null:
@@ -543,8 +295,7 @@ func start(spawn: StringName) -> void:
 
 func _exit_tree() -> void:
 	DebugRegistry.hidden = []
-	LightingDirector.sun_k = 1.0 # the street keeps game1's weather
-	LightingDirector.clear_override = null
+	SunMap.enabled = false # ticket 36: the street keeps its own light
 	RoomLighting.day_exposure_k = 1.0
 	RoomLighting.night_exposure_k = 1.0
 	RoomLighting.day_ambient_k = 1.0
@@ -557,13 +308,12 @@ func _exit_tree() -> void:
 
 
 func apply_time(hour: float) -> void:
-	_set_door()
 	super.apply_time(hour)
 	if _sun_map != null:
 		_sun_map.apply(director.sun)
 
 
-## Ticket 31: the house's SunGeometry from what was built (windows of every wall, every block) plus
+## Ticket 36: the house's SunGeometry from what was built (windows of every wall, every block) plus
 ## the wall tops between the columns, and the SunMap over it.
 func _build_sun_map() -> void:
 	var data: SunGeometry = SunGeometry.new()
@@ -587,7 +337,7 @@ func _build_sun_map() -> void:
 		data.add_box(AABB(Vector3(left, door_from, _door_h), Vector3(RoomBox.WALL_TOP_M, _side_door_m(), WALL_M - _door_h)),
 				null, false)
 	var door_sash: int = -1
-	if _value(&"drzwi_swiatlo") == 3 and not is_nan(_door_x_m):
+	if not is_nan(_door_x_m):
 		data.add_sash(SunGeometry.Wall.FRONT, _door_x_m - DOOR_SASH_W / 2.0, _door_x_m + DOOR_SASH_W / 2.0, 0.0, DOOR_SASH_H)
 		door_sash = data.sashes.size() - 1
 	_sun_map = SunMap.new()
@@ -630,14 +380,16 @@ func _build_world() -> void:
 	_ground_wall_m = WALL_M
 	street_scene = STREET_SCENE # the house stands on that street
 	LightingDirector.top_azimuth_deg = TOP_AZIMUTHS[_value(&"gora_mapy")]
-	SideWindowLight.beams = _value(&"smugi_bok")
-	var patch_on: bool = _value(&"plama_dzien") == 0
-	var north: bool = TOP_AZIMUTHS[_value(&"gora_mapy")] == 0.0
-	SideWindowLight.day_patch = patch_on and north
-	WindowLight.day_patch = patch_on and not north
-	SideWindowLight.night_patch = _value(&"plama_noc")
-	WindowLight.night_patch = _value(&"plama_noc")
-	SideWindowLight.night_pillow_k = NIGHT_PILLOW_SCALES[_value(&"poduszki_noc")]
+	# Ticket 36: all the light inside from the buffer (SunMap); the hand-made shapes stay off.
+	SunMap.enabled = true
+	SideWindowLight.beams = 0
+	SideWindowLight.day_patch = false
+	WindowLight.day_patch = false
+	SideWindowLight.night_patch = 0
+	WindowLight.night_patch = 0
+	Figure.blob = Figure.Blob.NONE
+	var environment: Environment = VIEW_ENVIRONMENT
+	environment.glow_enabled = false # the glass bloomed onto the wall (the human, ticket 31)
 	_door_h = minf(DOOR_MAX_M, WALL_M - DOOR_BELOW_CEILING_M)
 	_window_size = _value(&"okna")
 	_cols = DIVISION_COLS[_value(&"podzial")]
@@ -1224,17 +976,7 @@ func _street_door(room: RoomLighting, origin: Vector2) -> void:
 	for step: int in steps:
 		fade.add_rect(Rect2(tongue.position.x, tongue.end.y - steps + step, tongue.size.x, 1.0),
 				Color(0.0, 0.0, 0.0, float(step + 1) / (steps + 1)))
-	_door_def = DOOR_LIGHT.duplicate() as FixtureDef
-	_door_def.texture_scale = DOOR_MAP_SCALE
-	if _value(&"drzwi_swiatlo") == 1:
-		_door_def.shape = LightTextures.Shape.DOOR_SOFT_SPILL
-	if _value(&"drzwi_swiatlo") == 2:
-		_door_def.shape = LightTextures.Shape.DOOR_GLOW
-		_door_def.texture_scale = DOOR_GLOW_SCALE
-		_door_def.offset = Vector2(0.0, -32.0 * DOOR_GLOW_SCALE) # the bottom edge on the door
-	_door_spill = _light(Vector2(config.px(cx), edge), _door_def)
-	_door_fixture = _door_spill.get_child(0) as LightFixture
-	room.add_child(_door_spill)
+	# Ticket 36: no spill light; the door is an opening in the bottom wall (its light from the buffer).
 	var door: Door = Door.new()
 	door.target_scene = street_scene
 	door.spawn = &"z_domu"

@@ -1,5 +1,8 @@
-// PROTOTYPE (ticket 31): the window sun from geometry (SunGeometry). Metres: x across, y = d into the
+// PROTOTYPE (ticket 36, „Przebudowa światła wnętrza na jeden bufor z cieniami”): the house in metres
+// (SunGeometry) and the one set of occluders every light is tested against. x across, y = d into the
 // depth from the back wall, z up. World px: x = ppm·x, y = floor_y + ppm·(kd·d − z).
+// Architecture: the shell and its sashes (glass only). Occluders: boxes (furniture, partitions,
+// lintels, stairs) and the actor (a cylinder, or a box for the swap test), all alike.
 
 uniform float ppm = 40.0;
 uniform float kd = 0.6;
@@ -7,36 +10,25 @@ uniform float floor_y = 88.0;
 uniform vec3 shell_min;
 uniform vec3 shell_max;
 uniform int sash_count = 0;
-uniform vec4 sashes[64];
+uniform vec4 sashes[64]; // u from, u to (x for back and front walls, d for side walls), z from, z to
 uniform int sash_wall[64]; // 0 back (d min), 1 front (d max), 2 left (x min), 3 right (x max)
 uniform int box_count = 0;
 uniform vec3 box_min[64];
 uniform vec3 box_max[64];
-uniform float box_top[64]; // shown top (receivers), < 0: not a receiver
-// The actor as an occluder (ticket 33, „Cień postaci z mapy światła”): its shape, feet (x, d m),
-// half width and height. actor_in_map 1: blocked() counts it (the whole map repainted every frame, or
-// the beams in the air); 0: only the shadow window (SunMap) tests it, through hit_actor().
-uniform int actor_shape = 0; // 0 none, 1 cylinder, 2 box, 3 flat rectangle facing the light, 4 flat figure facing the light
-uniform vec4 actor_body = vec4(0.0, 0.0, 0.22, 1.8); // feet x, feet d, half width, height
-uniform float actor_half_depth = 0.15; // the box and the cylinder: their middle this far behind the feet line
-uniform int actor_in_map = 0;
+uniform float box_top[64]; // shown top (a receiver), < 0: only an occluder
+uniform int actor_shape = 0; // 0 none, 1 cylinder, 2 box
+uniform vec4 actor_body = vec4(0.0, 0.0, 0.26, 1.8); // middle x, middle d, radius (half width), height
 uniform int room_count = 0;
 uniform vec4 room_rect[4]; // x0, d0, x1, d1
-uniform vec3 room_light[4]; // colour × energy at that room's exposure
-// Light through a wall the source only grazes fades out (artistic, as the hand-tuned windows'
-// top_facing_full): full when the source's horizontal direction is this cos off the wall's normal.
-uniform float facing_full = 0.0;
-uniform int front_back = 1; // 0: back and front windows light nothing here (their beams: SunMap polygons)
-uniform float side_k = 1.0; // light through the side walls, × this (the air: their beams must read)
-uniform int side_walls = 1; // 0: side windows light nothing here (their beams: SunMap ribbons, as game1-proto)
 
 const float EPS = 0.003;
 
-// Where the ray o + t·dir leaves the shell, and through which face (4: the ceiling or never).
+// Where the ray o + t·dir leaves the shell, and through which face (4: the ceiling or the floor).
 float shell_exit(vec3 o, vec3 dir, out int face) {
 	float t = 1e9;
 	face = 4;
 	if (dir.z > 1e-5) { t = (shell_max.z - o.z) / dir.z; }
+	if (dir.z < -1e-5) { t = (shell_min.z - o.z) / dir.z; }
 	if (dir.y < -1e-5) { float s = (shell_min.y - o.y) / dir.y; if (s < t) { t = s; face = 0; } }
 	if (dir.y > 1e-5) { float s = (shell_max.y - o.y) / dir.y; if (s < t) { t = s; face = 1; } }
 	if (dir.x < -1e-5) { float s = (shell_min.x - o.x) / dir.x; if (s < t) { t = s; face = 2; } }
@@ -44,18 +36,26 @@ float shell_exit(vec3 o, vec3 dir, out int face) {
 	return t;
 }
 
-bool through_sash(vec3 q, int face) {
+// The sash at shell point q on face `face`, or -1.
+int sash_at(vec3 q, int face) {
 	if (face == 4) {
-		return false;
+		return -1;
 	}
 	float u = face < 2 ? q.x : q.y;
 	for (int i = 0; i < sash_count; i++) {
 		vec4 s = sashes[i];
 		if (sash_wall[i] == face && u >= s.x && u <= s.y && q.z >= s.z && q.z <= s.w) {
-			return true;
+			return i;
 		}
 	}
-	return false;
+	return -1;
+}
+
+vec3 inverse_dir(vec3 dir) {
+	return vec3(
+			abs(dir.x) > 1e-8 ? 1.0 / dir.x : 1e8,
+			abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
+			abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
 }
 
 bool hit_box(vec3 o, vec3 inv, vec3 lo, vec3 hi, float t_max) {
@@ -68,9 +68,9 @@ bool hit_box(vec3 o, vec3 inv, vec3 lo, vec3 hi, float t_max) {
 	return tf >= max(tn, 0.0) && tn < t_max;
 }
 
-bool hit_cylinder(vec3 o, vec3 dir, float t_max, vec4 actor_cyl) {
-	vec2 oc = o.xy - actor_cyl.xy;
-	float r = actor_cyl.z;
+bool hit_cylinder(vec3 o, vec3 dir, float t_max, vec4 cyl) {
+	vec2 oc = o.xy - cyl.xy;
+	float r = cyl.z;
 	float a = dot(dir.xy, dir.xy);
 	float b = dot(oc, dir.xy);
 	float c = dot(oc, oc) - r * r;
@@ -89,10 +89,10 @@ bool hit_cylinder(vec3 o, vec3 dir, float t_max, vec4 actor_cyl) {
 	float z1 = 1e9;
 	if (abs(dir.z) > 1e-6) {
 		float ta = -o.z / dir.z;
-		float tb = (actor_cyl.w - o.z) / dir.z;
+		float tb = (cyl.w - o.z) / dir.z;
 		z0 = min(ta, tb);
 		z1 = max(ta, tb);
-	} else if (o.z < 0.0 || o.z > actor_cyl.w) {
+	} else if (o.z < 0.0 || o.z > cyl.w) {
 		return false;
 	}
 	float tn = max(t0, z0);
@@ -100,93 +100,34 @@ bool hit_cylinder(vec3 o, vec3 dir, float t_max, vec4 actor_cyl) {
 	return tf >= max(tn, 0.0) && tn < t_max;
 }
 
-// The flat figure's half width at height z (m, of 1.8): legs, hips, torso and arms, neck, head.
-float figure_half(float z, float h) {
-	float k = z / h * 1.8;
-	if (k < 0.85) { return 0.14; }
-	if (k < 1.0) { return 0.18; }
-	if (k < 1.45) { return 0.24; }
-	if (k < 1.52) { return 0.06; }
-	if (k < 1.78) { return 0.1; }
-	return 0.0;
-}
-
-// The actor's middle (x, d): a body point there is inside it.
-vec2 actor_middle() {
-	return vec2(actor_body.x, actor_body.y - actor_half_depth);
-}
-
-// The ray o + t·dir (t < t_max) hits the actor.
-bool hit_actor(vec3 o, vec3 dir, float t_max) {
-	vec2 middle = actor_middle();
-	float half_w = actor_body.z;
-	float h = actor_body.w;
+bool hit_actor(vec3 o, vec3 dir, vec3 inv, float t_max) {
 	if (actor_shape == 1) {
-		return hit_cylinder(o, dir, t_max, vec4(middle, half_w, h));
+		return hit_cylinder(o, dir, t_max, actor_body);
 	}
 	if (actor_shape == 2) {
-		vec3 inv = vec3(
-				abs(dir.x) > 1e-8 ? 1.0 / dir.x : 1e8,
-				abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
-				abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
-		return hit_box(o, inv, vec3(middle.x - half_w, middle.y - actor_half_depth, 0.0),
-				vec3(middle.x + half_w, middle.y + actor_half_depth, h), t_max);
-	}
-	if (actor_shape >= 3) {
-		// A card standing at its middle, turned to face the light horizontally (a sprite's shadow).
-		float level = length(dir.xy);
-		if (level < 1e-5) {
-			return false;
-		}
-		vec2 along = dir.xy / level;
-		float t = dot(middle - o.xy, along) / level;
-		if (t <= 0.0 || t >= t_max) {
-			return false;
-		}
-		vec3 q = o + dir * t;
-		if (q.z < 0.0 || q.z > h) {
-			return false;
-		}
-		float across = abs(dot(q.xy - middle, vec2(-along.y, along.x)));
-		return across < (actor_shape == 3 ? half_w : figure_half(q.z, h));
+		vec3 half_size = vec3(actor_body.z, actor_body.z, 0.0);
+		return hit_box(o, inv, vec3(actor_body.xy, 0.0) - half_size, vec3(actor_body.xy + half_size.xy, actor_body.w), t_max);
 	}
 	return false;
 }
 
-bool blocked(vec3 o, vec3 dir, float t_max) {
-	vec3 inv = vec3(
-			abs(dir.x) > 1e-8 ? 1.0 / dir.x : 1e8,
-			abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
-			abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
+// Any occluder on o + t·dir, t in (0, t_max). with_actor false: a point on the actor itself.
+// skip_bulb: a lamp's own pole and shade (the bulb inside or just above a box) cast nothing.
+bool blocked_by(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, vec3 bulb) {
+	vec3 inv = inverse_dir(dir);
 	for (int i = 0; i < box_count; i++) {
+		if (skip_own && all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
+			continue;
+		}
 		if (hit_box(o, inv, box_min[i], box_max[i], t_max)) {
 			return true;
 		}
 	}
-	// A point on the actor's body (the actor's light) is not shadowed by the actor itself.
-	if (actor_in_map == 1 && actor_shape > 0 && distance(o.xy, actor_middle()) > actor_body.z + 0.05 && hit_actor(o, dir, t_max)) {
-		return true;
-	}
-	return false;
+	return with_actor && hit_actor(o, dir, inv, t_max);
 }
 
-// 1 when light from direction `dir` (towards the source) reaches p through a sash; `reach`: the ray
-// stops there (a point source: 1), else the shell exit.
-float visible_through(vec3 p, vec3 dir, float reach, out float t_exit) {
-	int face;
-	t_exit = shell_exit(p, dir, face);
-	if (t_exit > reach || (side_walls == 0 && face >= 2) || (front_back == 0 && face < 2) || !through_sash(p + dir * t_exit, face)) {
-		return 0.0;
-	}
-	if (blocked(p, dir, t_exit)) {
-		return 0.0;
-	}
-	float gain = face >= 2 ? side_k : 1.0;
-	if (facing_full <= 0.0 || length(dir.xy) < 1e-4) {
-		return gain;
-	}
-	vec2 normal = face == 0 ? vec2(0.0, -1.0) : (face == 1 ? vec2(0.0, 1.0) : (face == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
-	return gain * smoothstep(0.0, facing_full, dot(normalize(dir.xy), normal));
+bool blocked(vec3 o, vec3 dir, float t_max, bool with_actor) {
+	return blocked_by(o, dir, t_max, with_actor, false, vec3(0.0));
 }
 
 // The surface a world pixel shows: the nearest to the viewer of the floor, the back wall and the
@@ -248,19 +189,26 @@ int room_index(vec2 xd) {
 	return index;
 }
 
-vec3 room_at(vec2 xd) {
-	return room_count > 0 ? room_light[room_index(xd)] : vec3(0.0);
+// The game's ordered dither (Bayer 4×4) on a world pixel, 0..1.
+float bayer4(vec2 px) {
+	int x = int(mod(floor(px.x), 4.0));
+	int y = int(mod(floor(px.y), 4.0));
+	int m[16] = int[](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+	return (float(m[y * 4 + x]) + 0.5) / 16.0;
 }
 
-// Sky through the windows: no grazing fade.
-bool sky_through(vec3 p, vec3 dir) {
-	int face;
-	float t = shell_exit(p, dir, face);
-	return !(side_walls == 0 && face >= 2) && through_sash(p + dir * t, face) && !blocked(p, dir, t);
-}
-
-vec2 vogel(int i, int count) {
+// Sample i of count on a unit disc, the pattern turned by `turn` (radians).
+vec2 vogel(int i, int count, float turn) {
 	float r = sqrt((float(i) + 0.5) / float(count));
-	float a = float(i) * 2.39996;
+	float a = float(i) * 2.39996 + turn;
 	return r * vec2(cos(a), sin(a));
+}
+
+void basis(vec3 axis, out vec3 u, out vec3 v) {
+	u = normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
+	v = cross(axis, u);
+}
+
+vec2 wall_normal(int wall) {
+	return wall == 0 ? vec2(0.0, -1.0) : (wall == 1 ? vec2(0.0, 1.0) : (wall == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
 }

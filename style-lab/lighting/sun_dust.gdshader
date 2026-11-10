@@ -1,14 +1,12 @@
-// PROTOTYPE (ticket 31): dust in the window sun from SunGeometry. Each mote (a RoomLighting dust
-// particle) hangs at a height picked by its random seed (its colour's red, from the initial ramp);
-// it glows when that 3D point sees the sun through a sash past the boxes, so it shows only inside the
-// real beam (the same prism as the patch), and bars, furniture and the actor cut it out. A mote that
-// a box (a partition, furniture: as drawn, cut down) hides from the viewer shows nothing.
+// PROTOTYPE (ticket 36): dust in the window sun. Each mote (a RoomLighting dust particle) hangs at a
+// height picked by its random seed (its colour's red, from the initial ramp); it glows when that 3D
+// point sees the sun through a sash past the occluders (the same test as the floor: furniture, the
+// actor), so it shows only inside the real beam. A mote a drawn box hides from the viewer shows nothing.
 shader_type canvas_item;
 render_mode unshaded, blend_add, world_vertex_coords;
 
-#include "res://lighting/sun_geometry.gdshaderinc"
+#include "res://lighting/light_fn.gdshaderinc"
 
-uniform vec3 source = vec3(0.0, 1.0, 1.0); // towards the sun
 uniform float fade_m = 6.0; // as the beams: fading with the distance from the window
 uniform vec4 dust_color = vec4(1.0, 0.92, 0.8, 0.22);
 uniform float gain = 1.0;
@@ -19,7 +17,6 @@ varying vec3 light_v;
 
 // Something drawn stands between q and the viewer (the line of sight: d + s / kd, z + s).
 bool hidden(vec3 q) {
-	vec3 dir = vec3(0.0, 1.0 / kd, 1.0);
 	vec3 inv = vec3(1e8, kd, 1.0);
 	for (int i = 0; i < box_count; i++) {
 		float top = box_top[i];
@@ -45,11 +42,13 @@ void vertex() {
 	float h = mix(low_m, high_m, COLOR.r);
 	vec3 q = vec3(VERTEX.x / ppm, (VERTEX.y - floor_y + h * ppm) / (ppm * kd), h);
 	light_v = vec3(0.0);
-	if (all(greaterThan(q, shell_min)) && all(lessThan(q, shell_max)) && !hidden(q)) {
-		float t;
-		float lit = visible_through(q, normalize(source), 1e8, t);
-		if (lit > 0.0) {
-			light_v = room_at(q.xy) * lit * exp(-t / fade_m);
+	if (sun_on == 1 && all(greaterThan(q, shell_min)) && all(lessThan(q, shell_max)) && !hidden(q)) {
+		vec3 dir = normalize(sun_dir);
+		int face;
+		float t = shell_exit(q, dir, face);
+		if (face < 2 && sash_at(q + dir * t, face) >= 0 && !blocked(q, dir, t, true)) {
+			float gain_wall = smoothstep(0.0, facing_full, dot(normalize(dir.xy), wall_normal(face)));
+			light_v = room_sun[room_index(q.xy)] * gain_wall * exp(-t / fade_m);
 		}
 	}
 }

@@ -176,8 +176,8 @@ func apply(sun: SunSample, exposure: float) -> void:
 	# Ticket 31: the map lights floor and walls with sky from the geometry; actors keep the pillow's twin.
 	if SunMap.replaces_sky():
 		_sky.enabled = false
-	# Ticket 31: the map lights the actor too (its strip): the twins step aside.
-	if SunMap.enabled and SunMap.actor_map != SunMap.ActorMap.TWINS:
+	# Ticket 36: the buffer lights the actor too (its strip): the twins step aside.
+	if SunMap.enabled:
 		_sky_actor.enabled = false
 		_bounce_actor.enabled = false
 
