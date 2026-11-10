@@ -188,8 +188,23 @@ func _shoot_hours(hours: String) -> void:
 		_on_hour_changed(hour.to_float())
 		for _frame: int in 4:
 			await RenderingServer.frame_post_draw
+		await _walk_path()
 		_save_shot()
 	get_tree().quit()
+
+
+## PROTOTYPE (ticket 36): `--path=x,d;x,d;…` (metres, as --at): before each shot the player steps
+## through these spots, two frames each (the light buffer's window round the actor must leave no trace).
+func _walk_path() -> void:
+	var path: String = _user_args().get("path", "")
+	for spot: String in path.split(";", false):
+		var at: PackedFloat64Array = spot.split_floats(",")
+		if at.size() == 2:
+			_poligon.move_player(Vector2(at[0], at[1]))
+			for _frame: int in 2:
+				await RenderingServer.frame_post_draw
+	for _frame: int in 2:
+		await RenderingServer.frame_post_draw
 
 
 ## PROTOTYPE (ticket 33): `--bench=22`: frames per second at that hour without vsync (3 s after 1 s of
@@ -229,5 +244,6 @@ func _save_shot() -> void:
 	var error: Error = _view.capture().save_png(path)
 	if error == OK:
 		print("Zrzut: ", path)
+		SunMap.dump_buffer(path.get_basename() + ".bufor")
 	else:
 		push_error("Zrzut nieudany (%s): %s" % [error_string(error), path])

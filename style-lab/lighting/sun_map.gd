@@ -100,9 +100,13 @@ var _last_window: Rect2 = Rect2()
 var _away: Array[Vector3] = []
 var _points: Array[Vector3] = []
 var _actor_middle: Vector2 = Vector2.ZERO
+var _sash_points: Array[Vector3] = [] ## Every sash's 4 corners (the sky's sources).
+var _sash_rooms: Array[Rect2] = [] ## The floor (x, d metres) of each sash's room.
+static var _current: SunMap
 
 
 func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, windows: WindowLightProfile) -> void:
+	_current = self
 	profile = windows
 	geometry = data
 	rooms = lit_rooms
@@ -246,6 +250,16 @@ func _material(shader: Shader) -> ShaderMaterial:
 func _set_all(param: StringName, value: Variant) -> void:
 	for material: ShaderMaterial in _materials:
 		material.set_shader_parameter(param, value)
+
+
+## PROTOTYPE (ticket 36): the buffer's raw data (the quality gate compares them byte for byte), if any.
+static func dump_buffer(path: String) -> void:
+	if _current == null or not is_instance_valid(_current) or not enabled:
+		return
+	var image: Image = _current._view.get_texture().get_image()
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file != null:
+		file.store_buffer(image.get_data())
 
 
 ## The hand-made sky pillows step aside for the buffer's sky.
@@ -429,9 +443,28 @@ func _set_sources(toward: Vector3, night_dir: Vector3, sun_on: bool, night_on: b
 		var v: Vector3 = axis.cross(u)
 		for j: Vector2 in [Vector2.ZERO, Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
 			_away.append(-(axis + (u * j.x + v * j.y) * soft))
+	_sash_points.clear()
+	_sash_rooms.clear()
 	for index: int in geometry.sashes.size():
 		for corner: int in 4:
-			_points.append(_sash_corner(index, corner))
+			_sash_points.append(_sash_corner(index, corner))
+		var middle: Vector3 = (_sash_corner(index, 0) + _sash_corner(index, 2)) / 2.0
+		_sash_rooms.append(_room_rect(Vector2(middle.x, middle.y)))
+
+
+## The floor rect (x, d metres) of the room nearest to (x, d), as room_index() in the shader.
+func _room_rect(at: Vector2) -> Rect2:
+	var best: Rect2 = Rect2()
+	var gap: float = INF
+	for room: RoomLighting in rooms.slice(0, MAX_ROOMS):
+		var area: Rect2 = room.global_floor_rect()
+		var low: Vector2 = geometry.ground_m(area.position)
+		var rect: Rect2 = Rect2(low, geometry.ground_m(area.end) - low)
+		var here: float = at.distance_to(at.clamp(rect.position, rect.end))
+		if here < gap:
+			gap = here
+			best = rect
+	return best
 
 
 func _sash_corner(index: int, corner: int) -> Vector3:
@@ -466,6 +499,7 @@ func _process(_delta: float) -> void:
 	_whole.visible = whole
 	_window.visible = not whole and both.has_area()
 	both = both.intersection(Rect2(Vector2.ZERO, Vector2(_rect.size)))
+	both = Rect2(both.position.floor(), (both.end.ceil() - both.position.floor()))
 	_window.position = both.position
 	_window.size = both.size
 
@@ -526,7 +560,9 @@ func _test_box(lows: PackedVector3Array, highs: PackedVector3Array, tops: Packed
 
 
 ## The buffer px the actor's shadow can change: its cylinder's corners and where rays from every source
-## through them leave the shell, projected (the screen is linear in metres: a shadow lies between them).
+## through them leave the shell, each also dropped to the floor and raised to the ceiling (the shadow
+## lies under where a ray meets a wall too: a band along the front edge lagged, the human). The sky:
+## only the sashes of the rooms the actor stands in (a point takes the sky of its own room's sashes).
 func _actor_window() -> Rect2:
 	if actor_shadow == ActorShadow.NONE and test == Test.NONE:
 		return Rect2()
@@ -537,21 +573,25 @@ func _actor_window() -> Rect2:
 		for y: float in [-r, r]:
 			for z: float in [0.0, h]:
 				corners.append(Vector3(_actor_middle.x + x, _actor_middle.y + y, z))
+	var sources: Array[Vector3] = _points.duplicate()
+	var near: Rect2 = Rect2(_actor_middle, Vector2.ZERO).grow(r + 0.3)
+	for index: int in _sash_rooms.size():
+		if sky_other_k > 0.0 or _sash_rooms[index].intersects(near):
+			sources.append_array(_sash_points.slice(index * 4, index * 4 + 4))
+	var exits: Array[Vector3] = []
+	for corner: Vector3 in corners:
+		exits.append(corner)
+		for away: Vector3 in _away:
+			exits.append(_shell_exit(corner, away))
+		for point: Vector3 in sources:
+			var away: Vector3 = corner - point
+			if away.length_squared() > 1e-6:
+				exits.append(_shell_exit(corner, away))
 	var low: Vector2 = Vector2(INF, INF)
 	var high: Vector2 = Vector2(-INF, -INF)
-	for corner: Vector3 in corners:
-		var at: Vector2 = _screen(corner)
-		low = low.min(at)
-		high = high.max(at)
-		for away: Vector3 in _away:
-			at = _screen(_shell_exit(corner, away))
-			low = low.min(at)
-			high = high.max(at)
-		for point: Vector3 in _points:
-			var away: Vector3 = corner - point
-			if away.length_squared() < 1e-6:
-				continue
-			at = _screen(_shell_exit(corner, away))
+	for exit: Vector3 in exits:
+		for z: float in [0.0, geometry.shell_max.z]:
+			var at: Vector2 = _screen(Vector3(exit.x, exit.y, z))
 			low = low.min(at)
 			high = high.max(at)
 	var pad: Vector2 = Vector2(WINDOW_PAD_PX, WINDOW_PAD_PX)
