@@ -3,7 +3,7 @@ id: 35
 title: Jeden model cienia dla postaci i obiektów
 labels: [wayfinder:prototype]
 status: open
-assignee:
+assignee: claude
 blocked_by: []
 ---
 

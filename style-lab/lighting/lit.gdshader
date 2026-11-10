@@ -15,23 +15,13 @@ uniform vec4 map_rect = vec4(0.0, 0.0, 1.0, 1.0); // world px: x, y, width, heig
 uniform vec2 map_size = vec2(1.0); // the house maps' px
 uniform bool is_actor = false;
 uniform vec4 actor_rect = vec4(0.0); // world px of the actor strip's top left, its size
-// Ticket 33: the light the actor takes away, per map, in a window round it (SunMap); size 0: none.
+// Ticket 35: the same maps with the actor in them, every frame, in a window round it (SunMap); the
+// house maps there give way to it, faded in over its edges. Size 0: none.
 uniform sampler2D shadow_sun_map : filter_nearest, repeat_disable;
 uniform sampler2D shadow_lamp_map : filter_nearest, repeat_disable;
 uniform sampler2D shadow_room_map : filter_nearest, repeat_disable;
 uniform vec4 shadow_rect = vec4(0.0); // world px: x, y, width, height
-// The actor's shadow as pixel art (the critic): 0 smooth; else the share of light it takes in this
-// many levels (2: hard; 3: none, half, full), dithered Bayer 4×4 on the world's pixels (dither 1).
-uniform int shadow_levels = 0;
-uniform int shadow_dither = 1;
-
-float bayer4(vec2 p) {
-	int x = int(mod(p.x, 4.0));
-	int y = int(mod(p.y, 4.0));
-	int i = y * 4 + x;
-	int m[16] = int[](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
-	return (float(m[i]) + 0.5) / 16.0;
-}
+const float SHADOW_EDGE = 24.0;
 
 varying vec2 world_pos;
 
@@ -53,19 +43,9 @@ void light() {
 			vec2 sp = floor(world_pos) + 0.5 - shadow_rect.xy;
 			if (shadow_rect.z > 0.0 && all(greaterThanEqual(sp, vec2(0.0))) && all(lessThan(sp, shadow_rect.zw))) {
 				vec2 suv = sp / shadow_rect.zw;
-				vec3 lost = h < 7250.0 ? texture(shadow_sun_map, suv).rgb : (h < 7600.0 ? texture(shadow_lamp_map, suv).rgb : texture(shadow_room_map, suv).rgb);
-				if (shadow_levels >= 2) {
-					float lit_l = max(dot(map, vec3(0.333)), 1e-5);
-					float share = clamp(dot(lost, vec3(0.333)) / lit_l, 0.0, 1.0);
-					float steps = float(shadow_levels - 1);
-					// Dithered only in a band round each step (a full-range dither turned a faint shadow into
-					// sparse dots over a wide area).
-					float t = shadow_dither == 1 ? 0.5 + (bayer4(floor(world_pos)) - 0.5) * 0.6 : 0.5;
-					share = clamp(floor(share * steps + t), 0.0, steps) / steps;
-					map *= 1.0 - share;
-				} else {
-					map = max(map - lost, vec3(0.0));
-				}
+				vec3 near = h < 7250.0 ? texture(shadow_sun_map, suv).rgb : (h < 7600.0 ? texture(shadow_lamp_map, suv).rgb : texture(shadow_room_map, suv).rgb);
+				vec2 edge = min(sp, shadow_rect.zw - sp);
+				map = mix(map, near, smoothstep(0.0, SHADOW_EDGE, min(edge.x, edge.y)));
 			}
 		}
 		LIGHT = vec4(map * COLOR.rgb * LIGHT_ENERGY, LIGHT_COLOR.a);

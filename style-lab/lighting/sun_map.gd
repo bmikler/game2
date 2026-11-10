@@ -101,7 +101,9 @@ static var sky_shadow_soft: float = 0.05
 static var sky_shadow_gradient: float = 0.5
 static var sky_shadow_reach: float = 3.0
 static var sky_shadow_contact: float = 0.5
-static var shadow_look: int = 0 ## 0 smooth, 1 three levels dithered, 2 two levels hard (lit.gdshader).
+static var shadow_look: int = 0 ## 0 smooth, 1 three levels dithered, 2 two levels hard (per source, in the maps).
+## Ticket 35: furniture shadows from lamps longer too (shadow_lamp_length), or that only for the actor.
+static var object_length: bool = true
 static var shadow_gradient_soft: bool = true ## The gradient by softness, not strength (window bars showed through).
 static var shadow_k: float = 0.75 ## The light it takes, × this.
 static var soft_deg: float = 0.8 ## Decided (the human, 2026-11-09).
@@ -410,9 +412,9 @@ func _set_shadow_views() -> void:
 	if _shadow_views.is_empty():
 		return
 	var ups: Array[bool] = [_sun_up, _lamp_up, _room_lamp_up]
-	var masks: PackedInt32Array = [SHADOW_SUN | SHADOW_SKY, SHADOW_NIGHT, SHADOW_LAMPS]
 	for index: int in _shadow_views.size():
-		var on: bool = _window_on() and ups[index] and (shadow_sources & masks[index]) != 0
+		# The window holds the whole map there (ticket 35), so it runs whenever its map is lit.
+		var on: bool = _window_on() and ups[index]
 		_shadow_views[index].render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	_set_shadow_rect()
 
@@ -422,8 +424,6 @@ func _window_on() -> bool:
 
 
 func _set_shadow_rect() -> void:
-	Lit.set_all(&"shadow_levels", [0, 3, 2][shadow_look])
-	Lit.set_all(&"shadow_dither", 1 if shadow_look == 1 else 0)
 	Lit.set_all(&"shadow_rect", Vector4(_shadow_origin.x, _shadow_origin.y, SHADOW_WIN.x, SHADOW_WIN.y) if _window_on() else Vector4.ZERO)
 
 
@@ -446,6 +446,8 @@ func _set_shadow_sources() -> void:
 		material.set_shader_parameter(&"sky_shadow_reach", sky_shadow_reach)
 		material.set_shader_parameter(&"sky_shadow_contact", sky_shadow_contact)
 		material.set_shader_parameter(&"shadow_k", shadow_k)
+		material.set_shader_parameter(&"shadow_look", shadow_look)
+		material.set_shader_parameter(&"object_length", 1 if object_length else 0)
 
 
 ## Side windows as game1-proto (SideWindowLight, research 47 pattern A): a ribbon per sash from the
@@ -694,6 +696,7 @@ func _set_boxes() -> void:
 	var lows: PackedVector3Array = PackedVector3Array()
 	var highs: PackedVector3Array = PackedVector3Array()
 	var tops: PackedFloat32Array = PackedFloat32Array()
+	var objects: PackedInt32Array = PackedInt32Array()
 	var shown: PackedFloat32Array = geometry.shown_tops()
 	if shown != _shown_tops:
 		_shown_tops = shown
@@ -710,6 +713,7 @@ func _set_boxes() -> void:
 		lows.append(box.position)
 		highs.append(box.end)
 		tops.append(shown[index])
+		objects.append(0 if partition else 1)
 	var shape: int = int(actor_shadow) if is_instance_valid(actor) else 0
 	var body: Vector4 = Vector4.ZERO
 	var half_depth: float = ACTOR_SIZE_M.y / 2.0
@@ -726,11 +730,13 @@ func _set_boxes() -> void:
 	lows.resize(SunGeometry.MAX_BOXES + 1)
 	highs.resize(SunGeometry.MAX_BOXES + 1)
 	tops.resize(SunGeometry.MAX_BOXES + 1)
+	objects.resize(SunGeometry.MAX_BOXES + 1)
 	for material: ShaderMaterial in _materials:
 		material.set_shader_parameter(&"box_count", count)
 		material.set_shader_parameter(&"box_min", lows)
 		material.set_shader_parameter(&"box_max", highs)
 		material.set_shader_parameter(&"box_top", tops)
+		material.set_shader_parameter(&"box_object", objects)
 		material.set_shader_parameter(&"actor_shape", shape)
 		material.set_shader_parameter(&"actor_body", body)
 		material.set_shader_parameter(&"actor_half_depth", half_depth)

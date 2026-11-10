@@ -32,8 +32,8 @@ uniform int soft_count = 1;
 uniform float soft_radius = 0.0; // sun: tan of the disc's angle; lamp: metres
 uniform float wall_max = 1.5; // a wall facing a low sun gets at most this × the floor's light
 // Sky light through the windows (the sun map only): the form factor of every sash's glass seen from the
-// point (Lambert's polygon formula: smooth, no noise), each sash dimmed by how many of SKY_RAYS rays to
-// its glass a box cuts; over sky_ref (the factor by a window gives the room's sky light).
+// point (Lambert's polygon formula: smooth, no noise), each sash dimmed by how many of 4 rays to its
+// glass architecture cuts; over sky_ref (the factor by a window gives the room's sky light).
 uniform int sky_count = 0; // > 0: on
 uniform float sky_ref = 0.25;
 uniform vec3 room_sky[4];
@@ -66,63 +66,166 @@ uniform float actor_bounce = 0.3; // the floor's light at the feet bounced up, �
 uniform float actor_gain = 1.0;
 uniform float actor_sky_k = 1.0; // the sky through the glass on the body, × this (by a bottom window: too bright, the human)
 uniform float actor_lamp_k = 0.7; // the rooms' lamps on the body, × this (a round body: part faces away)
+
+// ---- Ticket 35: one shadow model for every object (box_object 1) and the actor ----
+// Every occluder casts by the same rules (ticket 33's preset A4, first made for the actor), each
+// measured from the occluder's base point nearest to the shadowed point (no anchor in its middle: a
+// wide box's shadow stays parallel along it and widens past its corners):
+// - a lamp counts shadow_stretch times farther from that point (a shorter, slower-widening shadow),
+//   its shadow shadow_lamp_length times longer (the point drawn back towards the occluder);
+// - the sun counts as a point shadow_sun_point m from it (0: parallel), so its shadow widens;
+// - the source's angle shadow_angle grows away from the occluder (shadow_gradient: × 1 + 4·g at
+//   shadow_fade_m), a soft far end;
+// - the sky: rays to a grid over each glass, every occluder taking sky_shadow_k of what it covers,
+//   fading out by sky_shadow_reach m from it, plus a contact oval of sky taken round its base.
+// Architecture (partitions, lintels, the shell, the window bars) stays hard as it was.
+// The map holds the light left per source; the look (smooth, 3 levels dithered, 2 hard) quantizes each
+// source's share taken (the sun, the sky, each lamp) apart, on the world's pixels.
 // The actor's shadow window (ticket 33): right of the actor strip (x from house_w + actor_strip.x), a
-// window of shadow_size px whose top left is shadow_origin (world px) holds the light the actor takes
-// away from each surface point (lit.gdshader subtracts it from this map). Which of this map's lights
-// it takes: bit 1 the direct light (the sun; the night map: its light), 2 the sky, 4 the rooms' lamps.
+// window of shadow_size px whose top left is shadow_origin (world px) holds the same map with the
+// actor in it, every frame (lit.gdshader takes it there instead of the house map). shadow_sources:
+// which of this map's lights the actor shadows: bit 1 the direct light, 2 the sky, 4 the rooms' lamps.
 uniform vec2 shadow_origin = vec2(0.0);
 uniform vec2 shadow_size = vec2(0.0);
 uniform int shadow_sources = 0;
-// One softness for every source (the human: the window's shadow blurred, the lamp's sharp): the
-// source's radius as seen from the shadowed point, tan of its angle.
 uniform float shadow_angle = 0.03;
-// A lamp counts this many times farther (and higher) from the actor's feet along the same line: its
-// shadow widens slower and ends (a bulb below the head cast an endless fan, the human).
 uniform float shadow_stretch = 3.0;
 uniform int shadow_samples = 16;
-// The window's (far) light for the actor's shadow as a point this far from the feet along its
-// direction (0: parallel): its shadow widens like a lamp's (the human: that looks better).
 uniform float shadow_sun_point = 0.0;
-// A lamp's shadow this many times longer, not wider: the shadowed point drawn back towards the feet
-// along the lamp's direction before the test.
 uniform float shadow_lamp_length = 1.0;
-// Gradient (the critic): 0 even; 1 darker by the feet (× 1 + 0.4·g) fading to × (1 − 0.8·g) at
-// shadow_fade_m from the feet (on the floor; up a wall its height counts too).
 uniform float shadow_gradient = 0.0;
 uniform float shadow_fade_m = 2.5;
-// 0: the gradient fades the strength (a window bar's full shadow showed through the faded part, the
-// human); 1: the shadow keeps its strength and grows softer away from the feet (the source's angle up
-// to × 1 + 4·gradient at shadow_fade_m), as a big source's shadow does.
-uniform int shadow_gradient_soft = 1;
-// The sky's shadow, its own settings (the human: a separate preset): strength, softness (radians on
-// the glass's angular edges), its gradient by softness, a reach (fading out by then, m from the feet)
-// and the contact: the sky taken in an oval under the feet (× this), as ambient occlusion.
+uniform float shadow_k = 1.0; // the share an occluder takes, × this
+uniform int object_length = 1; // 0: the lamp's longer shadow (shadow_lamp_length) for the actor only
 uniform float sky_shadow_k = 0.6;
-uniform float sky_shadow_soft = 0.05;
-uniform float sky_shadow_gradient = 0.5;
 uniform float sky_shadow_reach = 3.0;
 uniform float sky_shadow_contact = 0.5;
+uniform int sky_grid = 4; // rays per glass: sky_grid × sky_grid
+uniform int shadow_look = 0; // 0 smooth, 1 three levels dithered, 2 two levels hard
 
-// The source's angle for the actor's shadow at o (see shadow_gradient_soft).
-float shadow_angle_at(vec3 o) {
-	if (shadow_gradient_soft == 0) {
-		return shadow_angle;
-	}
-	float from_feet = length(o.xy - actor_middle()) + o.z;
-	return shadow_angle * (1.0 + 4.0 * shadow_gradient * smoothstep(0.0, shadow_fade_m, from_feet));
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = y * 4 + x;
+	int m[16] = int[](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+	return (float(m[i]) + 0.5) / 16.0;
 }
 
-// o for the actor test, its distance from the feet away from the light (flat dir towards it) ÷ k.
-vec3 shadow_pull(vec3 o, vec2 towards, float k) {
-	vec2 away = -normalize(towards);
-	vec2 rel = o.xy - actor_middle();
-	float along = dot(rel, away);
-	if (along <= 0.0 || k <= 1.0) {
-		return o;
+// The share of a source the occluders take, as the look shows it (px: the world pixel).
+float look_share(float share, vec2 px) {
+	share = clamp(share, 0.0, 1.0);
+	if (shadow_look == 0) {
+		return share;
 	}
-	return vec3(o.xy + away * (along / k - along), o.z);
+	float steps = shadow_look == 1 ? 2.0 : 1.0;
+	// Dithered only in a band round each step (a full-range dither turned a faint shadow into sparse
+	// dots over a wide area).
+	float t = shadow_look == 1 ? 0.5 + (bayer4(floor(px)) - 0.5) * 0.6 : 0.5;
+	return clamp(floor(share * steps + t), 0.0, steps) / steps;
 }
-uniform float shadow_k = 1.0;
+
+vec3 any_side(vec3 axis) {
+	return normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
+}
+
+// Occluder i (-1: the actor): its base point nearest to o (x, d, its base z); gap: how far o is from it.
+vec3 occluder_anchor(int i, vec3 o, out float gap) {
+	if (i < 0) {
+		vec2 middle = actor_middle();
+		vec2 rel = o.xy - middle;
+		float len = length(rel);
+		float r = actor_body.z;
+		vec2 a = len > r ? middle + rel / len * r : o.xy;
+		gap = length(vec2(max(len - r, 0.0), max(o.z, 0.0)));
+		return vec3(a, 0.0);
+	}
+	vec3 lo = box_min[i];
+	vec3 hi = box_max[i];
+	vec2 a = clamp(o.xy, lo.xy, hi.xy);
+	gap = length(vec2(distance(o.xy, a), max(o.z - lo.z, 0.0)));
+	return vec3(a, lo.z);
+}
+
+bool occluder_hit(int i, vec3 ro, vec3 rd, float reach) {
+	if (i < 0) {
+		return hit_actor(ro, rd, reach);
+	}
+	vec3 inv = vec3(
+			abs(rd.x) > 1e-8 ? 1.0 / rd.x : 1e8,
+			abs(rd.y) > 1e-8 ? 1.0 / rd.y : 1e8,
+			abs(rd.z) > 1e-8 ? 1.0 / rd.z : 1e8);
+	return hit_box(ro, inv, box_min[i], box_max[i], reach);
+}
+
+// A lamp's own pole and shade (the bulb inside or just above it) cast nothing.
+bool own_fixture(int i, vec3 bulb) {
+	return all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)));
+}
+
+// Which of shadow_samples samples of the source occluder i hides from o, as bits (point 1: a bulb at
+// src; 0: a far light towards src).
+int occluder_mask(int i, vec3 o, vec3 src, int point) {
+	float gap;
+	vec3 a = occluder_anchor(i, o, gap);
+	vec3 ro = o;
+	vec3 to;
+	float reach = 1.0;
+	bool parallel = false;
+	if (point == 1) {
+		if (i < 0 || object_length == 1) {
+			// Drawn back towards the occluder along the lamp's direction: the shadow longer, not wider.
+			vec2 away = src.xy - a.xy;
+			float level = length(away);
+			if (level > 1e-4 && shadow_lamp_length > 1.0) {
+				away = -away / level;
+				float along = dot(o.xy - a.xy, away);
+				if (along > 0.0) {
+					ro = vec3(o.xy + away * (along / shadow_lamp_length - along), o.z);
+				}
+			}
+		}
+		to = a + (src - a) * shadow_stretch - ro;
+	} else if (shadow_sun_point > 0.0) {
+		to = a + normalize(src) * shadow_sun_point - o;
+	} else {
+		to = normalize(src);
+		reach = 1e8;
+		parallel = true;
+	}
+	float d = length(to);
+	vec3 axis = to / max(d, 1e-5);
+	vec3 u = any_side(axis);
+	vec3 v = cross(axis, u);
+	float angle = shadow_angle * (1.0 + 4.0 * shadow_gradient * smoothstep(0.0, shadow_fade_m, gap));
+	float spread = angle * (parallel ? 1.0 : d);
+	int mask = 0;
+	for (int s = 0; s < shadow_samples; s++) {
+		vec2 j = vogel(s, shadow_samples) * spread;
+		if (occluder_hit(i, ro, to + u * j.x + v * j.y, reach)) {
+			mask |= 1 << s;
+		}
+	}
+	return mask;
+}
+
+// The share of the source the occluders (with_actor: and the actor) hide from o.
+float occluders_share(vec3 o, vec3 src, int point, bool with_actor) {
+	int mask = 0;
+	if (with_actor && actor_shape > 0) {
+		mask = occluder_mask(-1, o, src, point);
+	}
+	for (int i = 0; i < box_count; i++) {
+		if (box_object[i] == 0 || (point == 1 && own_fixture(i, src))) {
+			continue;
+		}
+		mask |= occluder_mask(i, o, src, point);
+	}
+	int hits = 0;
+	for (int s = 0; s < shadow_samples; s++) {
+		hits += (mask >> s) & 1;
+	}
+	return float(hits) / float(shadow_samples);
+}
 
 vec3 sash_corner(int i, int k) {
 	vec4 s = sashes[i];
@@ -135,102 +238,204 @@ vec3 sash_corner(int i, int k) {
 	return vec3(shell_max.x, u, z);
 }
 
+// Sash i's sky at o (normal n) before any object: its form factor, the architecture's cut, the room,
+// the sun's side, the glow.
+float sash_sky(int i, vec3 o, vec3 n, int own, out vec3 c[4], out bool usable) {
+	usable = false;
+	for (int k = 0; k < 4; k++) {
+		c[k] = sash_corner(i, k);
+	}
+	if (sky_side == 0 && sash_wall[i] >= 2) {
+		return 0.0;
+	}
+	vec3 middle = (c[0] + c[2]) / 2.0;
+	float other = room_index(middle.xy) == own ? 1.0 : sky_other_k;
+	if (other <= 0.0) {
+		return 0.0;
+	}
+	float f = 0.0;
+	for (int k = 0; k < 4; k++) {
+		vec3 a = normalize(c[k] - o);
+		vec3 b = normalize(c[(k + 1) % 4] - o);
+		vec3 g = cross(a, b);
+		float len = length(g);
+		if (len > 1e-6) {
+			f += acos(clamp(dot(a, b), -1.0, 1.0)) * dot(n, g / len);
+		}
+	}
+	f = abs(f) / 6.2832;
+	// Every wall alike (the human: the back windows lit the floor less than the others).
+	f = sky_ref * pow(f / sky_ref, front_gamma);
+	if (f < 1e-4) {
+		return 0.0;
+	}
+	float open = 0.0;
+	for (int k = 0; k < 4; k++) {
+		vec3 to = mix(middle, c[k], 0.6) - o;
+		open += blocked_arch(o, to, 0.999) ? 0.0 : 0.25;
+	}
+	int w = sash_wall[i];
+	vec2 normal = w == 0 ? vec2(0.0, -1.0) : (w == 1 ? vec2(0.0, 1.0) : (w == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
+	float towards = max(0.2, 1.0 + dot(normal, sky_sun));
+	usable = open > 0.0;
+	return f * open * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
+}
+
+// Sky at o (normal n): x the sky with no object, y the share of it the occluders take (with the look).
+vec2 sky_light(vec3 o, vec3 n, bool with_actor, vec2 px) {
+	int own = room_index(o.xy);
+	// Each occluder's weight (its reach) and whether it can stand between o and any glass at all.
+	float weight[65];
+	float total = 0.0;
+	float taken = 0.0;
+	float contact = 0.0;
+	int count = box_count + 1;
+	for (int i = 0; i < count; i++) {
+		int id = i < box_count ? i : -1;
+		weight[i] = 0.0;
+		if ((id >= 0 && box_object[id] == 0) || (id < 0 && !(with_actor && actor_shape > 0))) {
+			continue;
+		}
+		float gap;
+		occluder_anchor(id, o, gap);
+		weight[i] = sky_shadow_k * (1.0 - smoothstep(0.5 * sky_shadow_reach, sky_shadow_reach, gap));
+		// Contact: an oval of sky taken round its base, on the floor (as ambient occlusion).
+		if (o.z < 0.05) {
+			float g;
+			if (id < 0) {
+				g = length((o.xy - actor_middle()) * vec2(1.0, 1.6)) - actor_body.z;
+			} else {
+				vec2 rel = o.xy - clamp(o.xy, box_min[id].xy, box_max[id].xy);
+				g = box_min[id].z < 0.05 ? length(rel * vec2(1.0, 1.6)) : 1e3;
+			}
+			contact = max(contact, sky_shadow_contact * (1.0 - smoothstep(-0.05, 0.32, g)));
+		}
+	}
+	float step_k = 1.0 / float(sky_grid);
+	for (int i = 0; i < sash_count; i++) {
+		vec3 c[4];
+		bool usable;
+		float s = sash_sky(i, o, n, own, c, usable);
+		if (!usable || s <= 0.0) {
+			continue;
+		}
+		total += s;
+		// The glass's bounds with o: an occluder outside them cannot cut a ray to it.
+		vec3 lo = min(min(o, c[0]), min(min(c[1], c[2]), c[3]));
+		vec3 hi = max(max(o, c[0]), max(max(c[1], c[2]), c[3]));
+		float hidden = 0.0;
+		for (int gx = 0; gx < sky_grid; gx++) {
+			for (int gy = 0; gy < sky_grid; gy++) {
+				vec2 uv = (vec2(float(gx), float(gy)) + 0.5) * step_k;
+				vec3 q = mix(mix(c[0], c[1], uv.x), mix(c[3], c[2], uv.x), uv.y);
+				vec3 to = q - o;
+				float ray = 0.0;
+				for (int k = 0; k < count; k++) {
+					if (weight[k] <= ray) {
+						continue;
+					}
+					int id = k < box_count ? k : -1;
+					if (id >= 0 && (any(greaterThan(box_min[id], hi)) || any(lessThan(box_max[id], lo)))) {
+						continue;
+					}
+					if (occluder_hit(id, o, to, 0.999)) {
+						ray = weight[k];
+					}
+				}
+				hidden += ray;
+			}
+		}
+		taken += s * hidden * step_k * step_k;
+	}
+	if (total <= 0.0) {
+		return vec2(0.0);
+	}
+	float share = max(taken / total, contact);
+	return vec2(total, look_share(min(share * shadow_k, 1.0), px));
+}
+
+// The old sky share (the actor's body: every box hard, no look).
 float sky_share(vec3 o, vec3 n) {
 	float total = 0.0;
 	int own = room_index(o.xy);
 	for (int i = 0; i < sash_count; i++) {
-		if (sky_side == 0 && sash_wall[i] >= 2) {
-			continue;
-		}
-		float f = 0.0;
 		vec3 c[4];
-		for (int k = 0; k < 4; k++) {
-			c[k] = sash_corner(i, k);
-		}
-		for (int k = 0; k < 4; k++) {
-			vec3 a = normalize(c[k] - o);
-			vec3 b = normalize(c[(k + 1) % 4] - o);
-			vec3 g = cross(a, b);
-			float len = length(g);
-			if (len > 1e-6) {
-				f += acos(clamp(dot(a, b), -1.0, 1.0)) * dot(n, g / len);
-			}
-		}
-		f = abs(f) / 6.2832;
-		// Every wall alike (the human: the back windows lit the floor less than the others).
-		f = sky_ref * pow(f / sky_ref, front_gamma);
-		if (f < 1e-4) {
+		bool usable;
+		float s = sash_sky(i, o, n, own, c, usable);
+		if (!usable || s <= 0.0) {
 			continue;
 		}
 		vec3 middle = (c[0] + c[2]) / 2.0;
 		float open = 0.0;
 		for (int k = 0; k < 4; k++) {
-			vec3 to = mix(middle, c[k], 0.6) - o;
-			open += blocked(o, to, 0.999) ? 0.0 : 0.25;
+			open += blocked(o, mix(middle, c[k], 0.6) - o, 0.999) ? 0.0 : 0.25;
 		}
-		float other = room_index(middle.xy) == own ? 1.0 : sky_other_k;
-		int w = sash_wall[i];
-		vec2 normal = w == 0 ? vec2(0.0, -1.0) : (w == 1 ? vec2(0.0, 1.0) : (w == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
-		float towards = max(0.2, 1.0 + dot(normal, sky_sun));
-		total += f * open * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
+		total += s * open;
 	}
 	return total;
 }
 
 // Blocked between o and the bulb at o + dir (t 0..1), past boxes holding the bulb (its lamp's own).
-bool blocked_lamp(vec3 o, vec3 dir, vec3 bulb) {
+// arch: architecture only (the shared model shades the rest).
+bool blocked_lamp(vec3 o, vec3 dir, vec3 bulb, bool arch) {
 	vec3 inv = vec3(
 			abs(dir.x) > 1e-8 ? 1.0 / dir.x : 1e8,
 			abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
 			abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
 	for (int i = 0; i < box_count; i++) {
-		// The lamp's own pole and shade (the bulb inside or just above it) cast nothing.
-		if (all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
+		if ((arch && box_object[i] == 1) || own_fixture(i, bulb)) {
 			continue;
 		}
 		if (hit_box(o, inv, box_min[i], box_max[i], 0.999)) {
 			return true;
 		}
 	}
-	if (actor_in_map == 1 && actor_shape > 0 && distance(o.xy, actor_middle()) > actor_body.z + 0.05 && hit_actor(o, dir, 0.999)) {
+	if (!arch && actor_in_map == 1 && actor_shape > 0 && distance(o.xy, actor_middle()) > actor_body.z + 0.05 && hit_actor(o, dir, 0.999)) {
 		return true;
 	}
 	return false;
 }
 
-vec3 room_lamp_one(int i, vec3 o, vec3 n) {
-	{
-		vec3 bulb = room_lamps[i];
-		vec3 to = bulb - o;
-		float d = length(to);
-		float reach = room_lamp_reach[i];
-		float facing = dot(n, to / max(d, 1e-4));
-		if (d > reach || facing <= 0.0) {
-			return vec3(0.0);
-		}
-		float h = bulb.z;
-		// At most twice the floor under it (a bulb by a wall burnt a hot spot), a shade sending most
-		// of it down (sideways shade_side, up a little).
-		float down = (bulb.z - o.z) / max(d, 1e-4);
-		float shade = mix(shade_up, 1.0, smoothstep(-0.3, 0.7, down));
-		float e = h * h / max(d * d, h * h * 0.5) * facing * shade * (1.0 - smoothstep(0.55 * reach, reach, d));
-		vec3 axis = to / d;
-		vec3 u = normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
-		vec3 v = cross(axis, u);
-		float seen = 0.0;
-		for (int k = 0; k < lamp_soft; k++) {
-			vec2 j = vogel(k, lamp_soft) * lamp_size * 0.5;
-			vec3 spot = bulb + u * j.x + v * j.y;
-			seen += blocked_lamp(o, spot - o, bulb) ? 0.0 : 1.0;
-		}
-		return room_lamp_color[i] * e * seen / float(lamp_soft);
+// Lamp i on o (normal n). shared: the shared model (architecture hard, occluders soft, the look); else
+// every box hard (the actor's body).
+vec3 room_lamp_one(int i, vec3 o, vec3 n, bool shared, bool with_actor, vec2 px) {
+	vec3 bulb = room_lamps[i];
+	vec3 to = bulb - o;
+	float d = length(to);
+	float reach = room_lamp_reach[i];
+	float facing = dot(n, to / max(d, 1e-4));
+	if (d > reach || facing <= 0.0) {
+		return vec3(0.0);
 	}
+	float h = bulb.z;
+	// At most twice the floor under it (a bulb by a wall burnt a hot spot), a shade sending most
+	// of it down (sideways shade_side, up a little).
+	float down = (bulb.z - o.z) / max(d, 1e-4);
+	float shade = mix(shade_up, 1.0, smoothstep(-0.3, 0.7, down));
+	float e = h * h / max(d * d, h * h * 0.5) * facing * shade * (1.0 - smoothstep(0.55 * reach, reach, d));
+	vec3 axis = to / d;
+	vec3 u = any_side(axis);
+	vec3 v = cross(axis, u);
+	float seen = 0.0;
+	for (int k = 0; k < lamp_soft; k++) {
+		vec2 j = vogel(k, lamp_soft) * lamp_size * 0.5;
+		vec3 spot = bulb + u * j.x + v * j.y;
+		seen += blocked_lamp(o, spot - o, bulb, shared) ? 0.0 : 1.0;
+	}
+	if (seen <= 0.0) {
+		return vec3(0.0);
+	}
+	float left = 1.0;
+	if (shared) {
+		left = 1.0 - look_share(min(occluders_share(o, bulb, 1, with_actor) * shadow_k, 1.0), px);
+	}
+	return room_lamp_color[i] * e * seen / float(lamp_soft) * left;
 }
 
-vec3 room_lamps_light(vec3 o, vec3 n) {
+vec3 room_lamps_light(vec3 o, vec3 n, bool with_actor, vec2 px) {
 	vec3 total = vec3(0.0);
 	for (int i = 0; i < room_lamp_count; i++) {
-		total += room_lamp_one(i, o, n);
+		total += room_lamp_one(i, o, n, true, with_actor, px);
 	}
 	return total;
 }
@@ -243,41 +448,50 @@ vec3 room_lamps_body(vec3 o) {
 		vec3 to = room_lamps[i] - o;
 		vec2 across = to.xy;
 		vec3 n = length(across) > 1e-3 ? vec3(normalize(across), 0.0) : vec3(0.0, 0.0, 1.0);
-		total += room_lamp_one(i, o, n);
+		total += room_lamp_one(i, o, n, false, false, vec2(0.0));
 	}
 	return total;
 }
 
-// The light on surface point p (normal n).
-vec3 light_at(vec3 p, vec3 n) {
+// The light on surface point p (normal n); with_actor: the actor casts here (by shadow_sources).
+vec3 light_at(vec3 p, vec3 n, bool with_actor, vec2 px) {
 	vec3 o = p + n * EPS;
 	if (point_source == 3) {
-		return room_lamps_light(o, n);
+		return room_lamps_light(o, n, with_actor && (shadow_sources & 4) != 0, px);
 	}
+	bool actor_direct = with_actor && (shadow_sources & 1) != 0;
 	if (point_source == 2) {
 		float sum = 0.0;
 		for (int i = 0; i < lamp_count; i++) {
 			float t;
-			sum += visible_through(o, lamps[i] - o, 1.0, t);
+			float seen = visible_through_k(o, lamps[i] - o, 1.0, t, true);
+			if (seen > 0.0) {
+				sum += seen * (1.0 - look_share(min(occluders_share(o, lamps[i], 1, actor_direct) * shadow_k, 1.0), px));
+			}
 		}
 		return room_at(p.xy) * min(sum, 1.0);
 	}
 	vec3 centre = point_source == 1 ? source - o : source;
 	vec3 axis = normalize(centre);
-	vec3 u = normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
+	vec3 u = any_side(axis);
 	vec3 v = cross(axis, u);
 	float sum = 0.0;
 	for (int i = 0; i < soft_count; i++) {
 		vec2 j = soft_count > 1 ? vogel(i, soft_count) * soft_radius : vec2(0.0);
 		vec3 dir = point_source == 1 ? centre + u * j.x + v * j.y : axis + u * j.x + v * j.y;
 		float t;
-		sum += visible_through(o, dir, point_source == 1 ? 1.0 : 1e8, t);
+		sum += visible_through_k(o, dir, point_source == 1 ? 1.0 : 1e8, t, true);
 	}
-	float facing = dot(n, axis) / max(axis.z, 0.05);
-	float lambert = n.z > 0.5 ? 1.0 : clamp(facing, 0.0, wall_max);
-	vec3 lit = room_at(p.xy) * lambert * sum / float(soft_count);
+	vec3 lit = vec3(0.0);
+	if (sum > 0.0) {
+		float facing = dot(n, axis) / max(axis.z, 0.05);
+		float lambert = n.z > 0.5 ? 1.0 : clamp(facing, 0.0, wall_max);
+		float left = 1.0 - look_share(min(occluders_share(o, source, point_source == 1 ? 1 : 0, actor_direct) * shadow_k, 1.0), px);
+		lit = room_at(p.xy) * lambert * sum / float(soft_count) * left;
+	}
 	if (sky_count > 0 && room_count > 0) {
-		lit += room_sky[room_index(p.xy)] * sky_share(o, n) / sky_ref;
+		vec2 sky = sky_light(o, n, with_actor && (shadow_sources & 2) != 0, px);
+		lit += room_sky[room_index(p.xy)] * sky.x * (1.0 - sky.y) / sky_ref;
 	}
 	return lit;
 }
@@ -297,24 +511,25 @@ bool in_doorway(vec3 p, out float x0, out float x1) {
 	return false;
 }
 
-// The floor's light at floor point p (blending the floors on both sides in a doorway).
-vec3 floor_light(vec3 p) {
+// The floor's light at floor point p (blending the floors on both sides in a doorway, the actor's
+// shadow with them: it went on through the doorway, the human).
+vec3 floor_light(vec3 p, bool with_actor, vec2 px) {
 	vec3 n = vec3(0.0, 0.0, 1.0);
 	float x0;
 	float x1;
 	if (in_doorway(p, x0, x1)) {
 		// Blend the floors on both sides (the wall shades the doorway's own floor: a seam, the human).
-		vec3 a = light_at(vec3(x0 - 0.03, p.y, 0.0), n);
-		vec3 b = light_at(vec3(x1 + 0.03, p.y, 0.0), n);
+		vec3 a = light_at(vec3(x0 - 0.03, p.y, 0.0), n, with_actor, px);
+		vec3 b = light_at(vec3(x1 + 0.03, p.y, 0.0), n, with_actor, px);
 		return mix(a, b, clamp((p.x - x0) / max(x1 - x0, 1e-3), 0.0, 1.0));
 	}
-	return light_at(p, n);
+	return light_at(p, n, with_actor, px);
 }
 
 // The light on the actor at strip pixel s (x across, y down; feet at the bottom middle).
 vec3 actor_light(vec2 s) {
 	vec3 feet = vec3(actor_feet, 0.0);
-	vec3 below = floor_light(feet);
+	vec3 below = floor_light(feet, false, vec2(0.0));
 	if (actor_mode == 1) {
 		return below * actor_gain;
 	}
@@ -333,7 +548,7 @@ vec3 actor_light(vec2 s) {
 	} else {
 		vec3 centre = point_source == 1 ? source - o : source;
 		vec3 axis = normalize(centre);
-		vec3 u = normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
+		vec3 u = any_side(axis);
 		vec3 v = cross(axis, u);
 		float sum = 0.0;
 		for (int i = 0; i < soft_count; i++) {
@@ -353,252 +568,18 @@ vec3 actor_light(vec2 s) {
 	vec3 lamps_below = vec3(0.0);
 	if (room_lamp_count > 0) {
 		lit += room_lamps_body(o) * actor_lamp_k;
-		lamps_below = room_lamps_light(feet + vec3(0.0, 0.0, EPS), vec3(0.0, 0.0, 1.0));
+		lamps_below = room_lamps_light(feet + vec3(0.0, 0.0, EPS), vec3(0.0, 0.0, 1.0), false, vec2(0.0));
 	}
 	float up = clamp(z / 1.8, 0.0, 1.0);
 	lit += (below + lamps_below) * actor_bounce * (1.0 - 0.6 * up);
 	return lit * actor_gain;
 }
 
-// The direct light (the sun, the night light) the actor takes from o (normal n).
-vec3 direct_lost(vec3 p, vec3 o, vec3 n) {
-	if (point_source == 2) {
-		float lost = 0.0;
-		for (int i = 0; i < lamp_count; i++) {
-			vec3 to = lamps[i] - o;
-			float t;
-			if (hit_actor(o, to, 1.0) && visible_through(o, to, 1.0, t) > 0.0) {
-				lost += 1.0;
-			}
-		}
-		return room_at(p.xy) * min(lost, 1.0);
+vec3 surface_light(vec3 p, vec3 n, bool with_actor, vec2 px) {
+	if (n.z > 0.5 && p.z < 0.01) {
+		return floor_light(p, with_actor, px);
 	}
-	vec3 centre = point_source == 1 ? source - o : source;
-	vec3 axis = normalize(centre);
-	vec3 u = normalize(abs(axis.z) < 0.99 ? cross(axis, vec3(0.0, 0.0, 1.0)) : cross(axis, vec3(1.0, 0.0, 0.0)));
-	vec3 v = cross(axis, u);
-	float sum = 0.0;
-	int count = shadow_samples;
-	if (point_source == 0 && shadow_sun_point > 0.0) {
-		// A point shadow_sun_point m from the feet towards the light.
-		vec3 point = vec3(actor_middle(), 0.0) + axis * shadow_sun_point;
-		vec3 to = point - o;
-		float dist = length(to);
-		vec3 ax = to / max(dist, 1e-4);
-		vec3 pu = normalize(abs(ax.z) < 0.99 ? cross(ax, vec3(0.0, 0.0, 1.0)) : cross(ax, vec3(1.0, 0.0, 0.0)));
-		vec3 pv = cross(ax, pu);
-		float hits = 0.0;
-		for (int i = 0; i < count; i++) {
-			vec2 j = vogel(i, count) * shadow_angle_at(o) * dist;
-			if (hit_actor(o, to + pu * j.x + pv * j.y, 1.0)) {
-				hits += 1.0;
-			}
-		}
-		if (hits <= 0.0) {
-			return vec3(0.0);
-		}
-		// The window's visibility exactly as the patch has it (its disc samples): by a bar the patch
-		// is half lit, and the shadow takes that half (one ray left the bar's line lit, the human).
-		float seen = 0.0;
-		for (int i = 0; i < soft_count; i++) {
-			vec2 j = soft_count > 1 ? vogel(i, soft_count) * soft_radius : vec2(0.0);
-			float t;
-			seen += visible_through(o, axis + u * j.x + v * j.y, 1e8, t);
-		}
-		sum = hits / float(count) * seen / float(soft_count) * float(count);
-	} else {
-	for (int i = 0; i < count; i++) {
-		vec2 j = vogel(i, count) * shadow_angle_at(o) * (point_source == 1 ? length(centre) : 1.0);
-		vec3 dir = point_source == 1 ? centre + u * j.x + v * j.y : axis + u * j.x + v * j.y;
-		float reach = point_source == 1 ? 1.0 : 1e8;
-		if (!hit_actor(o, dir, reach)) {
-			continue;
-		}
-		float t;
-		sum += visible_through(o, dir, reach, t);
-	}
-	}
-	float facing = dot(n, axis) / max(axis.z, 0.05);
-	float lambert = n.z > 0.5 ? 1.0 : clamp(facing, 0.0, wall_max);
-	return room_at(p.xy) * lambert * sum / float(count);
-}
-
-// The overlap of [a0, a1] with [b0, b1].
-float span_overlap(float a0, float a1, float b0, float b1) {
-	return max(0.0, min(a1, b1) - max(a0, b0));
-}
-
-// As span_overlap with [b0, b1]'s edges ramped over s (the mean of it shrunk, as is and grown).
-float soft_overlap(float a0, float a1, float b0, float b1, float s) {
-	float h = s * 0.5;
-	float inner = b1 - b0 > s ? span_overlap(a0, a1, b0 + h, b1 - h) : 0.0;
-	return (inner + span_overlap(a0, a1, b0, b1) + span_overlap(a0, a1, b0 - h, b1 + h)) / 3.0;
-}
-
-float wrap_angle(float a) {
-	return a - 6.2832 * floor((a + 3.1416) / 6.2832);
-}
-
-// The sky the actor takes from o (ticket 33, second take): per sash, the part of its glass the actor
-// covers seen from o, as the overlap of two angular rectangles (azimuth × elevation: the glass and the
-// actor's cylinder), smooth: 3×3 rays per sash drew a fan of faint sharp cylinders, one per ray (the
-// human). The edges soften by sky_shadow_soft (radians), growing away from the feet by sky_shadow_gradient.
-float sky_lost(vec3 o, vec3 n) {
-	float total = 0.0;
-	int own = room_index(o.xy);
-	vec2 middle_a = actor_middle();
-	vec2 to_a = middle_a - o.xy;
-	float radius = actor_body.z;
-	float da = max(length(to_a), radius + 0.02);
-	float half_az = asin(clamp(radius / da, 0.0, 1.0));
-	float az_a = atan(to_a.y, to_a.x);
-	float el_lo = atan(-o.z, da);
-	float el_hi = atan(actor_body.w - o.z, da);
-	float from_feet = length(o.xy - middle_a) + o.z;
-	float s = sky_shadow_soft * (1.0 + 4.0 * sky_shadow_gradient * smoothstep(0.0, shadow_fade_m, from_feet));
-	for (int i = 0; i < sash_count; i++) {
-		if (sky_side == 0 && sash_wall[i] >= 2) {
-			continue;
-		}
-		vec3 c[4];
-		for (int k = 0; k < 4; k++) {
-			c[k] = sash_corner(i, k);
-		}
-		vec3 middle = (c[0] + c[2]) / 2.0;
-		vec2 to_s = middle.xy - o.xy;
-		// The actor must stand between the point and the glass.
-		if (length(to_s) <= da || dot(to_s, to_a) <= 0.0) {
-			continue;
-		}
-		float az0 = 1e9;
-		float az1 = -1e9;
-		float el0 = 1e9;
-		float el1 = -1e9;
-		for (int k = 0; k < 4; k++) {
-			vec3 d = c[k] - o;
-			float az = wrap_angle(atan(d.y, d.x) - az_a);
-			float el = atan(d.z, length(d.xy));
-			az0 = min(az0, az);
-			az1 = max(az1, az);
-			el0 = min(el0, el);
-			el1 = max(el1, el);
-		}
-		float area = (az1 - az0) * (el1 - el0);
-		if (area < 1e-6) {
-			continue;
-		}
-		float hidden = soft_overlap(az0, az1, -half_az, half_az, s) * soft_overlap(el0, el1, el_lo, el_hi, s) / area;
-		if (hidden <= 0.0) {
-			continue;
-		}
-		// The glass the furniture already hides gives no sky to take (as sky_share: 4 rays).
-		float open = 0.0;
-		for (int k = 0; k < 4; k++) {
-			open += blocked(o, mix(middle, c[k], 0.6) - o, 0.999) ? 0.0 : 0.25;
-		}
-		hidden = min(hidden, 1.0) * open;
-		if (hidden <= 0.0) {
-			continue;
-		}
-		float f = 0.0;
-		for (int k = 0; k < 4; k++) {
-			vec3 a = normalize(c[k] - o);
-			vec3 b = normalize(c[(k + 1) % 4] - o);
-			vec3 g = cross(a, b);
-			float len = length(g);
-			if (len > 1e-6) {
-				f += acos(clamp(dot(a, b), -1.0, 1.0)) * dot(n, g / len);
-			}
-		}
-		f = abs(f) / 6.2832;
-		f = sky_ref * pow(f / sky_ref, front_gamma);
-		float other = room_index(middle.xy) == own ? 1.0 : sky_other_k;
-		int w = sash_wall[i];
-		vec2 normal = w == 0 ? vec2(0.0, -1.0) : (w == 1 ? vec2(0.0, 1.0) : (w == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
-		float towards = max(0.2, 1.0 + dot(normal, sky_sun));
-		total += f * hidden * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
-	}
-	return total;
-}
-
-// The rooms' lamps' light the actor takes from o: as room_lamp_one, only the bulb's spots behind it.
-vec3 room_lamps_lost(vec3 o, vec3 n) {
-	vec3 total = vec3(0.0);
-	for (int i = 0; i < room_lamp_count; i++) {
-		vec3 bulb = room_lamps[i];
-		vec3 to = bulb - o;
-		float d = length(to);
-		float reach = room_lamp_reach[i];
-		float facing = dot(n, to / max(d, 1e-4));
-		if (d > reach || facing <= 0.0) {
-			continue;
-		}
-		// The bulb for the actor's shadow: shifted away from the feet along the same line.
-		vec3 feet = vec3(actor_middle(), 0.0);
-		vec3 far_bulb = feet + (bulb - feet) * shadow_stretch;
-		vec3 o_test = shadow_pull(o, bulb.xy - feet.xy, shadow_lamp_length);
-		vec3 far_to = far_bulb - o_test;
-		float far_d = length(far_to);
-		vec3 far_axis = far_to / max(far_d, 1e-4);
-		vec3 fu = normalize(abs(far_axis.z) < 0.99 ? cross(far_axis, vec3(0.0, 0.0, 1.0)) : cross(far_axis, vec3(1.0, 0.0, 0.0)));
-		vec3 fv = cross(far_axis, fu);
-		float hits = 0.0;
-		for (int k = 0; k < shadow_samples; k++) {
-			vec2 j = vogel(k, shadow_samples) * shadow_angle_at(o) * far_d;
-			if (hit_actor(o_test, far_to + fu * j.x + fv * j.y, 1.0)) {
-				hits += 1.0;
-			}
-		}
-		if (hits <= 0.0) {
-			continue;
-		}
-		// The bulb's visibility as the lamp map has it (its spots), so the shadow takes no more than lit.
-		vec3 la = to / max(d, 1e-4);
-		vec3 lu = normalize(abs(la.z) < 0.99 ? cross(la, vec3(0.0, 0.0, 1.0)) : cross(la, vec3(1.0, 0.0, 0.0)));
-		vec3 lv = cross(la, lu);
-		float seen = 0.0;
-		for (int k = 0; k < lamp_soft; k++) {
-			vec2 j = vogel(k, lamp_soft) * lamp_size * 0.5;
-			vec3 spot = bulb + lu * j.x + lv * j.y;
-			seen += blocked_lamp(o, spot - o, bulb) ? 0.0 : 1.0;
-		}
-		hits *= seen / float(lamp_soft);
-		float h = bulb.z;
-		float down = (bulb.z - o.z) / max(d, 1e-4);
-		float shade = mix(shade_up, 1.0, smoothstep(-0.3, 0.7, down));
-		float e = h * h / max(d * d, h * h * 0.5) * facing * shade * (1.0 - smoothstep(0.55 * reach, reach, d));
-		total += room_lamp_color[i] * e * hits / float(shadow_samples);
-	}
-	return total;
-}
-
-// The light the actor takes from surface point p (normal n), of this map's shadow_sources.
-vec3 lost_at(vec3 p, vec3 n) {
-	vec3 o = p + n * EPS;
-	vec3 lost = vec3(0.0);
-	if ((shadow_sources & 4) != 0 && point_source == 3) {
-		lost += room_lamps_lost(o, n);
-	}
-	if ((shadow_sources & 1) != 0 && point_source != 3) {
-		lost += direct_lost(p, o, n);
-	}
-	float from_feet = length(o.xy - actor_middle()) + o.z;
-	float strength_gradient = shadow_gradient_soft == 0 ? shadow_gradient : 0.0;
-	float k = shadow_k * mix(1.0 + 0.4 * strength_gradient, 1.0 - 0.8 * strength_gradient, smoothstep(0.0, shadow_fade_m, from_feet));
-	lost *= min(k, 1.0);
-	if ((shadow_sources & 2) != 0 && sky_count > 0 && room_count > 0 && point_source != 3) {
-		float sky_k = sky_shadow_k * (1.0 - smoothstep(0.5 * sky_shadow_reach, sky_shadow_reach, from_feet));
-		float sky_taken = sky_lost(o, n) / sky_ref * min(sky_k, 1.0);
-		// Contact (the critic): an oval of sky taken right under the feet, whatever the window's side
-		// (it used to weaken the shadow there, where it is strongest, and the oval sat on its axis).
-		float flat_feet = length((o.xy - actor_middle()) * vec2(1.0, 1.6));
-		float ao = sky_shadow_contact * (1.0 - smoothstep(actor_body.z * 0.8, actor_body.z * 2.2, flat_feet)) * step(o.z, 0.05);
-		if (ao > 0.0) {
-			sky_taken = max(sky_taken, sky_share(o, n) / sky_ref * ao);
-		}
-		lost += room_sky[room_index(p.xy)] * sky_taken;
-	}
-	return lost;
+	return light_at(p, n, with_actor, px);
 }
 
 void fragment() {
@@ -607,22 +588,17 @@ void fragment() {
 	vec3 n;
 	vec3 lit = vec3(0.0);
 	if (local.x >= house_w + actor_strip.x) {
+		// The shadow window: the same map with the actor in it.
 		vec2 s = local - vec2(house_w + actor_strip.x, 0.0);
 		vec2 at = shadow_origin + s;
-		if (shadow_sources != 0 && actor_shape > 0 && s.x < shadow_size.x && s.y < shadow_size.y && surface_at(at, p, n)) {
-			// Fading out by the window's edges (a soft sky shadow cut there showed a hard line).
-			vec2 edge = min(s, shadow_size - s);
-			lit = lost_at(p, n) * smoothstep(0.0, 24.0, min(edge.x, edge.y));
+		if (s.x < shadow_size.x && s.y < shadow_size.y && surface_at(at, p, n)) {
+			lit = surface_light(p, n, actor_shape > 0, at);
 		}
 	} else if (local.x >= house_w) {
 		vec2 s = local - vec2(house_w, 0.0);
 		lit = actor_mode > 0 && s.y < actor_strip.y && s.x < actor_strip.x ? actor_light(s) : vec3(0.0);
 	} else if (surface_at(world, p, n)) {
-		if (n.z > 0.5 && p.z < 0.01) {
-			lit = floor_light(p);
-		} else {
-			lit = light_at(p, n);
-		}
+		lit = surface_light(p, n, actor_in_map == 1 && actor_shape > 0, world);
 	}
 	COLOR = vec4(lit, 1.0);
 }

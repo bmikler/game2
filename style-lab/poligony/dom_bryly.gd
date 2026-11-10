@@ -108,6 +108,7 @@ static var SHADOW_RADIUS_M: PackedFloat32Array = _steps(0.12, 0.4, 0.01)
 static var SHADOW_LENGTH_K: PackedFloat32Array = _steps(1.0, 3.0, 0.1)
 const SHADOW_SUN_POINT_M: PackedFloat32Array = [0.0, 15.0, 12.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5]
 const SHADOW_LOOKS: PackedStringArray = ["gladki", "3 poziomy z ditherem", "2 poziomy twarde"]
+const OBJECT_LENGTHS: PackedStringArray = ["jak postac (A4: dluzszy)", "geometryczna (tylko postac dluzsza)"]
 const GRADIENT_MODES: PackedStringArray = ["sile (szpros przebija)", "miekkosc (pelny cien)"]
 const SHADOW_GRADIENT: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 const SHADOW_GAIN: PackedFloat32Array = [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
@@ -281,7 +282,7 @@ func _add_layout_options() -> void:
 ## The human (ticket 31): only the frame and the clock; the light is the critic's C („Pośredni”).
 ## Ticket 33 (the human: too many sliders to see the options): only the critic's shadow presets and
 ## the shadow's look; the shadow sliders stay hidden (--set= still sets them).
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cienie_krytyk", &"cien_wyglad"]
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cienie_krytyk", &"cien_wyglad", &"meble_dlugosc"]
 const SLIDER_OPTIONS: Array[StringName] = [&"mapa_postac_swiatlo", &"mapa_postac_jasnosc",
 		&"postac_niebo", &"postac_lampy", &"lampy_mapa", &"lampy_jasnosc", &"lampy_rozlewanie", &"noc_okna",
 		&"ambient_dzien", &"ambient_noc", &"ekspozycja_dzien", &"ekspozycja_noc"]
@@ -430,8 +431,12 @@ func _add_sun_map_options() -> void:
 	_darkness_slider(&"niebo_gradient", "Cień nieba: gradient przez miękkość", _steps(0.0, 1.0, 0.1), func(k: float) -> void: SunMap.sky_shadow_gradient = k, 0.5)
 	_darkness_slider(&"niebo_zasieg", "Cień nieba: zasięg od stóp (m)", _steps(0.5, 6.0, 0.25), func(k: float) -> void: SunMap.sky_shadow_reach = k, 3.0)
 	_darkness_slider(&"niebo_kontakt", "Cień nieba: AO pod stopami (owal)", _steps(0.0, 1.0, 0.05), func(k: float) -> void: SunMap.sky_shadow_contact = k, 0.5)
-	DebugRegistry.add_variant(self, &"cien_wyglad", "Cień postaci: wygląd", SHADOW_LOOKS, 0, func(index: int) -> void:
+	DebugRegistry.add_variant(self, &"cien_wyglad", "Cienie: wygląd (postać i meble)", SHADOW_LOOKS, 0, func(index: int) -> void:
 		SunMap.shadow_look = index
+		_refresh_sun())
+	# Ticket 35: the lamps' longer shadow (A4 x1,6) for the furniture too, or for the actor only.
+	DebugRegistry.add_variant(self, &"meble_dlugosc", "Cień mebli od lamp: długość", OBJECT_LENGTHS, 0, func(index: int) -> void:
+		SunMap.object_length = index == 0
 		_refresh_sun())
 	_darkness_slider(&"cien_sila", "Cień postaci: siła", SHADOW_GAIN, func(k: float) -> void: SunMap.shadow_k = k, 0.75)
 	DebugRegistry.add_variant(self, &"plamka", "Plamka pod stopami", BLOBS, 1, func(index: int) -> void:

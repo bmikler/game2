@@ -170,15 +170,33 @@ bool blocked(vec3 o, vec3 dir, float t_max) {
 	return false;
 }
 
+// Ticket 35: 1 for an object (furniture, stairs, a door leaf: soft shadows by the shared model in
+// sun_map.gdshader), 0 for architecture (partitions, lintels: hard, as the shell). Unset: all hard.
+uniform int box_object[64];
+
+// As blocked(), architecture only (the shared model shades the objects and the actor).
+bool blocked_arch(vec3 o, vec3 dir, float t_max) {
+	vec3 inv = vec3(
+			abs(dir.x) > 1e-8 ? 1.0 / dir.x : 1e8,
+			abs(dir.y) > 1e-8 ? 1.0 / dir.y : 1e8,
+			abs(dir.z) > 1e-8 ? 1.0 / dir.z : 1e8);
+	for (int i = 0; i < box_count; i++) {
+		if (box_object[i] == 0 && hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // 1 when light from direction `dir` (towards the source) reaches p through a sash; `reach`: the ray
-// stops there (a point source: 1), else the shell exit.
-float visible_through(vec3 p, vec3 dir, float reach, out float t_exit) {
+// stops there (a point source: 1), else the shell exit. arch: only architecture blocks it.
+float visible_through_k(vec3 p, vec3 dir, float reach, out float t_exit, bool arch) {
 	int face;
 	t_exit = shell_exit(p, dir, face);
 	if (t_exit > reach || (side_walls == 0 && face >= 2) || (front_back == 0 && face < 2) || !through_sash(p + dir * t_exit, face)) {
 		return 0.0;
 	}
-	if (blocked(p, dir, t_exit)) {
+	if (arch ? blocked_arch(p, dir, t_exit) : blocked(p, dir, t_exit)) {
 		return 0.0;
 	}
 	float gain = face >= 2 ? side_k : 1.0;
@@ -187,6 +205,10 @@ float visible_through(vec3 p, vec3 dir, float reach, out float t_exit) {
 	}
 	vec2 normal = face == 0 ? vec2(0.0, -1.0) : (face == 1 ? vec2(0.0, 1.0) : (face == 2 ? vec2(-1.0, 0.0) : vec2(1.0, 0.0)));
 	return gain * smoothstep(0.0, facing_full, dot(normalize(dir.xy), normal));
+}
+
+float visible_through(vec3 p, vec3 dir, float reach, out float t_exit) {
+	return visible_through_k(p, dir, reach, t_exit, false);
 }
 
 // The surface a world pixel shows: the nearest to the viewer of the floor, the back wall and the
