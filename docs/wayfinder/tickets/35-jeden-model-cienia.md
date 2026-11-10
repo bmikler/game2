@@ -2,7 +2,7 @@
 id: 35
 title: Jeden model cienia dla postaci i obiektów
 labels: [wayfinder:prototype]
-status: open
+status: closed
 assignee: claude
 blocked_by: []
 ---
@@ -31,3 +31,7 @@ Kierunek uzgodniony z człowiekiem: **ustawienia postaci (A4) działają na wszy
 4. Każdą wersję najpierw sprawdzić na „2 poziomy twarde” (`--set=` z rozpisanym presetem A4 i `cienie_krytyk=0,cien_wyglad=2`, bo preset A4 przy starcie nadpisuje wygląd), porównać z `main` i dopiero potem pokazać człowiekowi.
 
 Narzędzia: zrzuty `--shots=9.5,12.5,22 --at=3.2,1.6` (przy oknie) i `--at=1.6,1.2` (przy lampie), koszt `--bench=godzina`, wycinek `tools/pomiar/kadr.mjs`, różnica `tools/pomiar/roznica.mjs`. Godot: `C:/Users/bartl/Desktop/repo/game1/tools/godot/Godot_v4.7.2-stable_win64.exe`.
+
+## Resolution
+
+Decyzja (2026-11-10): **jeden model cienia = jedna funkcja światła i jeden bufor dla wszystkiego**, przebudowany czysto, nie łatany. Wersja 2 (gałąź `t35-wersja2`: reguły A4 mierzone od najbliższego punktu przesłony, wygląd per źródło w mapie, okno postaci zastępujące mapę, potem tryb „fizyka: tylko mapa”) też odrzucona przez człowieka: „od podstaw to jest zepsute”. Przyczyny (research `docs/research/81-spojne-cienie-architektura.md`): warstwy światła rysowane na wierzchu poza mapą (języczek drzwi, smugi `BeamCanvas`, wstęgi, kurz), których cień nie przyciemnia; osobna droga postaci (pasek światła, okno cienia mieszane z mapą domu: szwy, cięcia przy oknie i drzwiach); stałe próbki nieba i słońca („palce”, schodki). Makieta 3D w Godot rozważona i odrzucona (rzut ukośny, miękkie cienie jako szum, smugi tylko z mgły wolumetrycznej). Wymagania człowieka: cienie w stylistyce pixel art; plamy okien i smugi z górnych okien zostają (kształt z ticketu 27), ale z cieniem; reguły A4 odpadają (fizyka z wielkością tarczy słońca i żarówki jako pokrętłami). Realizacja i bramka jakości → [Przebudowa światła wnętrza na jeden bufor z cieniami](36-przebudowa-swiatla-jeden-bufor.md). Zrzuty człowieka z wersji 2: `style-lab/shots/dom_parter__zrzut_czlowieka__*.png` (poza repo).
