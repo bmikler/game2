@@ -232,7 +232,7 @@ func _add_sun_map_options() -> void:
 		SunMap.whole_every_frame = index == 1
 		_refresh_sun())
 	_darkness_slider(&"lampy_jasnosc", "Lampy z mapy: jasność", LAMP_STEPS, func(k: float) -> void: SunMap.room_lamp_k = k, 2.0)
-	_darkness_slider(&"postac_jasnosc", "Postać: światło na ciele", ACTOR_STEPS, func(k: float) -> void: SunMap.actor_k = k, 1.5)
+	_darkness_slider(&"postac_jasnosc", "Postać: światło na ciele", ACTOR_STEPS, func(k: float) -> void: SunMap.actor_k = k, 1.0)
 	_darkness_slider(&"lampy_rozlewanie", "Lampy: rozlewanie na pokój (poza plamą)", FILL_STEPS, func(k: float) -> void: RoomLighting.art_fill_k = k, 1.5)
 	_darkness_slider(&"noc_okna", "Noc: zimne światło z okien (śnieg, latarnie)", NIGHT_WINDOW_STEPS, func(k: float) -> void: SunMap.night_window_k = k, 2.0)
 	_darkness_slider(&"ambient_dzien", "Ambient pokoju w dzień", AMBIENT_STEPS, func(k: float) -> void: RoomLighting.day_ambient_k = k, 0.7)

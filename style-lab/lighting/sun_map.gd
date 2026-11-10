@@ -58,7 +58,7 @@ static var side_width: float = 2.0
 static var air_k: float = 1.0
 static var room_lamp_k: float = 1.0
 static var night_window_k: float = 1.0
-static var actor_k: float = 1.6 ## The light on the body (four sides averaged) × this, as the floor beside it.
+static var actor_k: float = 1.0 ## The light on the body (its front, a cylinder seen from the camera) × this.
 ## Variants (F1).
 static var shadow_look: int = 1 ## 0 smooth, 1 three levels dithered, 2 two levels hard.
 static var sun_disc_deg: float = 2.4 ## The sun's disc (radius, degrees): its shadows' softness.

@@ -59,22 +59,21 @@ vec3 surface_light(vec3 p, vec3 n, vec2 px) {
 	return pick(light_parts(p, n, px, true));
 }
 
-// The light on the actor's body at strip pixel s: four sides of a round body on its axis (it does not
-// shadow itself), and the floor's light at its feet bounced up.
+// The light on the actor's body at strip pixel s: the camera sees the body's front (towards +d), a
+// cylinder: each column's normal turns from the front in the middle to the sides at the edges (a back
+// window lights only the rim, the human); it does not shadow itself; the floor's light bounced up.
 vec3 body_light(vec2 s, vec2 world) {
 	float ppm_d = ppm * kd;
 	vec2 feet = vec2(actor_feet_px.x / ppm, (actor_feet_px.y - floor_y) / ppm_d);
 	float z = (strip_size.y - s.y) / ppm;
 	float dx = (s.x - strip_size.x * 0.5) / ppm;
-	vec3 o = vec3(actor_body.x + dx, actor_body.y, max(z, EPS));
-	vec3 sum = vec3(0.0);
-	sum += pick(light_parts(o, vec3(1.0, 0.0, 0.0), world, false));
-	sum += pick(light_parts(o, vec3(-1.0, 0.0, 0.0), world, false));
-	sum += pick(light_parts(o, vec3(0.0, 1.0, 0.0), world, false));
-	sum += pick(light_parts(o, vec3(0.0, -1.0, 0.0), world, false));
+	vec3 o = vec3(actor_body.x + dx, actor_body.y + actor_body.z * 0.5, max(z, EPS));
+	float across = clamp(dx / actor_body.z, -1.0, 1.0);
+	vec3 normal = vec3(across, sqrt(max(1.0 - across * across, 0.0)), 0.0);
+	vec3 lit = pick(light_parts(o, normal, world, false));
 	vec3 below = pick(light_parts(vec3(feet, 0.0), vec3(0.0, 0.0, 1.0), world, false));
 	float up = clamp(z / 1.8, 0.0, 1.0);
-	return (sum / 4.0 + below * actor_bounce * (1.0 - 0.6 * up)) * actor_k;
+	return (lit + below * actor_bounce * (1.0 - 0.6 * up)) * actor_k;
 }
 
 void fragment() {

@@ -252,17 +252,24 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		if (other <= 0.0) {
 			continue;
 		}
+		// Signed by the winding as seen from o (abs() lit a surface facing away from the glass as one
+		// facing it: the front of the actor under a back window, the human); not clipped to the
+		// surface's half space, so a sash half behind it counts in part.
 		float f = 0.0;
+		float winding = 0.0;
+		vec3 towards_glass = normalize(middle - o);
 		for (int k = 0; k < 4; k++) {
 			vec3 a = normalize(c[k] - o);
 			vec3 b = normalize(c[(k + 1) % 4] - o);
 			vec3 g = cross(a, b);
 			float len = length(g);
 			if (len > 1e-6) {
-				f += acos(clamp(dot(a, b), -1.0, 1.0)) * dot(n, g / len);
+				float angle = acos(clamp(dot(a, b), -1.0, 1.0));
+				f += angle * dot(n, g / len);
+				winding += angle * dot(towards_glass, g / len);
 			}
 		}
-		f = abs(f) / 6.2832;
+		f = max(f * sign(winding), 0.0) / 6.2832;
 		// Every wall alike (the human: the back windows lit the floor less than the others).
 		f = sky_ref * pow(f / sky_ref, front_gamma);
 		if (f < 1e-4) {
