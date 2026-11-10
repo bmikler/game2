@@ -4,7 +4,7 @@ title: Brzeg domu w czerni
 labels: [wayfinder:prototype]
 status: open
 assignee:
-blocked_by: [27, 35]
+blocked_by: [27, 35, 36]
 ---
 
 ## Question
@@ -13,4 +13,4 @@ Jak zakończyć dół i boki domu bez ramek, wiszącego w czerni, żeby wygląda
 
 Po ticketcie [Światło okien ze wszystkich ścian i orientacja mapy](27-swiatlo-okien-orientacja.md), bo brzeg zależy od tego, jak pokój jest oświetlony. Kod: `_fade_bottom`, `_fade_side`, `_slab`, `_dither` w `style-lab/poligony/dom_bryly.gd`; ambient w `style-lab/lighting/room_lighting.gd`.
 
-Blokada (człowiek, 2026-11-10): także po [Jeden model cienia dla postaci i obiektów](35-jeden-model-cienia.md) — najpierw jeden rodzaj cieni (gładki albo z ditherem) dla postaci i obiektów; światło pokoju: zestaw krytyka C „Pośredni”, lampy z mapy.
+Blokada (człowiek, 2026-11-10): także po [Jeden model cienia dla postaci i obiektów](35-jeden-model-cienia.md), realizowanym w [Przebudowa światła wnętrza na jeden bufor z cieniami](36-przebudowa-swiatla-jeden-bufor.md) — najpierw jeden rodzaj cieni (gładki albo z ditherem) dla postaci i obiektów; światło pokoju: zestaw krytyka C „Pośredni”, lampy z mapy.

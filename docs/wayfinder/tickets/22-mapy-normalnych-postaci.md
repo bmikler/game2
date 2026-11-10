@@ -4,7 +4,7 @@ title: Mapy normalnych postaci: Pixellab, Laigter czy własny skrypt
 labels: [wayfinder:prototype]
 status: open
 assignee:
-blocked_by: [34]
+blocked_by: [36]
 ---
 
 ## Question
@@ -19,4 +19,4 @@ Porównać na tej samej postaci, w Poligonie w dzień i w nocy, przełączane na
 
 Mierzyć: wygląd pod światłem (ocena człowieka), migotanie w chodzie, koszt na postać (generacje / czas), konwencję osi (Godot: `CanvasTexture.normal_texture`, Y). Wynik: krok 9 Przepisu postaci (i wskazówka dla Przepisu mebli).
 
-**Stan (2026-11-10):** postać jest już oświetlana mapą światła jako bryła (ticket [31](31-dynamiczne-slonce-okien-prototyp.md), sesja 13), ale mapy nie niosą kierunku światła, więc normalne nie miałyby czego użyć. Najpierw decyzja o punkcie B w [Uwagi inżyniera do oświetlenia](34-uwagi-inzyniera-oswietlenie.md) (mapa kierunkowa, N·L w `lit`); bez niej ten ticket nie ma sensu.
+**Stan (2026-11-10):** postać jest już oświetlana mapą światła jako bryła (ticket [31](31-dynamiczne-slonce-okien-prototyp.md), sesja 13), ale mapy nie niosą kierunku światła, więc normalne nie miałyby czego użyć. Najpierw [Przebudowa światła wnętrza na jeden bufor z cieniami](36-przebudowa-swiatla-jeden-bufor.md): czy jedna funkcja światła `light_parts(p, n, …)` daje postaci kierunek światła (uwaga B inżyniera w `docs/research/80-ocena-oswietlenia-inzynier.md`: mapa kierunkowa, N·L w `lit`); bez tego ten ticket nie ma sensu.

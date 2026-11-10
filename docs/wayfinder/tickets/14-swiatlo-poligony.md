@@ -4,7 +4,7 @@ title: Światło w Poligonach: smugi, plama słońca, noc w mieście i poza nim
 labels: [wayfinder:prototype]
 status: open
 assignee:
-blocked_by: [11, 34]
+blocked_by: [11, 36]
 ---
 
 ## Question
@@ -23,4 +23,4 @@ Wnętrze jest rozstrzygnięte: światło okien, drzwi, lamp i kurz w smudze licz
 - pomysły ze stanu ticketu 27 (do oceny, nie decyzje): bez cieni budynków albo tylko jako wariant, błysk w co trzecim oknie, poświata zapalonych okien na śniegu, ciepła krawędź śniegu na dachach i parapetach przy fasadach w cieniu; pytanie człowieka: czy smugi słońca wpadające do okna pokazać na zewnątrz, czy tylko kolor;
 - cień postaci na ulicy wzorem z ticketu [35](35-jeden-model-cienia.md).
 
-Blokada: [Uwagi inżyniera do oświetlenia](34-uwagi-inzyniera-oswietlenie.md), punkt C (jak mapa skaluje się na ulicę: mapa wysokości, kafle, portale) i D (wiele postaci).
+Blokada: [Przebudowa światła wnętrza na jeden bufor z cieniami](36-przebudowa-swiatla-jeden-bufor.md) (model światła i cieni wnętrza, który idzie na ulicę). Do uwzględnienia przy ulicy uwagi inżyniera z `docs/research/80-ocena-oswietlenia-inzynier.md`: C (skala na ulicę: mapa wysokości, kafle, portale, pomiar w ms) i D (wiele postaci, test z 5 NPC).
