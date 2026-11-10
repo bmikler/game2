@@ -382,6 +382,8 @@ func _build_world() -> void:
 	LightingDirector.top_azimuth_deg = TOP_AZIMUTHS[_value(&"gora_mapy")]
 	# Ticket 36: all the light inside from the buffer (SunMap); the hand-made shapes stay off.
 	SunMap.enabled = true
+	LightFixture.map_lamps = true # before the rooms first apply: their hand-made pools never show
+	LightFixture.map_actor = true
 	SideWindowLight.beams = 0
 	SideWindowLight.day_patch = false
 	WindowLight.day_patch = false

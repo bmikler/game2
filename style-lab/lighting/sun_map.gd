@@ -50,7 +50,7 @@ static var sun_scale: float = 0.25 ## Sun and sky (with the side windows' sky th
 static var front_glow: float = 2.0 ## Sky through every sash, × this.
 static var front_gamma: float = 0.7 ## < 1: the far floor gains, by the glass it stays.
 static var sky_dir_k: float = 0.4 ## The sky brighter on the sun's side: × (1 + k·cos).
-static var sky_other_k: float = 0.0 ## Sky through a doorway from another room's window.
+static var sky_other_k: float = 1.0 ## Sky through a doorway from another room's window (ticket 36: shadows cross doorways).
 static var door_k: float = 0.5 ## The street door, an opening, × a window's sky of its size.
 static var side_ribbon_k: float = 0.2
 static var side_reach: float = 1.0
@@ -334,6 +334,8 @@ func apply(sun: SunSample) -> void:
 	_debug.visible = debug_view > 0
 	_set_sources(toward, night_dir, sun_on, night_on)
 	_dirty = true
+	if OS.get_cmdline_user_args().has("--lights"):
+		_debug_lights()
 
 
 ## The rooms' lamps (FixtureDef.map_source) as the function's point sources, at their room's exposure.
@@ -508,14 +510,20 @@ func _process(_delta: float) -> void:
 func _set_boxes() -> void:
 	var lows: PackedVector3Array = PackedVector3Array()
 	var highs: PackedVector3Array = PackedVector3Array()
+	var arch: PackedInt32Array = PackedInt32Array()
 	var tops: PackedFloat32Array = geometry.shown_tops()
 	if tops != _tops:
 		_tops = tops.duplicate()
 		_dirty = true
 	tops = tops.duplicate()
-	for box: AABB in geometry.boxes:
+	for index: int in geometry.boxes.size():
+		var box: AABB = geometry.boxes[index]
 		lows.append(box.position)
 		highs.append(box.end)
+		# Walls, lintels and partitions (no Block, full height or lifted): architecture.
+		var block: Block = geometry.box_blocks[index]
+		var wall: bool = block == null or block.size_m.z >= geometry.shell_max.z - 0.01 or block.lift_m > 0.0
+		arch.append(1 if wall else 0)
 	var shape: int = int(actor_shadow) if is_instance_valid(actor) else 0
 	var feet: Vector2 = geometry.ground_m(actor.global_position) if is_instance_valid(actor) else Vector2.ZERO
 	var height: float = ProjectionConfig.current().actor_height_m
@@ -526,24 +534,26 @@ func _set_boxes() -> void:
 			shape = int(ActorShadow.BOX)
 		Test.BOX_AT_ACTOR:
 			shape = 0
-			_test_box(lows, highs, tops, Vector3(_actor_middle.x - r, _actor_middle.y - r, 0.0), Vector3(_actor_middle.x + r, _actor_middle.y + r, height))
+			_test_box(lows, highs, tops, arch, Vector3(_actor_middle.x - r, _actor_middle.y - r, 0.0), Vector3(_actor_middle.x + r, _actor_middle.y + r, height))
 		Test.BOX_AT_DOOR:
 			if door_sash >= 0:
 				var sash: Vector4 = geometry.sashes[door_sash]
 				var middle: float = (sash.x + sash.y) / 2.0
 				var front: float = geometry.shell_max.y - 0.2
-				_test_box(lows, highs, tops, Vector3(middle - TEST_BOX_M.x / 2.0, front - TEST_BOX_M.y, 0.0), Vector3(middle + TEST_BOX_M.x / 2.0, front, TEST_BOX_M.z))
+				_test_box(lows, highs, tops, arch, Vector3(middle - TEST_BOX_M.x / 2.0, front - TEST_BOX_M.y, 0.0), Vector3(middle + TEST_BOX_M.x / 2.0, front, TEST_BOX_M.z))
 		Test.BOX_AT_WINDOW:
 			for index: int in geometry.sashes.size():
 				if geometry.sash_walls[index] == SunGeometry.Wall.BACK:
 					var middle: float = geometry.sash_middles[index]
 					var back: float = geometry.shell_min.y + 0.3
-					_test_box(lows, highs, tops, Vector3(middle - TEST_BOX_M.x / 2.0, back, 0.0), Vector3(middle + TEST_BOX_M.x / 2.0, back + TEST_BOX_M.y, TEST_BOX_M.z))
+					_test_box(lows, highs, tops, arch, Vector3(middle - TEST_BOX_M.x / 2.0, back, 0.0), Vector3(middle + TEST_BOX_M.x / 2.0, back + TEST_BOX_M.y, TEST_BOX_M.z))
 					break
 	var count: int = lows.size()
 	lows.resize(SunGeometry.MAX_BOXES + 1)
 	highs.resize(SunGeometry.MAX_BOXES + 1)
 	tops.resize(SunGeometry.MAX_BOXES + 1)
+	arch.resize(SunGeometry.MAX_BOXES + 1)
+	_set_all(&"box_arch", arch)
 	_set_all(&"box_count", count)
 	_set_all(&"box_min", lows)
 	_set_all(&"box_max", highs)
@@ -553,10 +563,11 @@ func _set_boxes() -> void:
 
 
 ## An occluder only (not drawn, no receiver).
-func _test_box(lows: PackedVector3Array, highs: PackedVector3Array, tops: PackedFloat32Array, low: Vector3, high: Vector3) -> void:
+func _test_box(lows: PackedVector3Array, highs: PackedVector3Array, tops: PackedFloat32Array, arch: PackedInt32Array, low: Vector3, high: Vector3) -> void:
 	lows.append(low)
 	highs.append(high)
 	tops.append(-1.0)
+	arch.append(0)
 
 
 ## The buffer px the actor's shadow can change: its cylinder's corners and where rays from every source
@@ -637,3 +648,10 @@ func _set_geometry() -> void:
 	_set_all(&"sashes", PackedVector4Array(geometry.sashes))
 	_set_all(&"sash_wall", walls)
 	_set_boxes()
+
+
+func _debug_lights() -> void:
+	for node: Node in get_tree().root.find_children("*", "Light2D", true, false):
+		var light: Light2D = node as Light2D
+		if light.enabled and light.is_visible_in_tree() and light.energy > 0.001:
+			print("SWIATLO ", light.get_path(), " h=", light.get(&"height"), " e=", light.energy, " c=", light.color)

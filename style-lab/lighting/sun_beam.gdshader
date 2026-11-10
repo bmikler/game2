@@ -35,10 +35,7 @@ void fragment() {
 			if (sash_at(q + dir * t, face) != beam_sash) {
 				continue;
 			}
-			al.x += 1.0;
-			if (!blocked(q, dir, t, true)) {
-				al.y += 1.0;
-			}
+			al += ray_al(occlusion(q, dir, t, true, false, vec3(0.0)));
 		}
 	}
 	COLOR = vec4(COLOR.rgb * kept(al, world), 1.0);

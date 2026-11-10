@@ -1,8 +1,8 @@
 // PROTOTYPE (ticket 36): the one light function. Every source (the sun through the sashes, the side
 // windows' ribbons, the sky through every sash and the street door, the night through the windows, the
 // rooms' lamps) is a sum of samples tested against the same occluders (sun_geometry: blocked_by). Per
-// source: arch = what the architecture lets through (shell, sashes), lit = what is left past the
-// occluders; the occluders' share (lit / arch) is the source's visibility, drawn in the look
+// source: arch = what the architecture lets through (shell, sashes, walls, partitions, lintels), lit =
+// what is left past the objects (furniture, stairs, the actor); the occluders' share (lit / arch) is the source's visibility, drawn in the look
 // (smooth, 3 levels dithered, 2 hard) before it scales the source's light. Samples turn per world
 // pixel by the game's Bayer 4×4: the penumbra is the game's dither, fixed in the world.
 
@@ -98,10 +98,7 @@ vec2 far_source(vec3 o, vec3 toward, vec2 px, bool with_actor) {
 		if (facing_full > 0.0 && length(dir.xy) > 1e-4) {
 			gain = smoothstep(0.0, facing_full, dot(normalize(dir.xy), wall_normal(face)));
 		}
-		al.x += gain;
-		if (!blocked(o, dir, t, with_actor)) {
-			al.y += gain;
-		}
+		al += gain * ray_al(occlusion(o, dir, t, with_actor, false, vec3(0.0)));
 	}
 	return al / float(sun_samples);
 }
@@ -157,15 +154,15 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		}
 		float towards = max(0.2, 1.0 + dot(wall_normal(sash_wall[i]), sky_sun));
 		float w = f * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
-		float seen = 0.0;
+		vec2 seen = vec2(0.0);
 		for (int a = 0; a < sky_grid; a++) {
 			for (int b = 0; b < sky_grid; b++) {
 				vec2 at = (vec2(float(a), float(b)) + vec2(jx, jz)) / float(sky_grid);
 				vec3 q = c[0] + (c[1] - c[0]) * at.x + (c[3] - c[0]) * at.y;
-				seen += blocked(o, q - o, 0.999, with_actor) ? 0.0 : 1.0;
+				seen += ray_al(occlusion(o, q - o, 0.999, with_actor, false, vec3(0.0)));
 			}
 		}
-		al += vec2(w, w * seen / cells);
+		al += w * seen / cells;
 	}
 	return al / sky_ref;
 }
@@ -193,13 +190,13 @@ vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		vec3 u;
 		vec3 v;
 		basis(axis, u, v);
-		float seen = 0.0;
+		vec2 seen = vec2(0.0);
 		for (int k = 0; k < lamp_samples; k++) {
 			vec2 j = vogel(k, lamp_samples, turn) * lamp_size * 0.5;
 			vec3 spot = bulb + u * j.x + v * j.y;
-			seen += blocked_by(o, spot - o, 1.0, with_actor, true, bulb) ? 0.0 : 1.0;
+			seen += ray_al(occlusion(o, spot - o, 1.0, with_actor, true, bulb));
 		}
-		total += lamp_color[i] * e * look(seen / float(lamp_samples), px);
+		total += lamp_color[i] * e * seen.x / float(lamp_samples) * kept(seen, px);
 	}
 	return total;
 }
@@ -249,14 +246,14 @@ vec2 ribbon_light(vec3 o, vec2 px, bool with_actor) {
 		}
 		float w = inside * pow(1.0 - t / reach, ribbon_fade) * smoothstep(0.0, ribbon_facing_full, facing);
 		// The real sun rays from the point to the wall: the occluders standing in them.
-		float seen = 0.0;
+		vec2 seen = vec2(0.0);
 		for (int k = 0; k < sun_samples; k++) {
 			vec2 j = vogel(k, sun_samples, turn) * sun_soft;
 			vec3 dir = axis + u * j.x + v * j.y;
 			float to_wall = (wx - o.x) / dir.x;
-			seen += to_wall > 0.0 && blocked(o, dir, to_wall, with_actor) ? 0.0 : 1.0;
+			seen += to_wall > 0.0 ? ray_al(occlusion(o, dir, to_wall, with_actor, false, vec3(0.0))) : vec2(1.0);
 		}
-		al += vec2(w, w * seen / float(sun_samples));
+		al += w * seen / float(sun_samples);
 	}
 	return al * ribbon_gain;
 }

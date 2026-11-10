@@ -16,6 +16,7 @@ uniform int box_count = 0;
 uniform vec3 box_min[64];
 uniform vec3 box_max[64];
 uniform float box_top[64]; // shown top (a receiver), < 0: only an occluder
+uniform int box_arch[64]; // 1: architecture (walls, lintels, partitions): its shadow is not drawn in the look
 uniform int actor_shape = 0; // 0 none, 1 cylinder, 2 box
 uniform vec4 actor_body = vec4(0.0, 0.0, 0.26, 1.8); // middle x, middle d, radius (half width), height
 uniform int room_count = 0;
@@ -128,6 +129,33 @@ bool blocked_by(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, v
 
 bool blocked(vec3 o, vec3 dir, float t_max, bool with_actor) {
 	return blocked_by(o, dir, t_max, with_actor, false, vec3(0.0));
+}
+
+// What stands on o + t·dir, t in (0, t_max): 2 architecture, 1 an object only (furniture, stairs, the
+// actor), 0 nothing. The look quantizes only the objects' share; the architecture's shadow stays as is.
+int occlusion(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, vec3 bulb) {
+	vec3 inv = inverse_dir(dir);
+	int found = 0;
+	for (int i = 0; i < box_count; i++) {
+		if (skip_own && all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
+			continue;
+		}
+		if ((box_arch[i] == 1 || found == 0) && hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+			if (box_arch[i] == 1) {
+				return 2;
+			}
+			found = 1;
+		}
+	}
+	if (found == 0 && with_actor && hit_actor(o, dir, inv, t_max)) {
+		found = 1;
+	}
+	return found;
+}
+
+// arch, lit for one ray: (1, 1) open, (1, 0) an object, (0, 0) architecture.
+vec2 ray_al(int occ) {
+	return occ == 0 ? vec2(1.0) : (occ == 1 ? vec2(1.0, 0.0) : vec2(0.0));
 }
 
 // The surface a world pixel shows: the nearest to the viewer of the floor, the back wall and the
