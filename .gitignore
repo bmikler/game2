@@ -1,0 +1,11 @@
+# Pobrane modele i dane (duże, do odtworzenia)
+zasoby/
+style-lab/tools/orient/venv/
+style-lab/tools/orient/weights/
+style-lab/tools/orient/repo/
+style-lab/tools/orient/__pycache__/
+style-lab/tools/mocap/
+# Cache Godot, zrzuty, kopie zapasowe
+.godot/
+style-lab/shots/
+kopie/

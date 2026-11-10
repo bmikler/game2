@@ -1,0 +1,3 @@
+odrzucone (usuniete): przod_a09_s9000 polar5.2, przod_a11_s9000 polar5.2, tyl_a09_s9000 polar10.9, tyl_a11_s9000 polar13.6, bok_a09_s9001 polar28.0, bok_a09_s9002 polar27.8
+tyl_a13_s9000 polar14.8 (bez przodu)
+przod_a13_s9000..3 polar 14.8/13.9/15.1/14.7 (poniżej 16), tyl_a15_s9000 polar14.8

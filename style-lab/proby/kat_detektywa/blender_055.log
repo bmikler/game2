@@ -1,0 +1,35 @@
+C:\Users\bartl\Desktop\game2\style-lab\tools\blender\wybor_postaci.py:428: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+C:\Users\bartl\Desktop\game2\style-lab\tools\blender\wybor_postaci.py:408: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: Online access preference is not enabled. Not checking if MakeHuman is online.
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[WARN ] material.mhmaterial ....................: Patching input material line to cater for non-normalized key ('bumpTexture', 'bumpmapTexture')
+00:12.250  render           | Saved: 'C:\Users\bartl\Desktop\game2\style-lab\proby\kat_detektywa\sweep\df_055\przod_stoi.png'
+00:12.437  render           | Saved: 'C:\Users\bartl\Desktop\game2\style-lab\proby\kat_detektywa\sweep\df_055\bok_stoi.png'
+00:12.640  render           | Saved: 'C:\Users\bartl\Desktop\game2\style-lab\proby\kat_detektywa\sweep\df_055\tyl_stoi.png'
+	parsing bvh 'C:\\Users\\bartl\\Desktop\\game2\\style-lab\\tools\\mocap\\cmu\\82_09.bvh'...	zero length node found: Hips
+	zero length node found: Spine1
+	zero length node found: LeftHand
+	zero length node found: RightHand
+0.0366
+	importing to blender...Done in 0.3472
+
+pętla: próbki 233..273 (40 kl.)
+Informacje: 82_09: 40 klatek (30 kl./s)
+wzrost w cyklu (podeszwa→czubek głowy): min 1.834 max 1.88 m
+wzrost w cyklu (podeszwa→czubek głowy): min 1.778 max 1.823 m
+GOTOWE C:\Users\bartl\Desktop\game2\style-lab\proby/kat_detektywa/sweep/df_055 0.00 kl./s
+Blender 5.2.3 LTS (hash e13b728c6880 built 2026-10-22 01:37:16)
+OBJ import of 'base.obj' took 9.18 ms
+OBJ import of 'low-poly.obj' took 0.36 ms
+OBJ import of 'eyebrow001.obj' took 0.38 ms
+OBJ import of 'eyelashes01.obj' took 0.47 ms
+OBJ import of 'short02.obj' took 1.43 ms
+OBJ import of 'scruffy_beard.obj' took 1.44 ms
+OBJ import of 'boots_ankle_male.obj' took 1.65 ms
+OBJ import of 'male_casualsuit05.obj' took 2.07 ms
+
+Blender quit

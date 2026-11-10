@@ -1,0 +1,4 @@
+0 slot=<bpy_struct, ActionSlot("OBArmature.001") at 0x0000021E473AE0D8> [('pelvis', [1.0, -0.0, 0.01, -0.02]), ('spine_01', [1.0, -0.0, -0.0, 0.0])]
+10 slot=<bpy_struct, ActionSlot("OBArmature.001") at 0x0000021E473AE0D8> [('pelvis', [1.0, 0.0, 0.0, -0.0]), ('spine_01', [1.0, -0.0, 0.0, 0.0])]
+20 slot=<bpy_struct, ActionSlot("OBArmature.001") at 0x0000021E473AE0D8> [('pelvis', [1.0, -0.0, -0.01, 0.03]), ('spine_01', [1.0, -0.0, 0.0, -0.0])]
+30 slot=<bpy_struct, ActionSlot("OBArmature.001") at 0x0000021E473AE0D8> [('pelvis', [1.0, -0.0, -0.0, 0.0]), ('spine_01', [1.0, 0.0, -0.0, 0.0])]

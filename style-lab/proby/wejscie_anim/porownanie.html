@@ -1,0 +1,49 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wejście do animacji</title>
+<style>
+:root{--bg:#1d2026;--card:#2a2e36;--fg:#e6e8ec;--dim:#9aa1ad;--acc:#7fb0ff}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px}p{color:var(--dim);margin:4px 0}
+.ctl{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+figure{margin:0;background:var(--card);border-radius:8px;padding:8px;width:260px}
+figure.ref{outline:1px dashed #555}
+.stage{position:relative;height:360px;display:flex;justify-content:center;align-items:flex-end;background:#c9cbcf;border-radius:4px;overflow:hidden}
+.stage img{height:340px;position:absolute;bottom:8px;left:50%;transform:translateX(-50%)}
+.stage img.ghost{opacity:0;mix-blend-mode:multiply}
+.flip .ref .stage img,.flip .ghost{transform:translateX(-50%) scaleX(-1)}
+.sprite{display:flex;justify-content:center;background:#3a3f48;margin-top:8px;border-radius:4px}
+.sprite img{width:240px;height:240px;image-rendering:pixelated}
+figcaption{margin-top:6px;font-weight:600}figcaption small{display:block;font-weight:400;color:var(--dim);word-break:break-all}
+figcaption small.kat{color:var(--acc)}
+.sets{display:flex;gap:16px;flex-wrap:wrap}.set{background:var(--card);border-radius:8px;padding:12px}
+.trio{display:flex;gap:4px;background:#3a3f48;padding:8px;border-radius:4px}.trio img{width:160px;height:160px;image-rendering:pixelated}
+</style></head><body>
+<h1>Wejście do animacji chodu: detektyw, proste nogi</h1>
+<p>Kąt gry 0,60. Pomiary: przód i tył = Orient (polar, krzywa wyprostowanego detektywa MPFB, ±0,1); bok = uskok podeszew ÷ rozstaw stóp z przodu (dokładność ok. ±0,01 na renderach).</p>
+<div class="ctl"><label>Nakładka szkieletu Blendera <input id="ghost" type="range" min="0" max="100" value="0"></label>
+<label><input id="tlo" type="checkbox"> ciemne tło sprite'ów</label></div>
+<h2>Przód</h2><div class="row"><figure class="ref"><div class="stage"><img src="ref/przod.png" alt=""></div><figcaption>Blender MPFB 0,60<small>proste nogi, wzorzec pozy i kąta</small></figcaption></figure><figure class="opt" data-opt="1">
+      <div class="stage"><img class="fig" src="opcja1/duzy_przod.png" alt=""><img class="ghost" src="ref/przod.png" alt=""></div>
+      <div class="sprite"><img src="opcja1/sprite_przod.png" alt=""></div>
+      <figcaption>Opcja 1<small>qwen/przod_buty_K_s9011</small><small class="kat">Orient 15,4° ≈ 0,64 (±0,1)</small></figcaption></figure><figure class="opt" data-opt="2">
+      <div class="stage"><img class="fig" src="opcja2/duzy_przod.png" alt=""><img class="ghost" src="ref/przod.png" alt=""></div>
+      <div class="sprite"><img src="opcja2/sprite_przod.png" alt=""></div>
+      <figcaption>Opcja 2<small>qwen/przod_buty_K_s9010</small><small class="kat">Orient 16,1° ≈ 0,67 (±0,1); stopy lekko na zewnątrz</small></figcaption></figure></div><h2>Bok (w grze lustrzany)</h2><div class="row flip"><figure class="ref"><div class="stage"><img src="ref/bok.png" alt=""></div><figcaption>Blender MPFB 0,60<small>proste nogi, wzorzec pozy i kąta</small></figcaption></figure><figure class="opt" data-opt="1">
+      <div class="stage"><img class="fig" src="opcja1/duzy_bok.png" alt=""><img class="ghost" src="ref/bok.png" alt=""></div>
+      <div class="sprite"><img src="opcja1/sprite_bok.png" alt=""></div>
+      <figcaption>Opcja 1<small>qwen/bok_l0_s9000</small><small class="kat">uskok 0,124; azymut 90°; ≈ 0,60 przy rozstawie z boku 0,21 (z tym przodem 0,164 → 0,76)</small></figcaption></figure><figure class="opt" data-opt="2">
+      <div class="stage"><img class="fig" src="opcja2/duzy_bok.png" alt=""><img class="ghost" src="ref/bok.png" alt=""></div>
+      <div class="sprite"><img src="opcja2/sprite_bok.png" alt=""></div>
+      <figcaption>Opcja 2<small>qwen/bok_l0_s9001</small><small class="kat">uskok 0,124 ÷ rozstaw 0,204 ≈ 0,61; azymut 89°</small></figcaption></figure></div><h2>Tył</h2><div class="row"><figure class="ref"><div class="stage"><img src="ref/tyl.png" alt=""></div><figcaption>Blender MPFB 0,60<small>proste nogi, wzorzec pozy i kąta</small></figcaption></figure><figure class="opt" data-opt="1">
+      <div class="stage"><img class="fig" src="opcja1/duzy_tyl.png" alt=""><img class="ghost" src="ref/tyl.png" alt=""></div>
+      <div class="sprite"><img src="opcja1/sprite_tyl.png" alt=""></div>
+      <figcaption>Opcja 1<small>qwen/tyl_K_s9010</small><small class="kat">Orient 23,0° ≈ 0,67 (±0,1)</small></figcaption></figure><figure class="opt" data-opt="2">
+      <div class="stage"><img class="fig" src="opcja2/duzy_tyl.png" alt=""><img class="ghost" src="ref/tyl.png" alt=""></div>
+      <div class="sprite"><img src="opcja2/sprite_tyl.png" alt=""></div>
+      <figcaption>Opcja 2<small>qwen/tyl_l0_s9000</small><small class="kat">Orient 18,9° ≈ 0,55 (±0,1)</small></figcaption></figure></div>
+<h2>Gotowe zestawy (sprite 80×80, wejście do Pixellab)</h2><div class="sets"><div class="set"><h3>Opcja 1</h3><p>Stopy najrówniej (przód), przód i tył spójne ok. 0,65.</p><div class="trio"><img src="opcja1/sprite_przod.png" alt=""><img src="opcja1/sprite_bok.png" alt=""><img src="opcja1/sprite_tyl.png" alt=""></div></div><div class="set"><h3>Opcja 2</h3><p>Rozstaw stóp przodu = boku (bok liczy się czysto); tył niżej.</p><div class="trio"><img src="opcja2/sprite_przod.png" alt=""><img src="opcja2/sprite_bok.png" alt=""><img src="opcja2/sprite_tyl.png" alt=""></div></div></div>
+<script>
+const g=document.getElementById("ghost");g.oninput=()=>document.querySelectorAll(".ghost").forEach(e=>e.style.opacity=g.value/100);
+const t=document.getElementById("tlo");t.onchange=()=>document.querySelectorAll(".sprite,.trio").forEach(e=>e.style.background=t.checked?"#111":"#3a3f48");
+</script></body></html>

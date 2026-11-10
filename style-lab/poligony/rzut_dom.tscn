@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://poligony/rzut_dom.gd" id="1"]
+[ext_resource type="Script" path="res://lighting/lighting_director.gd" id="2"]
+[ext_resource type="Resource" path="res://lighting/data/norway_feb.tres" id="3"]
+
+[node name="Rzutdom" type="Node2D"]
+script = ExtResource("1")
+title = "rzut_dom"
+interior = true
+
+[node name="Lighting" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2")
+profile = ExtResource("3")
+
+[node name="World" type="Node2D" parent="."]
+unique_name_in_owner = true
+y_sort_enabled = true
+
+[node name="Spawns" type="Node2D" parent="."]
+unique_name_in_owner = true

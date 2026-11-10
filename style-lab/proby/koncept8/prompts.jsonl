@@ -1,0 +1,11 @@
+{"file":"proby/koncept8/k060_a09_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> front view elevated shot full shot","seed":9000,"angles":0.9,"secs":119}
+{"file":"proby/koncept8/k036_a05_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> front view elevated shot full shot","seed":9000,"angles":0.5,"secs":112}
+{"file":"proby/koncept8/k070_a12_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> front view elevated shot full shot","seed":9000,"angles":1.2,"secs":115}
+{"file":"proby/koncept8/bok036_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> right side view elevated shot full shot","seed":9000,"angles":0.5,"secs":115}
+{"file":"proby/koncept8/bok060_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> right side view elevated shot full shot","seed":9000,"angles":0.9,"secs":137}
+{"file":"proby/koncept8/bok070_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> right side view elevated shot full shot","seed":9000,"angles":1.2,"secs":131}
+{"file":"proby/koncept8/tyl036_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> back view elevated shot full shot","seed":9000,"angles":0.5,"secs":131}
+{"file":"proby/koncept8/tyl060_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> back view elevated shot full shot","seed":9000,"angles":0.9,"secs":137}
+{"file":"proby/koncept8/tyl070_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> back view elevated shot full shot","seed":9000,"angles":1.2,"secs":137}
+{"file":"proby/koncept8/bokL060_s9000.png","input":"proby/koncept7/przod-8302.png","prompt":"<sks> left side view elevated shot full shot","seed":9000,"angles":1,"secs":137}
+{"file":"proby/koncept8/bokP060_s9000.png","input":"proby/koncept7/przod-8302.png","pose":"shots/mpfb_060/postac_bok.png","prompt":"<sks> right side view elevated shot full shot. The man from image 1, same clothes, face and drawing style, standing in exactly the same pose and orientation as the grey mannequin in image 2, seen in full profile. Plain light grey background.","seed":9000,"angles":0.9,"secs":185}

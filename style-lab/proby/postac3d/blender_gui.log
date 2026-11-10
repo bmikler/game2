@@ -1,0 +1,53 @@
+C:\Users\bartl\Desktop\game2\style-lab\tools\blender\wybor_postaci.py:425: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+C:\Users\bartl\Desktop\game2\style-lab\tools\blender\wybor_postaci.py:405: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: Online access preference is not enabled. Not checking if MakeHuman is online.
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[WARN ] material.mhmaterial ....................: Patching input material line to cater for non-normalized key ('bumpTexture', 'bumpmapTexture')
+	parsing bvh 'C:\\Users\\bartl\\Desktop\\game2\\style-lab\\tools\\mocap\\cmu\\82_09.bvh'...	zero length node found: Hips
+	zero length node found: Spine1
+	zero length node found: LeftHand
+	zero length node found: RightHand
+0.0606
+	importing to blender...Done in 0.5993
+
+pętla: próbki 233..273 (40 kl.)
+PING 82_09 40
+07:34:43 | INFO: Data are loaded, start creating Blender stuff
+07:34:43 | INFO: Blender create Mesh node Face
+07:34:43 | ERROR: Missing image file (index 0): C:\Users\bartl\Desktop\game2\zasoby\quaternius\ubc\Universal Base Characters[Standard]\Base Characters\Godot - UE\T_Hair_1_Normal_png.png
+07:34:43 | INFO: Blender create Mesh node Face.001
+07:34:43 | ERROR: Missing image file (index 2): C:\Users\bartl\Desktop\game2\zasoby\quaternius\ubc\Universal Base Characters[Standard]\Base Characters\Godot - UE\T_Eye_Normal_png.png
+07:34:43 | INFO: Blender create Mesh node Sphere.005_Retopology.004
+07:34:44 | INFO: glTF import finished in 0.25s
+07:34:44 | INFO: Data are loaded, start creating Blender stuff
+07:34:44 | INFO: Blender create Mesh node Mannequin
+07:34:47 | INFO: glTF import finished in 2.93s
+10:21.891  gpu.texture      | ERROR Failed to create GPU texture from Blender image
+10:21.891  gpu.texture      | ERROR Failed to create GPU texture from Blender image
+07:35:44 | INFO: Data are loaded, start creating Blender stuff
+07:35:45 | INFO: Blender create Mesh node Face
+07:35:45 | ERROR: Missing image file (index 0): C:\Users\bartl\Desktop\game2\zasoby\quaternius\ubc\Universal Base Characters[Standard]\Base Characters\Godot - UE\T_Hair_1_Normal_png.png
+07:35:45 | INFO: Blender create Mesh node Face.001
+07:35:45 | ERROR: Missing image file (index 2): C:\Users\bartl\Desktop\game2\zasoby\quaternius\ubc\Universal Base Characters[Standard]\Base Characters\Godot - UE\T_Eye_Normal_png.png
+07:35:45 | INFO: Blender create Mesh node Sphere.005_Retopology.004
+07:35:45 | INFO: glTF import finished in 0.12s
+07:35:45 | INFO: Data are loaded, start creating Blender stuff
+07:35:45 | INFO: Blender create Mesh node Mannequin
+07:35:48 | INFO: glTF import finished in 2.94s
+11:23.032  gpu.texture      | ERROR Failed to create GPU texture from Blender image
+11:23.032  gpu.texture      | ERROR Failed to create GPU texture from Blender image
+02:38:05.547  blend            | Saved session recovery to "C:\Users\bartl\AppData\Local\Temp\quit.blend"
+OBJ import of 'base.obj' took 18.94 ms
+OBJ import of 'low-poly.obj' took 0.55 ms
+OBJ import of 'eyebrow001.obj' took 0.62 ms
+OBJ import of 'eyelashes01.obj' took 0.74 ms
+OBJ import of 'short02.obj' took 2.32 ms
+OBJ import of 'scruffy_beard.obj' took 2.51 ms
+OBJ import of 'boots_ankle_male.obj' took 3.06 ms
+OBJ import of 'male_casualsuit05.obj' took 3.90 ms
+
+Blender quit

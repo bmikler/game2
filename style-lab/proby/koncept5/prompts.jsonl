@@ -1,0 +1,8 @@
+{"file":"proby\\koncept5\\i2i_d0.7_036_s7000.png","mode":"img2img","angle":"036","seed":7000,"denoise":0.7,"cn":0.9,"secs":17}
+{"file":"proby\\koncept5\\depth_cn0.9_036_s7000.png","mode":"depth","angle":"036","seed":7000,"denoise":0.7,"cn":0.9,"secs":33}
+{"file":"proby\\koncept5\\i2i_d0.6_036_s7000.png","mode":"img2img","angle":"036","seed":7000,"denoise":0.6,"cn":0.9,"secs":16}
+{"file":"proby\\koncept5\\i2i_d0.6_060_s7000.png","mode":"img2img","angle":"060","seed":7000,"denoise":0.6,"cn":0.9,"secs":12}
+{"file":"proby\\koncept5\\i2i_d0.6_070_s7000.png","mode":"img2img","angle":"070","seed":7000,"denoise":0.6,"cn":0.9,"secs":12}
+{"file":"proby\\koncept5\\i2i_d0.75_036_s7000.png","mode":"img2img","angle":"036","seed":7000,"denoise":0.75,"cn":0.9,"secs":15}
+{"file":"proby\\koncept5\\i2i_d0.75_060_s7000.png","mode":"img2img","angle":"060","seed":7000,"denoise":0.75,"cn":0.9,"secs":15}
+{"file":"proby\\koncept5\\i2i_d0.75_070_s7000.png","mode":"img2img","angle":"070","seed":7000,"denoise":0.75,"cn":0.9,"secs":15}

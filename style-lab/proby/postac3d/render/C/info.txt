@@ -1,0 +1,1 @@
+wariant C klatki 10 kl_s 7.69 zakres 0.0-39.0

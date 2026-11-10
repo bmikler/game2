@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FixtureDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://world/lighting/fixture_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+lux = 90.0
+color = Color(0.7, 0.8, 1, 1)
+shape = 2
+texture_scale = 2.4
+offset = Vector2(0, -32)
+footprint_m2 = 0.0
+scheduled = false
+actor_twin = false
+receivers = 3

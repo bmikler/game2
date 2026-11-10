@@ -1,0 +1,106 @@
+{
+  "frames": [
+    {
+      "file": "0730_swit.png",
+      "hour": 7.5,
+      "id": "swit"
+    },
+    {
+      "file": "0815_wschod.png",
+      "hour": 8.25,
+      "id": "wschod"
+    },
+    {
+      "file": "1000_ranek.png",
+      "hour": 10,
+      "id": "ranek"
+    },
+    {
+      "file": "1200_dzien.png",
+      "hour": 12,
+      "id": "dzien"
+    },
+    {
+      "file": "1500_popoludnie.png",
+      "hour": 15,
+      "id": "popoludnie"
+    },
+    {
+      "file": "1615_zachod.png",
+      "hour": 16.25,
+      "id": "zachod"
+    },
+    {
+      "file": "1700_zlota_godzina.png",
+      "hour": 17,
+      "id": "zlota_godzina"
+    },
+    {
+      "file": "1736_niebieska_godzina.png",
+      "hour": 17.6,
+      "id": "niebieska_godzina"
+    },
+    {
+      "file": "2200_noc.png",
+      "hour": 22,
+      "id": "noc"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "hall",
+      "rect": [
+        50,
+        14,
+        260,
+        414
+      ]
+    },
+    {
+      "id": "corridor",
+      "rect": [
+        290,
+        260,
+        570,
+        168
+      ]
+    },
+    {
+      "id": "office",
+      "rect": [
+        300,
+        14,
+        188,
+        256
+      ]
+    },
+    {
+      "id": "break_room",
+      "rect": [
+        478,
+        14,
+        196,
+        256
+      ]
+    },
+    {
+      "id": "cells",
+      "rect": [
+        664,
+        14,
+        196,
+        256
+      ]
+    }
+  ],
+  "size": [
+    960,
+    540
+  ],
+  "source": {
+    "project": "game1/game",
+    "base_commit": "fa80bd2",
+    "note": "Ticket 27: office screen and desk lamp, hall and corridor as one space, back-wall shadow only, windows by night. Captured with tools/reference_shots/capture_game.gd.",
+    "godot": "4.7.2-stable"
+  }
+}

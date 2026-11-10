@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kotwice i Referencje</title>
+<style>
+  :root { --bg:#14161a; --fg:#e6e6e6; --dim:#9aa0a8; --acc:#e0a050; --ref:#7fa8d8; --card:#1d2026; }
+  body { background:var(--bg); color:var(--fg); font:15px/1.45 system-ui, sans-serif; margin:0; padding:16px 24px 64px; }
+  h1 { font-size:22px; margin:8px 0 4px; }
+  h2 { font-size:18px; margin:36px 0 8px; border-bottom:1px solid #333; padding-bottom:4px; }
+  p.lead { color:var(--dim); max-width:900px; }
+  section.game { background:var(--card); border-radius:8px; padding:12px 14px; margin:14px 0; }
+  .head { display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .name { font-weight:700; font-size:17px; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:10px; background:#333; }
+  .tag.k { background:var(--acc); color:#111; }
+  .tag.r { background:var(--ref); color:#111; }
+  .tag.c { background:#666; }
+  .take { margin:6px 0 2px; } .take b { color:var(--acc); }
+  .skip { color:var(--dim); margin:0 0 8px; }
+  .shots { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:8px; }
+  .shots a img { width:100%; display:block; border-radius:4px; image-rendering:pixelated; }
+</style>
+</head>
+<body>
+<h1>Kotwice i Referencje: wybór stylu</h1>
+<p class="lead">Lokalna plansza, nie publikować. Zrzuty oficjalne ze Steam (z notatek 60, 66, 67, 68). Kliknij zrzut, żeby otworzyć go w pełnej rozdzielczości i zobaczyć piksele. <b style="color:var(--acc)">Kotwica</b> = wzorzec wyglądu całej gry w swojej roli (maks. 3). <b style="color:var(--ref)">Referencja</b> = wzór jednego szczegółu dla jednego Przepisu.</p>
+<div id="out"></div>
+<script>
+const S = [
+ ["Kotwice (ustalone)", [
+  {n:"Beat Cop", t:"k", role:"Kotwica rzutu", dir:"67-assets", f:"beatcop", k:[0,1,2,3],
+   take:"niski kąt 3/4: frontalne fasady, spłaszczony chodnik, wnętrza jako przekroje, układ ulicy w poziomie",
+   skip:"małe, uproszczone postacie (ok. 28–30 px), paleta"},
+  {n:"NORCO", t:"k", role:"Kotwica koloru i malarskości", dir:"60-assets", f:"norco", k:[0,1,2,3,4,5],
+   take:"kontrast ciepłych okien z granatem, zmierzch, malarskie przejścia koloru, powaga",
+   skip:"widok z boku, bardzo duże piksele"},
+ ]],
+ ["Kandydaci do decyzji: Kotwica postaci i światła (Q15)", [
+  {n:"REPLACED", t:"c", role:"kandydat: Kotwica postaci i światła", dir:"60-assets", f:"replaced", k:[0,1,2,3,4,5],
+   take:"dorosłe, realistyczne postacie w pixel arcie, ciepłe punkty światła z bloomem na zimnym tle, mgła",
+   skip:"rzut boczny, DoF i tła 3D (za drogie dla nas)"},
+  {n:"Gemini Rue", t:"c", role:"kandydat: Referencja proporcji postaci", dir:"67-assets", f:"geminirue", k:[0,1,2,3],
+   take:"6,5–7 głów, ok. 40–50 px, surowa pikselowa kreska, zimny fiolet noir",
+   skip:"widok z boku, niska rozdzielczość tła 320×240"},
+  {n:"Drova – Forsaken Kin", t:"c", role:"kandydat: Referencja skali i kierunków", dir:"67-assets", f:"drova", k:[0,1,2,3],
+   take:"skala dorosłej postaci w widoku z góry (ok. 55–70 px), widoki przód/tył/bok",
+   skip:"styl, paleta, fantasy"},
+ ]],
+ ["Referencje (Q17): do jednego Przepisu", [
+  {n:"Kentucky Route Zero", t:"r", role:"Referencja: Przepis światła", dir:"68-assets", f:"krz", k:[0,1,2,3],
+   take:"małe ciepłe źródło w ogromnej ciemności, cisza i pustka nocy",
+   skip:"to nie pixel art (wektor), płaskie bryły"},
+  {n:"Disco Elysium", t:"r", role:"Referencja: Przepis światła i palety zimy", dir:"68-assets", f:"disco", k:[0,1,2,3],
+   take:"brudna, zgaszona paleta, zimne światło dnia, śnieg i wilgoć",
+   skip:"malarskie 3D, izometria"},
+  {n:"The Last Door", t:"r", role:"Referencja: Przepis światła", dir:"68-assets", f:"lastdoor", k:[0,1,2,3],
+   take:"jedna lampa w czerni: skrajny przypadek, ile może zniknąć w ciemności",
+   skip:"bardzo niska rozdzielczość, postacie bez twarzy"},
+  {n:"CrossCode", t:"r", role:"Referencja: Przepis terenu (śnieg)", dir:"66-assets", f:"crosscode", k:[16,10,5],
+   take:"czapy śniegu, sople, niebiesko-lawendowy cień śniegu, krawędź śniegu bez konturu",
+   skip:"postacie anime, jasna paleta"},
+  {n:"Pixel Noir", t:"r", role:"Referencja: Przepis wnętrz (odcięta ściana)", dir:"67-assets", f:"pixelnoir", k:[0,1,2,3],
+   take:"tylko sposób pokazania wnętrza: ściana od strony kamery odcięta lub niska",
+   skip:"izometria, styl postaci (odrzucony)"},
+ ]],
+];
+const out = document.getElementById("out");
+for (const [title, games] of S) {
+  const h = document.createElement("h2"); h.textContent = title; out.appendChild(h);
+  for (const g of games) {
+    const s = document.createElement("section"); s.className = "game";
+    const imgs = g.k.map(i => { const p = `${g.dir}/${g.f}-${i}.jpg`; return `<a href="${p}" target="_blank"><img src="${p}" loading="lazy" alt="${g.n} ${i}"></a>`; }).join("");
+    s.innerHTML = `<div class="head"><span class="name">${g.n}</span><span class="tag ${g.t}">${g.role}</span></div>
+      <p class="take"><b>Bierzemy:</b> ${g.take}</p><p class="skip">Nie bierzemy: ${g.skip}</p><div class="shots">${imgs}</div>`;
+    out.appendChild(s);
+  }
+}
+</script>
+</body>
+</html>

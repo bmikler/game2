@@ -1,0 +1,36 @@
+file,h_px,buty,uskok,zasieg
+proby/kat_detektywa/sweep_stoi/df_040/bok_stoi.png,614,2,0.0798,0.0594
+proby/kat_detektywa/sweep_stoi/df_050/bok_stoi.png,621,2,0.0982,0.0628
+proby/kat_detektywa/sweep_stoi/df_055/bok_stoi.png,625,2,0.1072,0.0648
+proby/kat_detektywa/sweep_stoi/df_060/bok_stoi.png,629,2,0.1176,0.0660
+proby/kat_detektywa/sweep_stoi/df_065/bok_stoi.png,633,2,0.1264,0.0671
+proby/kat_detektywa/sweep_stoi/df_070/bok_stoi.png,637,2,0.1350,0.0691
+proby/kat_detektywa/sweep_stoi/df_080/bok_stoi.png,640,2,0.1469,0.0625
+proby/kat_detektywa/sweep_stoi/df_040/przod_stoi.png,607,2,0.0000,0.0881
+proby/kat_detektywa/sweep_stoi/df_050/przod_stoi.png,615,2,0.0000,0.0959
+proby/kat_detektywa/sweep_stoi/df_055/przod_stoi.png,617,2,0.0000,0.0997
+proby/kat_detektywa/sweep_stoi/df_060/przod_stoi.png,622,2,0.0000,0.1037
+proby/kat_detektywa/sweep_stoi/df_065/przod_stoi.png,625,2,0.0000,0.1080
+proby/kat_detektywa/sweep_stoi/df_070/przod_stoi.png,629,2,0.0000,0.1129
+proby/kat_detektywa/sweep_stoi/df_080/przod_stoi.png,635,2,0.0000,0.1181
+proby/kurtka_060/bok_pose_a13_s9000.png,1095,2,0.0721,0.0324
+proby/kurtka_060/bok_pose_a13_s9001.png,1127,2,0.0018,0.0399
+proby/kurtka_060/bok_pose_a13_s9002.png,1134,2,0.1235,0.0366
+proby/kurtka_060/przod_a13_s9000.png,985,2,0.0051,0.0645
+proby/kurtka_060/przod_a13_s9001.png,1020,2,0.0088,0.0686
+proby/kurtka_060/przod_a13_s9002.png,994,2,0.0010,0.0634
+ERROR: Error opening file 'proby/koncept8/bokP060.png'.
+   at: load_image (core/io/image_loader.cpp:91)
+   GDScript backtrace (most recent call first):
+       [0] _measure (res://tools/postac/stopy.gd:20)
+       [1] _init (res://tools/postac/stopy.gd:15)
+ERROR: Failed to load image. Error 7
+   at: load_from_file (core/io/image.cpp:2787)
+   GDScript backtrace (most recent call first):
+       [0] _measure (res://tools/postac/stopy.gd:20)
+       [1] _init (res://tools/postac/stopy.gd:15)
+SCRIPT ERROR: Cannot call method 'convert' on a null value.
+   at: _measure (res://tools/postac/stopy.gd:21)
+   GDScript backtrace (most recent call first):
+       [0] _measure (res://tools/postac/stopy.gd:21)
+       [1] _init (res://tools/postac/stopy.gd:15)

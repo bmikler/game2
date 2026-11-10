@@ -1,0 +1,7 @@
+{"krok":"koncept","plik":"koncept/koncept.png","orient":{"az":3.3,"polar":3.0}}
+{"krok":"qwen","widok":"przod","pliki":["przod_a15_s9000","przod_a15_s9001"],"lora":1.5,"prompt":"<sks> front view elevated shot full shot","orient_polar":[16.8,21.0]}
+{"krok":"qwen","widok":"bok","pliki":["bok_a13_s9000","bok_a13_s9001"],"lora":1.3,"pose":"shots/mpfb_060_kobieta/postac_bok.png","orient":[[83.6,13.2],[82.0,27.0]]}
+{"krok":"qwen","widok":"tyl","pliki":["tylp9000_a10_s9000","tylp9001_a10_s9000"],"lora":1.0,"wejscie":"przod_a15_s900x","prompt":"<sks> back view elevated shot full shot","orient_polar":[19.4,22.2]}
+{"krok":"piksele","crop_ref":"0 0 880 1184 80 72 0.08 0.5 0.8","alpha_cut":"0.5 0","wyjscie":"sprite/{przod,bok,tyl}_{A,B}.png"}
+{"krok":"kalibracja_detektyw","przod_polar":[17.3,23.7,16.1],"bok":[[91.0,12.8],[91.2,27.0],[89.1,26.2]],"tyl_polar":[21.3,23.7,19.1],"mpfb_kobieta":{"przod":20.2,"bok":25.9,"tyl":17.9}}
+{"krok":"odrzucone_usuniete","pliki":"orient/odrzucone.txt"}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chód wersji C</title>
+<style>
+  :root { --bg: #1d2026; --panel: #2a2e36; --ink: #e6e8ec; --mute: #9aa1ad; --snow: #c9d3e6; --night: #3a4258; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 8px; }
+  p { color: var(--mute); margin: 0 0 10px; max-width: 80ch; }
+  .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 12px 0 16px; }
+  .anims { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .anim { background: var(--panel); border-radius: 8px; padding: 12px; }
+  .stage { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 12px; border-radius: 6px; background: var(--snow); }
+  .stage.night { background: var(--night); }
+  .stage img { image-rendering: pixelated; display: block; }
+  .strip { display: flex; gap: 2px; margin-top: 10px; overflow-x: auto; }
+  .strip img { image-rendering: pixelated; width: 120px; background: var(--snow); border-radius: 3px; }
+  .strip img.on { outline: 2px solid #e2b65a; }
+  small { color: var(--mute); }
+  @media (max-width: 800px) { .anims { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Chód z boku, wersja C (Pixellab, 80×80, postać 72 px)</h1>
+<p>Na górze: zakładka Characters (szablon chodu). Niżej: animacje z opisu ruchu.</p>
+<p>Klatka 0 to nasz sprite (wejście, stoi), klatki 1–8 to chód. Pełna pętla 0–8 ma przeskok (klatka 8 obraca się ku kamerze); przycięta pętla kończy się na klatce, która najlepiej przechodzi w 0 (macierz różnic klatek). Każda animacja kosztowała 1 generację triala.</p>
+<div class="controls">
+  <label>Tempo: <input id="fps" type="range" min="2" max="16" value="8"> <span id="fpsv">8</span> kl./s</label>
+  <label><input id="trim" type="checkbox" checked> przycięta pętla (pixminimax 0–6, text-v3 0–5)</label>
+  <label><input id="night" type="checkbox"> tło nocne</label>
+  <label><input id="pause" type="checkbox"> pauza</label>
+</div>
+<div class="anims" id="anims"></div>
+<script>
+  const SETS = [
+    { id: "tmpl", files: [...Array(8).keys()].map((i) => `../pixellab_postac_C/walking-8-frames_west_${i}.png`), last: 7, title: "Characters: szablon walking-8-frames (west)", note: "postać zaimportowana z naszych 4 widoków (0,25 gen.), chód szablonem na szkielecie (1 gen.); pełny cykl, obie nogi; Pixellab przerysował styl" },
+    { id: "pixminimax16", last: 15, count: 17, title: "animate-pixminimax, 16 kl. z last_frame", note: "dwa kroki, pętla domknięta; dalsza noga się nie zgina (kulenie)" },
+    { id: "pixminimax", last: 6, title: "animate-pixminimax", note: "opis: „walking forward at a calm natural pace, steady stride, arms swinging slightly”" },
+    { id: "text-v3", last: 5, title: "animate-with-text-v3", note: "akcja: „walking”" },
+  ];
+  const root = document.getElementById("anims");
+  const players = [];
+  for (const s of SETS) {
+    const box = document.createElement("div");
+    box.className = "anim";
+    box.innerHTML = `<h2>${s.title}</h2><small>${s.note}</small>
+      <div class="stage"><img data-scale="1"><img data-scale="3"><img data-scale="6"></div>
+      <div class="strip"></div>`;
+    root.appendChild(box);
+    const frames = s.files ?? [...Array(s.count ?? 9).keys()].map((i) => `${s.id}_${i}.png`);
+    const strip = box.querySelector(".strip");
+    const thumbs = frames.map((f, i) => { const im = new Image(); im.src = f; im.title = `klatka ${i}`; strip.appendChild(im); return im; });
+    const big = [...box.querySelectorAll(".stage img")];
+    big.forEach((im) => { im.width = 80 * Number(im.dataset.scale); im.height = 80 * Number(im.dataset.scale); });
+    players.push({ frames, thumbs, big, last: s.last, stage: box.querySelector(".stage"), i: 0 });
+  }
+  const fps = document.getElementById("fps"), trim = document.getElementById("trim");
+  const pause = document.getElementById("pause"), night = document.getElementById("night");
+  fps.oninput = () => (document.getElementById("fpsv").textContent = fps.value);
+  night.onchange = () => players.forEach((p) => p.stage.classList.toggle("night", night.checked));
+  let last = 0;
+  function tick(t) {
+    if (!pause.checked && t - last > 1000 / Number(fps.value)) {
+      last = t;
+      for (const p of players) {
+        const end = trim.checked ? p.last : p.frames.length - 1;
+        p.i = p.i + 1 > end ? 0 : p.i + 1;
+        p.big.forEach((im) => (im.src = p.frames[p.i]));
+        p.thumbs.forEach((im, k) => im.classList.toggle("on", k === p.i));
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>

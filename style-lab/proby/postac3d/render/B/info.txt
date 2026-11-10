@@ -1,0 +1,1 @@
+wariant B klatki 10 kl_s 9.38 zakres 0.0-32.0

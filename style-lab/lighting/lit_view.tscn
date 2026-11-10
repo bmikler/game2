@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://lighting/lit_view.gd" id="1"]
+[ext_resource type="Material" path="res://lighting/data/display_material.tres" id="2"]
+[ext_resource type="Environment" path="res://lighting/data/view_environment.tres" id="3"]
+
+[node name="LitView" type="Node"]
+script = ExtResource("1")
+
+[node name="View" type="SubViewport" parent="."]
+unique_name_in_owner = true
+canvas_item_default_texture_filter = 0
+use_hdr_2d = true
+snap_2d_transforms_to_pixel = true
+size = Vector2i(960, 540)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="View"]
+environment = ExtResource("3")
+
+[node name="Display" type="SubViewport" parent="."]
+unique_name_in_owner = true
+size = Vector2i(960, 540)
+render_target_update_mode = 4
+
+[node name="Shown" type="TextureRect" parent="Display"]
+unique_name_in_owner = true
+texture_filter = 1
+material = ExtResource("2")
+offset_right = 960.0
+offset_bottom = 540.0
+
+[node name="Screen" type="TextureRect" parent="."]
+unique_name_in_owner = true
+texture_filter = 1
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0

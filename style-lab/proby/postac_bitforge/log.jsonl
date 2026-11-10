@@ -1,0 +1,4 @@
+{"endpoint":"bitforge","style":"proby/postac_kat3/lokal_k060-4201.png","out":"proby/postac_bitforge/low.png","view":"low","oblique":"0","strength":"60","usage":{"type":"generations","generations":1},"secs":26}
+{"endpoint":"bitforge","style":"proby/postac_kat3/lokal_k060-4201.png","out":"proby/postac_bitforge/high.png","view":"high","oblique":"0","strength":"60","usage":{"type":"generations","generations":1},"secs":45}
+{"endpoint":"bitforge","style":"proby/postac_kat3/lokal_k060-4201.png","out":"proby/postac_bitforge/high_oblique.png","view":"high","oblique":"1","strength":"60","usage":{"type":"generations","generations":1},"secs":30}
+{"endpoint":"bitforge","style":"proby/postac_styl/styl_8101.png","out":"proby/postac_bitforge/malarski_high.png","view":"high","oblique":"0","strength":"60","usage":{"type":"generations","generations":1},"secs":27}

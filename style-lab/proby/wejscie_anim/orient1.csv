@@ -1,0 +1,12 @@
+﻿file,azimuth,polar,rotation,confidence,az_std,polar_std,sim
+proby\wejscie_anim\qwen\przod_l04_s9000.png,0.7,15.4,17.0,1.000,0.9,3.3,
+proby\wejscie_anim\qwen\przod_l04_s9001.png,360.0,15.8,14.6,1.000,0.9,3.3,
+proby\wejscie_anim\qwen\przod_l0_s9000.png,0.4,15.4,17.2,1.000,0.8,3.2,
+proby\wejscie_anim\qwen\przod_l0_s9001.png,0.4,15.9,9.6,1.000,0.8,3.3,
+proby\wejscie_anim\qwen\tyl_l04_s9000.png,179.0,19.0,-21.9,1.000,0.0,0.9,
+proby\wejscie_anim\qwen\tyl_l04_s9001.png,179.0,19.1,-21.9,1.000,0.0,1.0,
+proby\wejscie_anim\qwen\tyl_l0_s9000.png,179.0,18.9,-21.8,1.000,0.0,1.3,
+proby\wejscie_anim\qwen\tyl_l0_s9001.png,179.0,18.7,-21.9,1.000,0.0,1.2,
+proby\wejscie_anim\qwen\bok_l0_s9000.png,89.9,26.3,-17.6,1.000,2.1,0.7,
+proby\wejscie_anim\qwen\bok_l0_s9001.png,88.8,26.2,-17.4,1.000,1.6,0.9,
+proby\wejscie_anim\qwen\bok_l04_s9000.png,89.4,26.4,-17.6,1.000,1.8,0.7,

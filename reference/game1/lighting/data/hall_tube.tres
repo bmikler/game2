@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="FixtureDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://world/lighting/fixture_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+lux = 120.0
+texture_scale = 1.8
+footprint_m2 = 11.7

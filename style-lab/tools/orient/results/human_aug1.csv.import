@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bcfpxcp1ylt4c"
+
+[deps]
+
+files=["res://tools/orient/results/human_aug1.azimuth.translation", "res://tools/orient/results/human_aug1.polar.translation", "res://tools/orient/results/human_aug1.rotation.translation", "res://tools/orient/results/human_aug1.confidence.translation", "res://tools/orient/results/human_aug1.az.translation", "res://tools/orient/results/human_aug1.polar.translation", "res://tools/orient/results/human_aug1.sim.translation"]
+
+source_file="res://tools/orient/results/human_aug1.csv"
+dest_files=["res://tools/orient/results/human_aug1.azimuth.translation", "res://tools/orient/results/human_aug1.polar.translation", "res://tools/orient/results/human_aug1.rotation.translation", "res://tools/orient/results/human_aug1.confidence.translation", "res://tools/orient/results/human_aug1.az.translation", "res://tools/orient/results/human_aug1.polar.translation", "res://tools/orient/results/human_aug1.sim.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

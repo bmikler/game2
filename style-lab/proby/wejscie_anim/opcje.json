@@ -1,0 +1,15 @@
+{
+  "ref": {"przod": "ref/przod.png", "bok": "ref/bok.png", "tyl": "ref/tyl.png"},
+  "opcje": [
+    {"nazwa": "1", "opis": "Stopy najrówniej (przód), przód i tył spójne ok. 0,65.",
+     "widoki": {
+       "przod": {"duzy": "opcja1/duzy_przod.png", "sprite": "opcja1/sprite_przod.png", "zrodlo": "qwen/przod_buty_K_s9011", "pomiar": "Orient 15,4° ≈ 0,64 (±0,1)"},
+       "bok":   {"duzy": "opcja1/duzy_bok.png",   "sprite": "opcja1/sprite_bok.png",   "zrodlo": "qwen/bok_l0_s9000",       "pomiar": "uskok 0,124; azymut 90°; ≈ 0,60 przy rozstawie z boku 0,21 (z tym przodem 0,164 → 0,76)"},
+       "tyl":   {"duzy": "opcja1/duzy_tyl.png",   "sprite": "opcja1/sprite_tyl.png",   "zrodlo": "qwen/tyl_K_s9010",        "pomiar": "Orient 23,0° ≈ 0,67 (±0,1)"}}},
+    {"nazwa": "2", "opis": "Rozstaw stóp przodu = boku (bok liczy się czysto); tył niżej.",
+     "widoki": {
+       "przod": {"duzy": "opcja2/duzy_przod.png", "sprite": "opcja2/sprite_przod.png", "zrodlo": "qwen/przod_buty_K_s9010", "pomiar": "Orient 16,1° ≈ 0,67 (±0,1); stopy lekko na zewnątrz"},
+       "bok":   {"duzy": "opcja2/duzy_bok.png",   "sprite": "opcja2/sprite_bok.png",   "zrodlo": "qwen/bok_l0_s9001",       "pomiar": "uskok 0,124 ÷ rozstaw 0,204 ≈ 0,61; azymut 89°"},
+       "tyl":   {"duzy": "opcja2/duzy_tyl.png",   "sprite": "opcja2/sprite_tyl.png",   "zrodlo": "qwen/tyl_l0_s9000",       "pomiar": "Orient 18,9° ≈ 0,55 (±0,1)"}}}
+  ]
+}

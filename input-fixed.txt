@@ -1,0 +1,58 @@
+Na podstawie zaimplementowanego prototypu C:\Users\bartl\Desktop\repo\game1 będzie robić grę pokrywającą scenariusz druga.
+
+Odchodzimy od call of cthulhu - nie nazywamy postaci gracza badaczem, statystyki zostaną przerobione.
+
+Mechaniki:
+Mechaniki które będą w finalnej grze testy k100 (trudność zwykła, trudna, ekstremalna; kość karna i premiowa). Przeżuty i zmęczenie jak w prototypie.
+
+Nie będzie walki, sceny konfrontacji jak np. spotkanie psów będzie ogrywane jak dialog z animacjami postaci
+np.
+- opcja dialogowa wyciągnij broń
+- animacja postaci, wyciągnięcie broni
+- pies szczeka
+- opcja dialogowa strzel w powietrze (test zastraszania)
+- animacja i dźwięk strzału
+
+Poczytalność - pomijamy całkiem tą mechnikę, nie ma sensu w takiej małej skali gry. Wywalamy efekt koszmaru itd. Efekty specjalne będą tylko przy pojawieniu się piaskuna.
+
+Lista umiejętności zostanie dostosowana do testów które wyjdą nam przy implementacji fabuły, może być okrojona, mogą pojawić się nowe umiejętności. Pewnie zostanie uproszczona, np. kilka umiejętności połązymy jedną. Szczęście wywalamy.
+
+Przy tworzeniu będzie można wybrać 3 archetypy różniące się statystkami - archetypy i statystyki wybierzemy jak będziemy mieć całą rozgrywkę rozplanowaną, żeby dostosować to testów.
+Gracz będzie mógł wybrać przedmioty na start, np. dyktafon, który pozwoli mu nagrać dziewczyny i puścić co mówi od tyłu - konkretne przedmioty i co dają do zdefiniowania jak będzie cała rozgrywka. Opcja alternatywna to pozwolić graczowi zrobić swoją postać w z jakimś systemem rozwoju punktów w stylu uproszczone zasady coc, ile punktów do rozdania i ile przedmiotów dobierzemy jak będziemy mieć całą grę gotową.
+
+Rezygnujemy z przymiotów. 
+
+Nastawienie postaci - niektóre opcje daialogowe mogą zmienić nastawienie, 3 tryby zly,neutralny,pozytywyny - tryby będą dawa kosci karne + premiowe do określonych testow w rozmowie z postacią (do tuningu). Kości karne i premiowe będą tylko do testów przeknoywnia, nie wpływją np. na testy spotrzegawczości w trakcie rozmowy. Prawdopobnie docelowo będzie jedna umiejętność zamiast, gadaniny, perswazji itd. i to na nią będzie wpływać nastawienie.
+
+Rutyny postaci - w nocy większość domów jest zamknięte, i nie da się rozmawiać z postaciami (mogą być od tego wyjątki), gracz może wtedy spróbować włamać się do domu (np. jak zepsuje dialog z matką branji i nie pozwoli mu przeszukać jej pokoju, może to zrobić po kryjomu w nocy.
+
+Będzie trzeba dostroić trudności testów, jak będziemy mieć gotową grę przydałby się jakiś symulator, który będzie eksplorował grę w różnych wariantach, sprawdzał testy i weryfikował.  
+
+Dźwięk:
+Dźwięki i muzyka: Dźwięki pewnie będziemy dodawać na bieżąco a muzykę na końcu jak już cała gra będzie gotowa. Stworzenie/znalezienie muzyki to temat na research. Muzyka na pewno musi być dynamiczna, przy określonych scenach lub opcjach dialogowych musi być odpowiednia muzyka itd.
+
+Grafika:
+Cała grafika będzie do stworzenie od nowa, punktem wyjścia będzie prototyp. Chciałbym poeksperymentować z grafiką w wyższej rozdzielczości i bardziej szczegółowymi postaciami, może być mniejszy obszar budynku widoczny na ekranie.
+Musimy stworzyć pipeline tworzenia postaci (reserach), np. najpierw jakiś concept art w comfy na podstawi mojego opisu i scenariusza, później generowanie postaci i animacji w pixellab (niektóre postacie będą w kilki wariantach, postać gracze w kurtce i bez ((zmienia się np. na posternku)), matka brnaji ((inny model jak spotykamy ja w domu i inny jak w szpitalu))
+Styl graficzny prototypu z grubsza mi się podoba ale chciałbym pooksperymentować - grafika i portrety są tam trochę infantylna.
+Oświetlenie słońca, kolory za oknem, smugi padające przez okna, drobinki kurzu będziemy przenosić ale też trochę tutaj poeksperymentujemy (można się pobawić jeszcze z plamą słońca którą mieliśmy w prototypie na podłodze ale z niej zrezygnowaliśmy bo dziwnie zachowywała się z obiektami), nocne światło wpadające przez okno będzie różne w mieście i różna poza miastem. Dla oświetlenia możemy zrobić jeszcze raz resarch (oświetlanie wnętrz i na zewnątrz, klimat itd.) - światło jest bardzo ważne artystycznie i klimatycznie, realizm światła jest na drugim miejscu. 
+
+Zeleży mi żeby grafika była ładna i klimatyczna, przyciągała do gry. Chciałbym dodać jakieś ozdoby typu para z ust postaci na zewnątrz, dym z papierosa, drzewa poruszane przez wiatr zamiast stać statycznie, może jakieś odblaski na szybach jak widzimy budynki z zewnątrz, może np. telewizor w jakimś domu działający w nocy i klimatycznie oświetlający pokój, telewizor może wyświetlać np. 4 różne ekrany i świecić w zależności of tego co wyświetla. itd. żeby budowć immersję. Można zrobić research jakie elementy dodać i jak zrobić to małym kosztem. Nie zależy mi na "wodotryskach" graficznych, bardziej budowaniu atmosfery przez grafikę.
+
+Efekty specjalne jeżeli gracz widzi piaskuna w stylu efektu koszmaru z prototypu.
+
+
+Cutscenki:
+W zasadzie potrzebne tylko na intro i na finał, rozważam opcje komiksu jak w pierwszy max payne (comfy ui (flux 2), powinien na wyrysować sceny, możliwe że są gotowe szablony komiksów gdzie moglibyśmy je wkleić lub wygenrować komiks ze obrazków claudem); rozważam też opcję zrobienia tego trochę jak dialogów w wersji z dużymi portretami, którą testowaliśmu z bardziej dynamicznymi portretami np. postać z wyciągniętą bronią itd. Jeżli pójdziemy w tą ścieżkę można by tak też ograć sceny walki.
+Największą zagwozdką jest scena otwierająca, gracz jedzie samochodem i robi test jazdy samochodem, samochód może wpaść do rowu i potrącić dziewczynę. To będzie o tyle trudne że to będzie pierwsze co zobaczy gracz w grze więc żeby ten test był dla niego zrozumiały a zarazem nie psuł się ten big bang na początku jakimś samouczkiem czy coś. Chcemy żeby też było czuć dynammikę, może komiks z dobrym dźwiękiem np. hamowania da nam odpowiedni feel. Jeżeli komiks wyjdzie dobrze, dziwne będzie jak będzie tylko na początku, można by wpleść go jeszcze gdzieś w rozgrywkę, przy końcu dnia czy coś. Może np. podsumowanie każdego w formie klimatycznego komiksu jak max payne?
+
+
+Przebieg gry:
+Do rozplanowania jest cała fabuła, spotkania ze wszystkimi postaciami, gdzie można zdobyć jaką poszlakę itd, definicja zakończeń bo tego nie ma scenariuszu.
+Generowanie dialogów robimy za pomocą Claude, ze zdefiniowanymi postaciami, ich nastrojem i nastawianiem do gracza.
+
+Do zaplanowania jest workflow pracy, czy implentujemy najpierw całą mapę, później akcję dzień po dniu; czy sceny, np. szpital i od razu wszystkie interakcje jakie tam mogą się pojawić z dialogami. Nie wiem jaki będzie najbardziej optymalny sposób. Wydaje mi się że najpierw trzeba zaplanować każdą scenę, wszystkie możliwe interakcje, wszystkie ścieżki do odblokowania itd.
+
+Do zaplanowania jest mapa, co jest dostępne z miasta, do jakich map można przejechać samochodem. Jako inspiracje do stowrzenia miasta przyjmij Chief RPG, chodzi o układ budynków, jak pokazać głębie bez ustawiania budnków jeden za drugim.
+
+Do zaplanowania jest pipeline tworzenie budynków, ich logiczny układ, spójny z tym jak wyglądają na zewnątrz (nie musi to być rozmiar 1:1 na mapie świata budynki mogą być trochę mniejsze niż po wejściu do środka), widok za oknami zgadzający się z tym co widzimy chodząc na zewnątrz budynku, wystrój budynku i oświetlenie. Budynki muszą mieć sens logiczny czyli brać pod uwagę kto tam mieszka i czego potrzebuje do życia.
