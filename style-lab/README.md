@@ -88,3 +88,9 @@ Poligony do decyzji graficznych game2 (Godot 4.7.2). To nie jest kod gry. Mapa: 
 - Zrzuty i arkusz kształtów: `shots/t33/` (`p1` lewy pokój obok lampy, `p2` lewy pokój w plamie okna, `p3` prawy dolny pokój przy lampie; `s0` bez cienia, `s4` sylwetka, `d_*` różnice ×6: `node tools/pomiar/roznica.mjs a.png b.png wy.png 6`).
 - Stan końcowy ticketu 33: F1 pokazuje tylko „Cienie: ustawienia krytyka” (domyślnie **A4 „Oddech okna, poprawiony”**, decyzja człowieka) i „Cień postaci: wygląd” (gładki / 3 poziomy z ditherem / 2 poziomy twarde, `lit.gdshader`); suwaki cieni i nieba schowane (`--set=` działa). Cień nieba liczony analitycznie (`sky_lost`: nakładanie kątowe szyby i walca), AO nieba pod stopami, postać we wstęgach bocznych (`sun_ribbon.gdshader`), plamka jak w game1. Pomiar kosztu: `--bench=godzina`.
 
+
+## Prototyp jednego bufora światła (ticket „Przebudowa światła wnętrza na jeden bufor z cieniami”)
+
+- `dom.bat`. Całe światło wnętrza z jednej funkcji (`lighting/light_fn.gdshaderinc`) i jednego bufora (`SunMap`, `light_map.gdshader`): słońce, wstęgi okien bocznych, niebo każdej szyby i drzwi wejściowych, noc, lampy; jedne przesłony (ściany, meble, schody, postać jako walec). Bez warstw rysowanych na wierzchu (poświata drzwi, plamka pod stopami, stare wstęgi). Szczegóły i stan: ticket 36.
+- F1: wygląd cieni (gładki / 3 poziomy z ditherem / 2 twarde), tarcza słońca, żarówka, widok debug bufora, smugi okien górnych, test cieni.
+- Zrzuty z ruchem: `-- --scene=res://poligony/dom_parter.tscn --at=3.2,1.6 --shots=9.5,22 --path=1.6,1.2;5.05,6.5;3.2,1.6`; przy zrzucie powstaje `.bufor` (surowy bufor), porównanie: `node tools/pomiar/bufor_roznica.mjs a.bufor b.bufor 652`. Koszt: `--bench=godzina` (`--set=liczenie=1`: cały dom co klatkę).
