@@ -153,6 +153,17 @@ int occlusion(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, vec
 	return found;
 }
 
+// Architecture only on o + t·dir, t in (0, t_max) (the sky's samples: objects are analytic there).
+bool arch_blocked(vec3 o, vec3 dir, float t_max) {
+	vec3 inv = inverse_dir(dir);
+	for (int i = 0; i < box_count; i++) {
+		if (box_arch[i] == 1 && hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // arch, lit for one ray: (1, 1) open, (1, 0) an object, (0, 0) architecture.
 vec2 ray_al(int occ) {
 	return occ == 0 ? vec2(1.0) : (occ == 1 ? vec2(1.0, 0.0) : vec2(0.0));

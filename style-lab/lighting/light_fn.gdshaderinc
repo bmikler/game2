@@ -119,7 +119,123 @@ vec3 sash_corner(int i, int k) {
 	return vec3(shell_max.x, u, z);
 }
 
-// The sky from o (normal n): x arch, y lit (over sky_ref: the room's full sky light by a window).
+// The overlap of [a0, a1] × [b0, b1] with sash s (u from, u to, z from, z to), over its area.
+float rect_share(float a0, float a1, float b0, float b1, vec4 s) {
+	float area = max((s.y - s.x) * (s.w - s.z), 1e-6);
+	return max(0.0, min(a1, s.y) - max(a0, s.x)) * max(0.0, min(b1, s.w) - max(b0, s.z)) / area;
+}
+
+// The share of sash i's glass the objects (furniture, stairs, the actor) hide from o, analytically (no
+// samples: a big window close behind an object drew it as three fingers): each object's silhouette
+// projected from o onto the glass's wall, as a rectangle (u, z), its overlap with the glass; several
+// objects as independent (1 − Π). A box: its part between o and the wall, its corners; the actor's
+// cylinder: its tangents in plan, its height at its near and far side.
+float objects_hide(vec3 o, int i, bool with_actor) {
+	int wall = sash_wall[i];
+	vec4 s = sashes[i];
+	bool across = wall < 2; // the back and front walls: u = x, the normal along d
+	float plane = wall == 0 ? shell_min.y : (wall == 1 ? shell_max.y : (wall == 2 ? shell_min.x : shell_max.x));
+	float on = across ? o.y : o.x;
+	float ou = across ? o.x : o.y;
+	float span = plane - on;
+	if (abs(span) < 1e-3) {
+		return 0.0;
+	}
+	float near_n = on + sign(span) * 0.02;
+	float lo_n = min(near_n, plane);
+	float hi_n = max(near_n, plane);
+	float open = 1.0;
+	for (int b = 0; b < box_count + 1; b++) {
+		vec3 lo;
+		vec3 hi;
+		if (b < box_count) {
+			if (box_arch[b] == 1) {
+				continue;
+			}
+			lo = box_min[b];
+			hi = box_max[b];
+		} else {
+			if (!with_actor || actor_shape == 0) {
+				continue;
+			}
+			vec2 c = actor_body.xy;
+			float r = actor_body.z;
+			if (actor_shape == 1) {
+				// The cylinder: tangents in plan from o, then up the wall.
+				vec2 to = c - o.xy;
+				float dist = length(to);
+				float cn = across ? c.y : c.x;
+				if (dist <= r) {
+					return 1.0; // inside the body (the floor under it)
+				}
+				if ((cn - on) * span <= 0.0 || abs(cn - on) >= abs(span)) {
+					continue;
+				}
+				float half_angle = asin(r / dist);
+				vec2 mid = to / dist;
+				// Where the tangents meet the wall; one running away from it (the cylinder beside the
+				// point): the rays between reach the wall only far out on that tangent's side.
+				float u0 = 1e9;
+				float u1 = -1e9;
+				float open_side = 0.0;
+				for (int k = -1; k <= 1; k += 2) {
+					float a = float(k) * half_angle;
+					vec2 d = vec2(mid.x * cos(a) - mid.y * sin(a), mid.x * sin(a) + mid.y * cos(a));
+					float dn = across ? d.y : d.x;
+					float du = across ? d.x : d.y;
+					if (dn * span <= 0.0) {
+						open_side = du >= 0.0 ? 1.0 : -1.0;
+						continue;
+					}
+					float u = ou + du * span / dn;
+					u0 = min(u0, u);
+					u1 = max(u1, u);
+				}
+				if (open_side > 0.0) {
+					u1 = 1e9;
+				} else if (open_side < 0.0) {
+					u0 = -1e9;
+				}
+				float mn = across ? mid.y : mid.x;
+				float to_wall = span / mn; // plan distance to the wall along the middle
+				float z0 = 1e9;
+				float z1 = -1e9;
+				for (int k = -1; k <= 1; k += 2) {
+					float at = max(dist + float(k) * r, 0.02);
+					z0 = min(z0, o.z + (0.0 - o.z) * to_wall / at);
+					z1 = max(z1, o.z + (actor_body.w - o.z) * to_wall / at);
+				}
+				open *= 1.0 - clamp(rect_share(u0, u1, z0, z1, s), 0.0, 1.0);
+				continue;
+			}
+			lo = vec3(c - vec2(r), 0.0);
+			hi = vec3(c + vec2(r), actor_body.w);
+		}
+		float n0 = max(across ? lo.y : lo.x, lo_n);
+		float n1 = min(across ? hi.y : hi.x, hi_n);
+		if (n0 >= n1) {
+			continue;
+		}
+		float bu0 = across ? lo.x : lo.y;
+		float bu1 = across ? hi.x : hi.y;
+		float u0 = 1e9;
+		float u1 = -1e9;
+		float z0 = 1e9;
+		float z1 = -1e9;
+		for (int k = 0; k < 2; k++) {
+			float t = span / ((k == 0 ? n0 : n1) - on); // from o to the wall over from o to this face
+			u0 = min(u0, min(ou + (bu0 - ou) * t, ou + (bu1 - ou) * t));
+			u1 = max(u1, max(ou + (bu0 - ou) * t, ou + (bu1 - ou) * t));
+			z0 = min(z0, min(o.z + (lo.z - o.z) * t, o.z + (hi.z - o.z) * t));
+			z1 = max(z1, max(o.z + (lo.z - o.z) * t, o.z + (hi.z - o.z) * t));
+		}
+		open *= 1.0 - clamp(rect_share(u0, u1, z0, z1, s), 0.0, 1.0);
+	}
+	return 1.0 - open;
+}
+
+// The sky from o (normal n): x arch, y lit, each sash in the look (over sky_ref: the room's full sky
+// light by a window).
 vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 	vec2 al = vec2(0.0);
 	int own = room_index(o.xy);
@@ -154,15 +270,22 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		}
 		float towards = max(0.2, 1.0 + dot(wall_normal(sash_wall[i]), sky_sun));
 		float w = f * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
-		vec2 seen = vec2(0.0);
+		// The architecture by samples on the glass (smooth: not in the look); the objects analytically.
+		float open = 0.0;
 		for (int a = 0; a < sky_grid; a++) {
 			for (int b = 0; b < sky_grid; b++) {
 				vec2 at = (vec2(float(a), float(b)) + vec2(jx, jz)) / float(sky_grid);
 				vec3 q = c[0] + (c[1] - c[0]) * at.x + (c[3] - c[0]) * at.y;
-				seen += ray_al(occlusion(o, q - o, 0.999, with_actor, false, vec3(0.0)));
+				open += arch_blocked(o, q - o, 0.999) ? 0.0 : 1.0;
 			}
 		}
-		al += w * seen / cells;
+		open /= cells;
+		if (open <= 0.0) {
+			continue;
+		}
+		// Each sash its own source in the look: the actor hiding only the faint light through a doorway
+		// took a hard bite out of the whole sky there (the human).
+		al += w * open * vec2(1.0, look(1.0 - objects_hide(o, i, with_actor), px));
 	}
 	return al / sky_ref;
 }
@@ -295,7 +418,7 @@ Light light_parts(vec3 p, vec3 n, vec2 px, bool with_actor) {
 	}
 	if (sky_on == 1 && room_count > 0) {
 		vec2 al = sky_light(o, n, px, with_actor);
-		l.sky = room_sky[room] * al.x * kept(al, px);
+		l.sky = room_sky[room] * al.y;
 		l.shadow.y = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 	}
 	if (lamp_count > 0) {

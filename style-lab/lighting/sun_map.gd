@@ -527,8 +527,10 @@ func _set_boxes() -> void:
 	var shape: int = int(actor_shadow) if is_instance_valid(actor) else 0
 	var feet: Vector2 = geometry.ground_m(actor.global_position) if is_instance_valid(actor) else Vector2.ZERO
 	var height: float = ProjectionConfig.current().actor_height_m
-	_actor_middle = Vector2(feet.x, feet.y - ACTOR_RADIUS_M)
 	var r: float = ACTOR_RADIUS_M
+	# Its middle a radius behind the feet line, inside the shell (by the back wall it stood in the glass).
+	_actor_middle = Vector2(clampf(feet.x, geometry.shell_min.x + r, geometry.shell_max.x - r),
+			clampf(feet.y - r, geometry.shell_min.y + r, geometry.shell_max.y - r))
 	match test:
 		Test.ACTOR_BOX:
 			shape = int(ActorShadow.BOX)
@@ -589,15 +591,21 @@ func _actor_window() -> Rect2:
 	for index: int in _sash_rooms.size():
 		if sky_other_k > 0.0 or _sash_rooms[index].intersects(near):
 			sources.append_array(_sash_points.slice(index * 4, index * 4 + 4))
+	# A point source walls hide from the whole actor casts nothing; a shadow stops at the first wall.
+	var walls: Array[AABB] = _walls()
+	var middle: Vector3 = Vector3(_actor_middle.x, _actor_middle.y, h / 2.0)
 	var exits: Array[Vector3] = []
 	for corner: Vector3 in corners:
 		exits.append(corner)
 		for away: Vector3 in _away:
-			exits.append(_shell_exit(corner, away))
-		for point: Vector3 in sources:
+			exits.append(_wall_exit(corner, away, walls))
+	for point: Vector3 in sources:
+		if _hidden(point, corners, middle, walls):
+			continue
+		for corner: Vector3 in corners:
 			var away: Vector3 = corner - point
 			if away.length_squared() > 1e-6:
-				exits.append(_shell_exit(corner, away))
+				exits.append(_wall_exit(corner, away, walls))
 	var low: Vector2 = Vector2(INF, INF)
 	var high: Vector2 = Vector2(-INF, -INF)
 	for exit: Vector3 in exits:
@@ -607,6 +615,39 @@ func _actor_window() -> Rect2:
 			high = high.max(at)
 	var pad: Vector2 = Vector2(WINDOW_PAD_PX, WINDOW_PAD_PX)
 	return Rect2(low - pad, high - low + pad * 2.0)
+
+
+## The architecture's boxes (walls, lintels, partitions), as the shader's box_arch.
+func _walls() -> Array[AABB]:
+	var walls: Array[AABB] = []
+	for index: int in geometry.boxes.size():
+		var block: Block = geometry.box_blocks[index]
+		if block == null or block.size_m.z >= geometry.shell_max.z - 0.01 or block.lift_m > 0.0:
+			walls.append(geometry.boxes[index])
+	return walls
+
+
+## Walls stand between the point and the actor's middle and each of its corners.
+func _hidden(point: Vector3, corners: Array[Vector3], middle: Vector3, walls: Array[AABB]) -> bool:
+	for target: Vector3 in [middle] + corners:
+		var free: bool = true
+		for wall: AABB in walls:
+			if wall.intersects_segment(point, target):
+				free = false
+				break
+		if free:
+			return false
+	return true
+
+
+## Where o + t·dir first meets a wall or leaves the shell.
+func _wall_exit(o: Vector3, dir: Vector3, walls: Array[AABB]) -> Vector3:
+	var end: Vector3 = _shell_exit(o, dir)
+	for wall: AABB in walls:
+		var hit: Variant = wall.intersects_segment(o, end)
+		if hit != null:
+			end = hit
+	return end
 
 
 ## Buffer px of a point (x, d, z) in metres.
