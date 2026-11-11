@@ -14,7 +14,7 @@ Jakie jedno, globalne strojenie światła i cieni (wspólne dla wnętrza i ulicy
 **Zanim zacznie stroić, krytyk sprawdza błędy** (niesprawdzone w ticketcie 36): piętro i schody, wieczorne słońce we wstęgach okien bocznych, jasność postaci względem `main`, ślad cienia w rogu salonu, gdy postać stoi w jadalni (okno przeliczania nie sięga przez dwa przejścia). Błędy idą do naprawy przed strojeniem.
 
 **Pokrętła (wszystkie w F1, jawne, z zapisem zestawu):**
-- cienie: miękkość (tarcza słońca, żarówka), gradient i długość, siła cienia każdego rodzaju źródła, parametry stylizacji pixel art z [37](37-stylizacja-cieni-pixel-art.md) (poziomy, progi, dither);
+- cienie: miękkość (tarcza słońca, żarówka), gradient i długość, siła cienia każdego rodzaju źródła, parametry stylizacji pixel art z [37](37-stylizacja-cieni-pixel-art.md): wygląd A / B / C (gładki odpadł), rozdzielczość ×1–×3 (start: A ×2), `poziom_ev`, `poziom_pas`, `klucz_prog`, `klucz_pas`, `klucz_min`, `kontakt_m`, `kontakt_k`; krytyk proponuje wariant, ostateczny wybór na teksturach ([25](25-makieta-z-teksturami.md));
 - niebo z okien i drzwi: `front_glow`, `front_gamma`, `sky_dir_k`, `sky_other_k`, `door_k`, `SKY_REF`;
 - słońce, plamy, wstęgi i smugi: `sun_scale`, `side_ribbon_k`, `side_reach`, `side_width`, `FACING_FULL`, `SIDE_FACING_FULL`, `RIBBON_WIDEN`, kurz i powietrze (`air_k`, `AIR_DENSITY`, `AIR_FADE_M`, `DUST_GAIN`, `DUST_AMOUNT_K`);
 - lampy: jasność (`room_lamp_k`), zasięg i odległość (zanik), abażur (`shade_up`), wielkość żarówki;

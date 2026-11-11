@@ -222,10 +222,10 @@ func _add_sun_map_options() -> void:
 			_nearest(BULB_STEPS, 0.1), func(index: int) -> void:
 		SunMap.bulb_m = BULB_STEPS[index]
 		_refresh_sun())
-	DebugRegistry.add_variant(self, &"wyglad", "Cienie i światło: wygląd", LOOKS, 0, func(index: int) -> void:
+	DebugRegistry.add_variant(self, &"wyglad", "Cienie i światło: wygląd", LOOKS, 1, func(index: int) -> void:
 		SunMap.look = index
 		_refresh_sun())
-	DebugRegistry.add_variant(self, &"swiatlo_res", "Światło i cienie: rozdzielczość", LIGHT_RES, 0, func(index: int) -> void:
+	DebugRegistry.add_variant(self, &"swiatlo_res", "Światło i cienie: rozdzielczość", LIGHT_RES, 1, func(index: int) -> void:
 		SunMap.light_res = index + 1
 		get_tree().call_group(&"lit_view", &"set", &"render_scale", index + 1)
 		_refresh_sun())
