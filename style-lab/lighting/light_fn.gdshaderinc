@@ -70,9 +70,19 @@ float look(float vis, vec2 px) {
 	return clamp(floor(vis * steps + t), 0.0, steps) / steps;
 }
 
-// The share kept: lit / arch in the look (1 where the architecture lets nothing through).
+// 1: the look is taken once, of the pixel's whole light (all sources summed smooth, then lit / arch in
+// levels); 0: per source (each window, the sun, each lamp in levels on its own, then summed: by a
+// window the thresholds of two sources crossed apart and drew a lit shape over the shadow, the human).
+uniform int look_total = 0;
+
+// The share kept: lit / arch in the look (1 where the architecture lets nothing through); smooth when
+// the look is taken of the whole light.
 float kept(vec2 al, vec2 px) {
-	return al.x > 1e-6 ? look(clamp(al.y / al.x, 0.0, 1.0), px) : 1.0;
+	if (al.x <= 1e-6) {
+		return 1.0;
+	}
+	float share = clamp(al.y / al.x, 0.0, 1.0);
+	return look_total == 1 ? share : look(share, px);
 }
 
 // A far source through the sashes from o: x arch, y lit (means over the disc's samples).
@@ -313,8 +323,9 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 }
 
 // The rooms' lamps from o (normal n), each in the look on its own.
-vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
+vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 	vec3 total = vec3(0.0);
+	arch = vec3(0.0);
 	float turn = bayer4(px) * 6.2832;
 	for (int i = 0; i < lamp_count; i++) {
 		vec3 bulb = lamps[i];
@@ -341,6 +352,7 @@ vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 			vec3 spot = bulb + u * j.x + v * j.y;
 			seen += ray_al(occlusion(o, spot - o, 1.0, with_actor, true, bulb));
 		}
+		arch += lamp_color[i] * e * seen.x / float(lamp_samples);
 		total += lamp_color[i] * e * seen.x / float(lamp_samples) * kept(seen, px);
 	}
 	return total;
@@ -422,29 +434,62 @@ Light light_parts(vec3 p, vec3 n, vec2 px, bool with_actor) {
 	l.shadow = vec4(0.0);
 	vec3 o = p + n * EPS;
 	int room = room_index(p.xy);
+	vec3 arch = vec3(0.0); // the light past the architecture only (no objects), all sources
 	if (sun_on == 1) {
 		vec2 al = far_source(o, sun_dir, px, with_actor);
 		float k = kept(al, px);
-		l.sun = room_sun[room] * far_lambert(n, sun_dir) * al.x * k;
+		vec3 full = room_sun[room] * far_lambert(n, sun_dir) * al.x;
+		l.sun = full * k;
+		arch += full;
 		l.shadow.x = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 		if (ribbon_count > 0 && p.z < 0.01 && n.z > 0.5) {
 			vec2 rl = ribbon_light(o, px, with_actor);
 			l.sun += room_sun[room] * rl.x * kept(rl, px);
+			arch += room_sun[room] * rl.x;
 			l.shadow.w = rl.x > 1e-6 ? 1.0 - rl.y / rl.x : 0.0;
 		}
 	}
 	if (night_on == 1) {
 		vec2 al = far_source(o, night_dir, px, with_actor);
-		l.night = room_night[room] * far_lambert(n, night_dir) * al.x * kept(al, px);
+		vec3 full = room_night[room] * far_lambert(n, night_dir) * al.x;
+		l.night = full * kept(al, px);
+		arch += full;
 		l.shadow.z = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 	}
 	if (sky_on == 1 && room_count > 0) {
 		vec2 al = sky_light(o, n, px, with_actor);
 		l.sky = room_sky[room] * al.y;
+		arch += room_sky[room] * al.x;
 		l.shadow.y = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 	}
 	if (lamp_count > 0) {
-		l.lamps = lamp_light(o, n, px, with_actor);
+		vec3 lamp_arch;
+		l.lamps = lamp_light(o, n, px, with_actor, lamp_arch);
+		arch += lamp_arch;
+	}
+	if (look_total == 1 && shadow_levels >= 2) {
+		// One shadow per pixel: the whole light's share left by the objects, in levels; every source
+		// scaled alike (their mix, the colour, stays as the smooth light has it).
+		vec3 luma = vec3(0.3, 0.59, 0.11);
+		float a = dot(arch, luma);
+		float lit = dot(l.sun + l.sky + l.night + l.lamps, luma);
+		if (a > 1e-6) {
+			float share = clamp(lit / a, 0.0, 1.0);
+			float q = look(share, px);
+			float scale = share > 1e-4 ? q / share : 0.0;
+			if (share <= 1e-4 && q > 0.0) {
+				// Nothing left smooth but a level above zero: the light past the architecture at that level.
+				l.sun = vec3(0.0);
+				l.sky = arch * q;
+				l.night = vec3(0.0);
+				l.lamps = vec3(0.0);
+			} else {
+				l.sun *= scale;
+				l.sky *= scale;
+				l.night *= scale;
+				l.lamps *= scale;
+			}
+		}
 	}
 	return l;
 }

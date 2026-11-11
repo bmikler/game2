@@ -178,7 +178,7 @@ func _add_layout_options() -> void:
 
 ## Ticket 36 (the human: the old variants out of F1): the panel shows the light's look and the quality
 ## checks; every other option keeps its value, hidden. The interior frame (resolution) stays.
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cien_wyglad", &"slonce_tarcza", &"zarowka",
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"cien_wyglad", &"cien_poziomy", &"slonce_tarcza", &"zarowka",
 		&"widok_debug", &"smugi_gorne", &"test_cienia"]
 const ACTOR_STEPS: PackedFloat32Array = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
 const FILL_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
@@ -189,6 +189,8 @@ const AMBIENT_STEPS: PackedFloat32Array = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.
 const EXPOSURE_STEPS: PackedFloat32Array = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5]
 ## Ticket 36: the light buffer's variants and checks.
 const LOOKS: PackedStringArray = ["gladki", "3 poziomy z ditherem", "2 poziomy twarde"]
+## Ticket 36: the levels of the whole light at once (one shadow a pixel) or of each source on its own.
+const LOOK_SCOPES: PackedStringArray = ["z calego swiatla", "z kazdego zrodla (bylo)"]
 static var SUN_DISC_STEPS: PackedFloat32Array = _steps(0.2, 4.0, 0.2)
 static var BULB_STEPS: PackedFloat32Array = _steps(0.02, 0.4, 0.02)
 const DEBUG_VIEWS: PackedStringArray = ["swiatlo", "tylko slonce (i wstegi)", "tylko niebo", "tylko noc", "tylko lampy",
@@ -204,6 +206,9 @@ const COMPUTES: PackedStringArray = ["okno wokol postaci", "caly dom co klatke"]
 func _add_sun_map_options() -> void:
 	DebugRegistry.add_variant(self, &"cien_wyglad", "Cienie: wygląd", LOOKS, 1, func(index: int) -> void:
 		SunMap.shadow_look = index
+		_refresh_sun())
+	DebugRegistry.add_variant(self, &"cien_poziomy", "Cienie: poziomy liczone", LOOK_SCOPES, 0, func(index: int) -> void:
+		SunMap.look_total = index == 0
 		_refresh_sun())
 	var discs: PackedStringArray = PackedStringArray()
 	for degrees: float in SUN_DISC_STEPS:
