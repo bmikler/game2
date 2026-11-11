@@ -100,8 +100,10 @@ var _last_window: Rect2 = Rect2()
 var _away: Array[Vector3] = []
 var _points: Array[Vector3] = []
 var _actor_middle: Vector2 = Vector2.ZERO
-var _sash_points: Array[Vector3] = [] ## Every sash's 4 corners (the sky's sources).
-var _sash_rooms: Array[Rect2] = [] ## The floor (x, d metres) of each sash's room.
+var _sash_points: Array[Vector3] = [] ## Every window's 4 corners (its panes together: the sky's sources).
+var _sash_rooms: Array[Rect2] = [] ## The floor (x, d metres) of each window's room.
+var _planes: Array[WallPlane] = [] ## The walls by plane with their doorways (_wall_planes), kept while the walls stay.
+var _planes_of: Array[AABB] = []
 static var _current: SunMap
 
 
@@ -445,13 +447,31 @@ func _set_sources(toward: Vector3, night_dir: Vector3, sun_on: bool, night_on: b
 		var v: Vector3 = axis.cross(u)
 		for j: Vector2 in [Vector2.ZERO, Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
 			_away.append(-(axis + (u * j.x + v * j.y) * soft))
+	# A whole window's corners (its panes together: a pane's shadow lies inside the window's), 4 points
+	# a window instead of 4 a pane (the actor's window cost 2.5–6.5 ms a frame with every pane).
 	_sash_points.clear()
 	_sash_rooms.clear()
-	for index: int in geometry.sashes.size():
+	var index: int = 0
+	while index < geometry.sashes.size():
+		var low: Vector3 = Vector3(INF, INF, INF)
+		var high: Vector3 = -low
+		var last: int = index
+		while last < geometry.sashes.size() and geometry.sash_walls[last] == geometry.sash_walls[index] \
+				and is_equal_approx(geometry.sash_middles[last], geometry.sash_middles[index]):
+			for corner: int in 4:
+				var point: Vector3 = _sash_corner(last, corner)
+				low = low.min(point)
+				high = high.max(point)
+			last += 1
+		var across: bool = absf(high.x - low.x) > 1e-4 # a back or front wall: the window runs along x
 		for corner: int in 4:
-			_sash_points.append(_sash_corner(index, corner))
-		var middle: Vector3 = (_sash_corner(index, 0) + _sash_corner(index, 2)) / 2.0
+			var u: float = 1.0 if corner == 1 or corner == 2 else 0.0
+			var z: float = high.z if corner >= 2 else low.z
+			_sash_points.append(Vector3(lerpf(low.x, high.x, u) if across else low.x,
+					low.y if across else lerpf(low.y, high.y, u), z))
+		var middle: Vector3 = (low + high) / 2.0
 		_sash_rooms.append(_room_rect(Vector2(middle.x, middle.y)))
+		index = last
 
 
 ## The floor rect (x, d metres) of the room nearest to (x, d), as room_index() in the shader.
@@ -591,30 +611,46 @@ func _actor_window() -> Rect2:
 	for index: int in _sash_rooms.size():
 		if sky_other_k > 0.0 or _sash_rooms[index].intersects(near):
 			sources.append_array(_sash_points.slice(index * 4, index * 4 + 4))
-	# A point source walls hide from the whole actor casts nothing; a shadow stops at the first wall.
+	# A point source walls hide from the whole actor casts nothing; a shadow stops at the first wall,
+	# unless it falls on a doorway in it: then it goes on through that wall (the corner rays end on the
+	# wall beside the doorway, the shadow's middle passes through it: the window was too small).
 	var walls: Array[AABB] = _walls()
+	if walls != _planes_of:
+		_planes_of = walls
+		_planes = _wall_planes(walls)
+	var planes: Array[WallPlane] = _planes
 	var middle: Vector3 = Vector3(_actor_middle.x, _actor_middle.y, h / 2.0)
-	var exits: Array[Vector3] = []
-	for corner: Vector3 in corners:
-		exits.append(corner)
-		for away: Vector3 in _away:
-			exits.append(_wall_exit(corner, away, walls))
-	for point: Vector3 in sources:
-		if _hidden(point, corners, middle, walls):
-			continue
-		for corner: Vector3 in corners:
-			var away: Vector3 = corner - point
-			if away.length_squared() > 1e-6:
-				exits.append(_wall_exit(corner, away, walls))
-	var low: Vector2 = Vector2(INF, INF)
-	var high: Vector2 = Vector2(-INF, -INF)
-	for exit: Vector3 in exits:
-		for z: float in [0.0, geometry.shell_max.z]:
-			var at: Vector2 = _screen(Vector3(exit.x, exit.y, z))
-			low = low.min(at)
-			high = high.max(at)
 	var pad: Vector2 = Vector2(WINDOW_PAD_PX, WINDOW_PAD_PX)
-	return Rect2(low - pad, high - low + pad * 2.0)
+	var house: Rect2 = Rect2(Vector2.ZERO, Vector2(_rect.size))
+	var bounds: PackedVector2Array = [Vector2(INF, INF), Vector2(-INF, -INF)]
+	_extend(bounds, corners)
+	# Far lights (a direction) first, then the points (a lamp's bulb, a window's corners); once the window
+	# is the whole house (a shadow through both doorways) the rest cannot add to it.
+	var count: int = _away.size() + sources.size()
+	for index: int in count:
+		var dirs: Array[Vector3] = []
+		if index < _away.size():
+			for corner: Vector3 in corners:
+				dirs.append(_away[index])
+		else:
+			var point: Vector3 = sources[index - _away.size()]
+			if _hidden(point, corners, middle, walls):
+				continue
+			for corner: Vector3 in corners:
+				dirs.append(corner - point)
+		_extend(bounds, _shadow_exits(corners, dirs, walls, planes))
+		if Rect2(bounds[0] - pad, bounds[1] - bounds[0] + pad * 2.0).encloses(house):
+			break
+	return Rect2(bounds[0] - pad, bounds[1] - bounds[0] + pad * 2.0)
+
+
+## Grows bounds (buffer px: low, high) by the points, each from the floor to the ceiling.
+func _extend(bounds: PackedVector2Array, points: Array[Vector3]) -> void:
+	for point: Vector3 in points:
+		for z: float in [0.0, geometry.shell_max.z]:
+			var at: Vector2 = _screen(Vector3(point.x, point.y, z))
+			bounds[0] = bounds[0].min(at)
+			bounds[1] = bounds[1].max(at)
 
 
 ## The architecture's boxes (walls, lintels, partitions), as the shader's box_arch.
@@ -625,6 +661,124 @@ func _walls() -> Array[AABB]:
 		if block == null or block.size_m.z >= geometry.shell_max.z - 0.01 or block.lift_m > 0.0:
 			walls.append(geometry.boxes[index])
 	return walls
+
+
+## Where the rays from the actor's corners (one direction each, one source) end: at the first wall, or
+## through walls whose doorway their footprint on the wall's plane overlaps (up to 3 walls deep).
+func _shadow_exits(origins: Array[Vector3], dirs: Array[Vector3], walls: Array[AABB], planes: Array[WallPlane]) -> Array[Vector3]:
+	var open: Array[AABB] = walls
+	var ends: Array[Vector3] = []
+	for _depth: int in 4:
+		ends.clear()
+		var hit: Array[WallPlane] = []
+		for index: int in origins.size():
+			if dirs[index].length_squared() < 1e-6:
+				continue
+			var end: Vector3 = _wall_exit(origins[index], dirs[index], open)
+			ends.append(end)
+			var plane: WallPlane = _plane_of(end, planes)
+			if plane != null and not hit.has(plane):
+				hit.append(plane)
+		var pierced: Array[WallPlane] = []
+		for plane: WallPlane in hit:
+			if plane.footprint_meets_doorway(origins, dirs):
+				pierced.append(plane)
+		if pierced.is_empty():
+			break
+		var kept: Array[AABB] = []
+		for wall: AABB in open:
+			var skip: bool = false
+			for plane: WallPlane in pierced:
+				skip = skip or plane.walls.has(wall)
+			if not skip:
+				kept.append(wall)
+		open = kept
+	return ends
+
+
+## The walls grouped by plane (thin across x or across d), each with its doorways.
+func _wall_planes(walls: Array[AABB]) -> Array[WallPlane]:
+	var planes: Array[WallPlane] = []
+	for wall: AABB in walls:
+		var axis: int = 0 if wall.size.x < wall.size.y else 1
+		if wall.size[axis] > 0.5:
+			continue
+		var at: float = wall.get_center()[axis]
+		var found: WallPlane = null
+		for plane: WallPlane in planes:
+			if plane.axis == axis and absf(plane.at - at) < 0.05:
+				found = plane
+		if found == null:
+			found = WallPlane.new()
+			found.axis = axis
+			found.at = at
+			planes.append(found)
+		found.walls.append(wall)
+	for plane: WallPlane in planes:
+		plane.find_doorways(geometry.shell_max.z)
+	return planes
+
+
+## The plane whose wall a ray's end lies on (null: the shell).
+func _plane_of(end: Vector3, planes: Array[WallPlane]) -> WallPlane:
+	for plane: WallPlane in planes:
+		for wall: AABB in plane.walls:
+			if wall.grow(0.005).has_point(end):
+				return plane
+	return null
+
+
+## One wall plane (across x: axis 0, u = d; across d: axis 1, u = x), its pieces and its doorways:
+## gaps between the full-height pieces, below the lintels over them, as Rect2(u, z).
+class WallPlane:
+	var axis: int = 0
+	var at: float = 0.0
+	var walls: Array[AABB] = []
+	var doorways: Array[Rect2] = []
+
+	func find_doorways(top: float) -> void:
+		var u_axis: int = 1 - axis
+		var spans: Array[Vector2] = []
+		for wall: AABB in walls:
+			if wall.position.z <= 0.01 and wall.end.z >= top - 0.01:
+				spans.append(Vector2(wall.position[u_axis], wall.end[u_axis]))
+		if spans.is_empty():
+			return
+		spans.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+		var cursor: float = spans[0].x
+		for span: Vector2 in spans:
+			if span.x > cursor + 0.01:
+				var z_top: float = top
+				for wall: AABB in walls:
+					if wall.position[u_axis] < span.x and wall.end[u_axis] > cursor:
+						z_top = minf(z_top, wall.position.z)
+				if z_top > 0.01:
+					doorways.append(Rect2(cursor, 0.0, span.x - cursor, z_top))
+			cursor = maxf(cursor, span.y)
+
+	## The rays' footprint on the plane (a box in u, z) overlaps a doorway; a ray not reaching the plane
+	## leaves the footprint open on that side (counted as overlapping).
+	func footprint_meets_doorway(origins: Array[Vector3], dirs: Array[Vector3]) -> bool:
+		if doorways.is_empty():
+			return false
+		var u_axis: int = 1 - axis
+		var low: Vector2 = Vector2(INF, INF)
+		var high: Vector2 = Vector2(-INF, -INF)
+		for index: int in origins.size():
+			var dir: Vector3 = dirs[index]
+			if absf(dir[axis]) < 1e-6:
+				return true
+			var t: float = (at - origins[index][axis]) / dir[axis]
+			if t <= 0.0:
+				return true
+			var hit: Vector3 = origins[index] + dir * t
+			low = low.min(Vector2(hit[u_axis], hit.z))
+			high = high.max(Vector2(hit[u_axis], hit.z))
+		var footprint: Rect2 = Rect2(low, high - low).grow(0.01)
+		for doorway: Rect2 in doorways:
+			if footprint.intersects(doorway):
+				return true
+		return false
 
 
 ## Walls stand between the point and the actor's middle and each of its corners.
