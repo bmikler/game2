@@ -71,3 +71,11 @@ Zrzuty i arkusze: `style-lab/shots/t36/krytyk/` (`arkusz_<miejsce>.png`: góra z
 - Lampa sufitowa nad głową daje duży okrągły cień wokół stóp; fizycznie poprawne (strojenie kształtu).
 - Widok „udział cienia” nie pokazuje lamp (tylko R/G/B: słońce, niebo, noc); cienie lamp sprawdzane widokiem „tylko lampy” z różnicą.
 - „2 twarde”: twarde łuki i kliny na ścianach (znane, strojenie).
+
+### Ciąg dalszy (2026-11-11), gałąź `t36-krytyk-naprawy`
+
+- **Błąd 1 naprawiony** (`light_fn.gdshaderinc`, `objects_hide`): „wewnątrz ciała” tylko dla punktów nie wyżej niż postać, wyżej walec pomijany. Kolumna nad głową przy oknie tylnym znika (`z_fix.png`). Pas na froncie sofy i blatu za stopami zostaje: to punkty poniżej wysokości postaci w miejscu, które walec zajmuje (środek r za stopami), zakryte sylwetką; nie poprawiam.
+- Bramka: `--bench` 191 kl./s (9:30), 205 (22:00). Okno vs cały dom po spacerze: 182 lub 2822 px różnicy (zależnie od uruchomienia), **tak samo przed naprawą i po niej**.
+- **Uwaga 2 (drobna, nienaprawiana):** okno wokół postaci pomija bardzo słaby cień nieba sięgający przez dwa przejścia (postać w jadalni, przód salonu: niebo z okien jadalni przez przejścia, `sky_other_k = 1`). Różnica ≤ 0,009 przy świetle ok. 0,3 (≤ 3%), bez przeskoku poziomów; ślad zostaje po odejściu postaci. Do decyzji człowieka: akceptować albo poszerzyć okno o przejścia.
+- **Postać „znikająca” przy ściance działowej to artefakt testu:** `--at` w jadalni na d 3,78–3,95 wstawia stopy w kolizję; postać zostaje wypchnięta do d ≈ 3,67 (w grubość ścianki, zasłonięta). Chodząc nie da się tam stanąć, przeciek cienia do kuchni nieosiągalny. Przy okazji (poza zakresem cieni): kolizja krawędzi kuchni ma 1 m grubości i wchodzi w jadalnię, warto sprawdzić, czy pas jadalni tuż przy ściance jest dostępny.
+- Obejrzane: `arkusz_e_przed_blat` (ten sam pas na froncie blatu, zakryty), `arkusz_e_szafa_pok` (bez uwag).

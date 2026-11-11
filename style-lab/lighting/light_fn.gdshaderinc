@@ -166,7 +166,12 @@ float objects_hide(vec3 o, int i, bool with_actor) {
 				float dist = length(to);
 				float cn = across ? c.y : c.x;
 				if (dist <= r) {
-					return 1.0; // inside the body (the floor under it)
+					// Inside the body (the floor under it); above its top (a wall or a box front the
+					// cylinder touches, kept r behind the feet) the rays to a window pass over it.
+					if (o.z <= actor_body.w) {
+						return 1.0;
+					}
+					continue;
 				}
 				if ((cn - on) * span <= 0.0 || abs(cn - on) >= abs(span)) {
 					continue;
