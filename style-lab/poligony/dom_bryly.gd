@@ -178,7 +178,7 @@ func _add_layout_options() -> void:
 
 ## Ticket 36 (the human: the old variants out of F1): the panel shows the light's look and the quality
 ## checks; every other option keeps its value, hidden. The interior frame (resolution) stays.
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"slonce_tarcza", &"zarowka",
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"wyglad", &"swiatlo_res", &"slonce_tarcza", &"zarowka",
 		&"widok_debug", &"smugi_gorne", &"test_cienia"]
 const ACTOR_STEPS: PackedFloat32Array = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
 const FILL_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
@@ -195,6 +195,13 @@ const DEBUG_VIEWS: PackedStringArray = ["swiatlo", "tylko slonce (i wstegi)", "t
 const TOP_BEAM_MODES: PackedStringArray = ["wielokat z cieniem (jak t27)", "wolumetryczne"]
 const TESTS: PackedStringArray = ["brak", "postac jako pudelko", "pudelko w miejscu postaci (postac bez cienia)",
 		"pudelko przed drzwiami", "pudelko przed oknem"]
+## Ticket 37: the pixel-art look of the light and shadows, and its knobs (hidden: the critic's, --set=).
+const LOOKS: PackedStringArray = ["gladki (odniesienie)", "A: poziomy calego swiatla",
+		"B: niebo kontaktowo, jeden twardy cien klucza", "C: B + poziomy"]
+static var LEVEL_STEPS: PackedFloat32Array = _steps(0.25, 1.0, 0.05)
+static var SHARE_STEPS: PackedFloat32Array = _steps(0.0, 1.0, 0.05)
+static var CONTACT_STEPS: PackedFloat32Array = _steps(0.1, 1.0, 0.05)
+const LIGHT_RES: PackedStringArray = ["x1 (piksel swiata)", "x2", "x3"]
 const COMPUTES: PackedStringArray = ["okno wokol postaci", "caly dom co klatke"]
 
 
@@ -215,6 +222,20 @@ func _add_sun_map_options() -> void:
 			_nearest(BULB_STEPS, 0.1), func(index: int) -> void:
 		SunMap.bulb_m = BULB_STEPS[index]
 		_refresh_sun())
+	DebugRegistry.add_variant(self, &"wyglad", "Cienie i światło: wygląd", LOOKS, 0, func(index: int) -> void:
+		SunMap.look = index
+		_refresh_sun())
+	DebugRegistry.add_variant(self, &"swiatlo_res", "Światło i cienie: rozdzielczość", LIGHT_RES, 0, func(index: int) -> void:
+		SunMap.light_res = index + 1
+		get_tree().call_group(&"lit_view", &"set", &"render_scale", index + 1)
+		_refresh_sun())
+	_value_slider(&"poziom_ev", "Wygląd A: krok poziomu (EV)", LEVEL_STEPS, 0.5, func(v: float) -> void: SunMap.level_stops = v)
+	_value_slider(&"poziom_pas", "Wygląd A: pas ditheru (część kroku)", SHARE_STEPS, 0.3, func(v: float) -> void: SunMap.level_band = v)
+	_value_slider(&"klucz_prog", "Wygląd B: próg cienia klucza (widoczność)", SHARE_STEPS, 0.5, func(v: float) -> void: SunMap.key_cut = v)
+	_value_slider(&"klucz_pas", "Wygląd B: pas ditheru (widoczność)", SHARE_STEPS, 0.25, func(v: float) -> void: SunMap.key_band = v)
+	_value_slider(&"klucz_min", "Wygląd B: udział klucza, poniżej cień gładki", SHARE_STEPS, 0.2, func(v: float) -> void: SunMap.key_min = v)
+	_value_slider(&"kontakt_m", "Wygląd B: zasięg cienia kontaktowego (m)", CONTACT_STEPS, 0.45, func(v: float) -> void: SunMap.contact_m = v)
+	_value_slider(&"kontakt_k", "Wygląd B: siła cienia kontaktowego", SHARE_STEPS, 0.6, func(v: float) -> void: SunMap.contact_k = v)
 	DebugRegistry.add_variant(self, &"widok_debug", "Widok debug (bufor)", DEBUG_VIEWS, 0, func(index: int) -> void:
 		SunMap.debug_view = index
 		_refresh_sun())
@@ -249,6 +270,16 @@ func _darkness_slider(id: StringName, label: String, steps: PackedFloat32Array, 
 			first = index
 	DebugRegistry.add_slider(self, id, label, names, first, func(index: int) -> void:
 		set_k.call(steps[index])
+		_refresh_sun())
+
+
+## Ticket 37: a slider over plain values (shown as numbers); `set_value` stores the chosen one.
+func _value_slider(id: StringName, label: String, steps: PackedFloat32Array, start: float, set_value: Callable) -> void:
+	var names: PackedStringArray = PackedStringArray()
+	for value: float in steps:
+		names.append(String.num(value, 2).replace(".", ","))
+	DebugRegistry.add_slider(self, id, label, names, _nearest(steps, start), func(index: int) -> void:
+		set_value.call(steps[index])
 		_refresh_sun())
 
 

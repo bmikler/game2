@@ -13,6 +13,13 @@ var pixel_perfect: bool = true:
 		pixel_perfect = value
 		_apply_pixel_mode()
 
+## Ticket 37: the world rendered this many times finer (sprites stay pixel art, the light gets finer).
+var render_scale: int = 1:
+	set(value):
+		render_scale = value
+		if is_node_ready():
+			_fit_to_window()
+
 var _base_size: Vector2 = Vector2(960, 540) ## What the scale aims to show.
 var _shown_size: Vector2 = Vector2(960, 540) ## What is rendered: the window divided by the scale.
 
@@ -26,6 +33,7 @@ func _ready() -> void:
 	_shown.texture = _view.get_texture()
 	_screen.texture = display.get_texture()
 	get_viewport().size_changed.connect(_fit_to_window)
+	add_to_group(&"lit_view")
 	apply_base_size()
 
 
@@ -78,8 +86,10 @@ func _fit_to_window() -> void:
 	var fit: float = window.y / _base_size.y
 	var size: Vector2i = Vector2i((window / fit).ceil())
 	_shown_size = Vector2(size)
-	_view.size = size
-	display.size = size
-	_shown.size = _shown_size
+	_view.size = size * render_scale
+	_view.size_2d_override = size if render_scale > 1 else Vector2i.ZERO
+	_view.size_2d_override_stretch = render_scale > 1
+	display.size = size * render_scale
+	_shown.size = _shown_size * render_scale
 	_screen.size = _shown_size * fit
 	_screen.position = ((window - _screen.size) / 2.0).floor()

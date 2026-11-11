@@ -18,7 +18,8 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 world = floor(world_v) + 0.5;
+	vec2 world = light_px_mid(world_v);
+	vec2 dither_px = light_px(world_v);
 	vec3 p;
 	vec3 n;
 	vec2 al = vec2(0.0);
@@ -26,7 +27,7 @@ void fragment() {
 		float d0 = (world.y - floor_y) / (ppm * kd);
 		float z_end = min(shell_max.z, (shell_max.y - d0) * kd);
 		vec3 dir = normalize(sun_dir);
-		float jitter = bayer4(world);
+		float jitter = bayer4(dither_px);
 		for (int i = 0; i < steps; i++) {
 			float z = mix(p.z, z_end, (float(i) + jitter) / float(steps));
 			vec3 q = vec3(p.x, d0 + z / kd, z);
@@ -38,5 +39,15 @@ void fragment() {
 			al += ray_al(occlusion(q, dir, t, true, false, vec3(0.0)));
 		}
 	}
-	COLOR = vec4(COLOR.rgb * kept(al, world), 1.0);
+	// Ticket 37: the beam in the shadows' look: B its visibility past the key's threshold, A its
+	// brightness on the same levels (on black: it is added on top of the lit floor).
+	float k = kept(al, dither_px);
+	if (look_key()) {
+		k = dither_step(k, key_cut, key_band, dither_px);
+	}
+	vec3 beam = COLOR.rgb * k;
+	if (look_levels()) {
+		beam = light_levels(beam, vec3(0.0), dither_px);
+	}
+	COLOR = vec4(beam, 1.0);
 }

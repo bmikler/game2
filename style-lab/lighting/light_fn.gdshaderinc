@@ -63,6 +63,119 @@ float kept(vec2 al, vec2 px) {
 	return al.x > 1e-6 ? clamp(al.y / al.x, 0.0, 1.0) : 1.0;
 }
 
+// PROTOTYPE (ticket 37): the pixel-art look, applied to the exact light above (research 82).
+// look: 0 smooth; 1 A, levels of the pixel's whole light (log steps, a Bayer band under each step);
+// 2 B, the sky casts only a contact shadow, one hard shadow from the key light (sun, ribbons, night,
+// lamps together: their light-weighted visibility past one threshold); 3 C, B and A.
+uniform int look = 0;
+uniform float level_stops = 0.5; // A: one level, in stops (log2 of the light)
+uniform float level_band = 0.3; // A: the share of each step dithered under its upper edge
+uniform float key_cut = 0.5; // B: the key's visibility where its shadow begins
+uniform float key_band = 0.25; // B: the dithered band round key_cut (visibility units)
+uniform float key_min = 0.2; // B: under this share of the pixel's light the key's shadow stays smooth
+uniform float contact_m = 0.45; // B: how far the contact shadow reaches from an object's base (m)
+uniform float contact_k = 0.6; // B: how dark it gets right at the base (of the sky)
+uniform vec3 room_ambient[4]; // each room's flat ambient (its RoomLighting light), for A's levels
+// Light pixels per world pixel (the view and the buffer rendered this much finer; sprites stay as they are).
+uniform float light_res = 1.0;
+
+// The light pixel holding world point w: its middle (world px), and its index (for the dither).
+vec2 light_px_mid(vec2 w) {
+	return (floor(w * light_res) + 0.5) / light_res;
+}
+
+vec2 light_px(vec2 w) {
+	return floor(w * light_res);
+}
+
+bool look_levels() {
+	return look == 1 || look == 3;
+}
+
+bool look_key() {
+	return look >= 2;
+}
+
+float luma(vec3 c) {
+	return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+// 0 or 1: v past `cut`, dithered by the game's Bayer 4×4 in a band `band` wide round it.
+float dither_step(float v, float cut, float band, vec2 px) {
+	float t = clamp((v - cut) / max(band, 1e-4) + 0.5, 0.0, 1.0);
+	return bayer4(px) < t ? 1.0 : 0.0;
+}
+
+// A: `light` (on top of the flat `amb`) so that their sum takes one of the levels; never under amb.
+vec3 light_levels(vec3 light, vec3 amb, vec2 px) {
+	vec3 sum = light + amb;
+	float l = luma(sum);
+	if (l < 1e-5) {
+		return light;
+	}
+	float e = log2(l) / level_stops;
+	float k = floor(e);
+	float f = e - k;
+	float t = clamp((f - (1.0 - level_band)) / max(level_band, 1e-4), 0.0, 1.0);
+	if (bayer4(px) < t) {
+		k += 1.0;
+	}
+	float q = max(exp2((k + 0.5) * level_stops), luma(amb));
+	return max(sum * (q / l) - amb, vec3(0.0));
+}
+
+// B: the contact shadow of the objects (furniture, stairs, the actor) on o, a share of the sky:
+// strongest at an object's base, gone contact_m away (less for low objects); on an upright receiver
+// only from objects in front of it and only near the floor; several as independent (1 − Π).
+float contact_shade(vec3 o, vec3 n, bool with_actor) {
+	float open = 1.0;
+	bool upright = n.z < 0.5;
+	for (int b = 0; b < box_count + 1; b++) {
+		vec3 lo;
+		vec3 hi;
+		vec2 near;
+		if (b < box_count) {
+			if (box_arch[b] == 1) {
+				continue;
+			}
+			lo = box_min[b];
+			hi = box_max[b];
+			near = clamp(o.xy, lo.xy, hi.xy);
+		} else {
+			if (!with_actor || actor_shape == 0) {
+				continue;
+			}
+			lo = vec3(actor_body.xy - vec2(actor_body.z), 0.0);
+			hi = vec3(actor_body.xy + vec2(actor_body.z), actor_body.w);
+			if (actor_shape == 1) {
+				vec2 off = o.xy - actor_body.xy;
+				float len = length(off);
+				near = len > actor_body.z ? actor_body.xy + off / len * actor_body.z : o.xy;
+			} else {
+				near = clamp(o.xy, lo.xy, hi.xy);
+			}
+		}
+		vec2 to = near - o.xy;
+		float flat_d = length(to);
+		if (flat_d < 1e-3 && o.z >= hi.z - 0.02) {
+			continue; // on its top
+		}
+		float up;
+		if (upright) {
+			if (flat_d < 1e-3 || dot(n.xy, to) <= 0.0) {
+				continue; // its own face, or the object behind the face
+			}
+			up = max(o.z - lo.z, 0.0);
+		} else {
+			up = max(o.z - hi.z, 0.0);
+		}
+		float reach = contact_m * clamp((hi.z - lo.z) / 0.8, 0.25, 1.0);
+		float a = 1.0 - clamp(length(vec2(flat_d, up)) / reach, 0.0, 1.0);
+		open *= 1.0 - contact_k * a * a;
+	}
+	return 1.0 - open;
+}
+
 // A far source through the sashes from o: x arch, y lit (means over the disc's samples).
 vec2 far_source(vec3 o, vec3 toward, vec2 px, bool with_actor) {
 	vec3 axis = normalize(toward);
@@ -372,7 +485,7 @@ float objects_hide(vec3 o, vec3 n, int i, bool with_actor) {
 
 // The sky from o (normal n): x arch, y lit, each sash in the look (over sky_ref: the room's full sky
 // light by a window).
-vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
+vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor, bool with_objects) {
 	vec2 al = vec2(0.0);
 	int own = room_index(o.xy);
 	float jx = bayer4(px);
@@ -437,15 +550,16 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		}
 		// Each window its own source in the look: the actor hiding only the faint light through a
 		// doorway took a hard bite out of the whole sky there (the human).
-		pane_sum += w * open * vec2(1.0, 1.0 - objects_hide(o, n, i, with_actor));
+		pane_sum += w * open * vec2(1.0, with_objects ? 1.0 - objects_hide(o, n, i, with_actor) : 1.0);
 	}
 	al += vec2(pane_sum.x, pane_sum.x * kept(pane_sum, px));
 	return al / sky_ref;
 }
 
 // The rooms' lamps from o (normal n), each in the look on its own.
-vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
+vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 	vec3 total = vec3(0.0);
+	arch = vec3(0.0);
 	float turn = bayer4(px) * 6.2832;
 	for (int i = 0; i < lamp_count; i++) {
 		vec3 bulb = lamps[i];
@@ -472,7 +586,9 @@ vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 			vec3 spot = bulb + u * j.x + v * j.y;
 			seen += ray_al(occlusion(o, spot - o, 1.0, with_actor, true, bulb));
 		}
-		total += lamp_color[i] * e * seen.x / float(lamp_samples) * kept(seen, px);
+		vec3 through = lamp_color[i] * e * seen.x / float(lamp_samples);
+		arch += through;
+		total += through * kept(seen, px);
 	}
 	return total;
 }
@@ -534,6 +650,18 @@ vec2 ribbon_light(vec3 o, vec2 px, bool with_actor) {
 	return al * ribbon_gain;
 }
 
+// B: a key source's light (`arch` what the architecture lets through, `lit` past the objects) with its
+// visibility past key_cut, smooth where it is under key_min of the pixel's light (`rest` the others).
+vec3 key_style(vec3 arch, vec3 lit, float rest, vec2 px) {
+	float through = luma(arch);
+	if (through < 1e-6) {
+		return lit;
+	}
+	float v = clamp(luma(lit) / through, 0.0, 1.0);
+	float share = through / (through + rest);
+	return arch * mix(v, dither_step(v, key_cut, key_band, px), smoothstep(key_min * 0.5, key_min, share));
+}
+
 // What light_at() returns, by source (the debug views).
 struct Light {
 	vec3 sun;
@@ -553,29 +681,60 @@ Light light_parts(vec3 p, vec3 n, vec2 px, bool with_actor) {
 	l.shadow = vec4(0.0);
 	vec3 o = p + n * EPS;
 	int room = room_index(p.xy);
+	// What the architecture lets through of each key source (B: one shadow over them all).
+	vec3 sun_arch = vec3(0.0);
+	vec3 night_arch = vec3(0.0);
+	vec3 lamp_arch = vec3(0.0);
 	if (sun_on == 1) {
 		vec2 al = far_source(o, sun_dir, px, with_actor);
 		float k = kept(al, px);
-		l.sun = room_sun[room] * far_lambert(n, sun_dir) * al.x * k;
+		sun_arch = room_sun[room] * far_lambert(n, sun_dir) * al.x;
+		l.sun = sun_arch * k;
 		l.shadow.x = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 		if (ribbon_count > 0 && p.z < 0.01 && n.z > 0.5) {
 			vec2 rl = ribbon_light(o, px, with_actor);
+			sun_arch += room_sun[room] * rl.x;
 			l.sun += room_sun[room] * rl.x * kept(rl, px);
 			l.shadow.w = rl.x > 1e-6 ? 1.0 - rl.y / rl.x : 0.0;
 		}
 	}
 	if (night_on == 1) {
 		vec2 al = far_source(o, night_dir, px, with_actor);
-		l.night = room_night[room] * far_lambert(n, night_dir) * al.x * kept(al, px);
+		night_arch = room_night[room] * far_lambert(n, night_dir) * al.x;
+		l.night = night_arch * kept(al, px);
 		l.shadow.z = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
 	}
 	if (sky_on == 1 && room_count > 0) {
-		vec2 al = sky_light(o, n, px, with_actor);
-		l.sky = room_sky[room] * al.y;
-		l.shadow.y = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
+		if (look_key()) {
+			// B: no cast shadow from the sky, only the objects' contact shadow.
+			vec2 al = sky_light(o, n, px, with_actor, false);
+			float c = contact_shade(o, n, with_actor);
+			l.sky = room_sky[room] * al.y * (1.0 - c);
+			l.shadow.y = c;
+		} else {
+			vec2 al = sky_light(o, n, px, with_actor, true);
+			l.sky = room_sky[room] * al.y;
+			l.shadow.y = al.x > 1e-6 ? 1.0 - al.y / al.x : 0.0;
+		}
 	}
 	if (lamp_count > 0) {
-		l.lamps = lamp_light(o, n, px, with_actor);
+		l.lamps = lamp_light(o, n, px, with_actor, lamp_arch);
+	}
+	if (look_key()) {
+		// B: each key source (the sun with its ribbons, the night, the lamps) past its own threshold;
+		// where it is a small part of the pixel's light its shadow stays smooth (faint, no stray
+		// contours). One threshold over them all lost a lamp's shadow in a sun patch (the human).
+		float rest = luma(l.sky + room_ambient[room]);
+		float sun_t = luma(sun_arch);
+		float night_t = luma(night_arch);
+		float lamp_t = luma(lamp_arch);
+		float key = sun_t + night_t + lamp_t;
+		l.sun = key_style(sun_arch, l.sun, rest + key - sun_t, px);
+		l.night = key_style(night_arch, l.night, rest + key - night_t, px);
+		l.lamps = key_style(lamp_arch, l.lamps, rest + key - lamp_t, px);
+		l.shadow.x = sun_t > 1e-6 ? 1.0 - luma(l.sun) / sun_t : 0.0;
+		l.shadow.z = night_t > 1e-6 ? 1.0 - luma(l.night) / night_t : 0.0;
+		l.shadow.w = 0.0;
 	}
 	return l;
 }

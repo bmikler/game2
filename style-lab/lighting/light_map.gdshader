@@ -77,20 +77,28 @@ vec3 body_light(vec2 s, vec2 world) {
 }
 
 void fragment() {
-	vec2 px = floor(buffer_px) + 0.5;
+	vec2 px = light_px_mid(buffer_px);
 	vec3 lit = vec3(0.0);
 	if (px.x >= house_w) {
 		vec2 s = px - vec2(house_w, 0.0);
 		if (s.x < strip_size.x && s.y < strip_size.y) {
 			vec2 world = actor_feet_px + s - vec2(strip_size.x * 0.5, strip_size.y);
-			lit = body_light(s, floor(world));
+			lit = body_light(s, light_px(world));
+			if (look_levels() && debug_view == 0) {
+				// Dithered in the strip's own px: the pattern stays on the body as it walks.
+				vec2 feet = vec2(actor_feet_px.x / ppm, (actor_feet_px.y - floor_y) / (ppm * kd));
+				lit = light_levels(lit, room_ambient[room_index(feet)], light_px(s));
+			}
 		}
 	} else {
 		vec2 world = origin_px + px;
 		vec3 p;
 		vec3 n;
 		if (surface_at(world, p, n)) {
-			lit = surface_light(p, n, floor(world));
+			lit = surface_light(p, n, light_px(world));
+			if (look_levels() && debug_view == 0) {
+				lit = light_levels(lit, room_ambient[room_index(p.xy)], light_px(world));
+			}
 		}
 	}
 	COLOR = vec4(lit, 1.0);

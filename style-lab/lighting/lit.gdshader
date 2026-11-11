@@ -12,6 +12,7 @@ uniform vec2 map_size = vec2(1.0); // the buffer's px (the house, then the actor
 uniform bool is_actor = false;
 uniform vec4 actor_rect = vec4(0.0); // world px of the actor strip's top left, its size
 uniform float house_w = 0.0; // the strip starts here in the buffer
+uniform float light_res = 1.0; // ticket 37: buffer px per world px
 
 varying vec2 world_pos;
 
@@ -20,14 +21,14 @@ void vertex() {
 }
 
 void light() {
-	float h = LIGHT_POSITION.z;
+	float h = LIGHT_POSITION.z / light_res; // the view light_res times finer scales the height too
 	if (h > 6900.0 && h < 7100.0) {
 		vec2 at;
 		if (is_actor) {
-			vec2 s = clamp(floor(world_pos) + 0.5 - actor_rect.xy, vec2(0.5), actor_rect.zw - 0.5);
+			vec2 s = clamp((floor(world_pos * light_res) + 0.5) / light_res - actor_rect.xy, vec2(0.5 / light_res), actor_rect.zw - 0.5 / light_res);
 			at = vec2(house_w, 0.0) + s;
 		} else {
-			at = floor(world_pos) + 0.5 - map_origin;
+			at = (floor(world_pos * light_res) + 0.5) / light_res - map_origin;
 		}
 		vec3 map = texture(light_map, at / map_size).rgb;
 		LIGHT = vec4(map * COLOR.rgb * LIGHT_ENERGY, LIGHT_COLOR.a);

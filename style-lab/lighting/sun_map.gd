@@ -66,6 +66,16 @@ static var actor_shadow: ActorShadow = ActorShadow.CYLINDER
 static var test: Test = Test.NONE
 static var debug_view: int = 0 ## light_map.gdshader: 0 the light, 1 sun, 2 sky, 3 night, 4 lamps, 5 shadow shares.
 static var whole_every_frame: bool = false ## The bench's reference: no window, the whole house every frame.
+## PROTOTYPE (ticket 37): the pixel-art look (light_fn.gdshaderinc: look) and its knobs (the critic's).
+static var look: int = 0 ## 0 smooth, 1 A levels of the whole light, 2 B contact sky + one key shadow, 3 C both.
+static var level_stops: float = 0.5
+static var level_band: float = 0.3
+static var key_cut: float = 0.5
+static var key_band: float = 0.25
+static var key_min: float = 0.2
+static var contact_m: float = 0.45
+static var contact_k: float = 0.6
+static var light_res: int = 1 ## Buffer px per world px (the view renders as fine: LitView.render_scale).
 
 var geometry: SunGeometry
 var rooms: Array[RoomLighting] = []
@@ -128,7 +138,7 @@ func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, wi
 func _build_buffer() -> void:
 	_map = _material(MAP_SHADER)
 	_view = SubViewport.new()
-	_view.size = Vector2i(_rect.size.x + STRIP.x, maxi(_rect.size.y, STRIP.y))
+	_apply_res()
 	_view.disable_3d = true
 	_view.use_hdr_2d = true
 	_view.transparent_bg = false
@@ -157,20 +167,33 @@ func _build_buffer() -> void:
 	add_child(_light)
 	Lit.set_all(&"light_map", _view.get_texture())
 	Lit.set_all(&"map_origin", Vector2(_rect.position))
-	Lit.set_all(&"map_size", Vector2(_view.size))
+	Lit.set_all(&"map_size", Vector2(_buffer_size()))
 	Lit.set_all(&"house_w", float(_rect.size.x))
 	# The debug views: the buffer itself over the house, unlit.
 	_debug = Sprite2D.new()
 	_debug.texture = _view.get_texture()
 	_debug.centered = false
 	_debug.region_enabled = true
-	_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size))
+	_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size * light_res))
+	_debug.scale = Vector2.ONE / light_res
 	_debug.position = Vector2(_rect.position)
 	_debug.z_index = 200
 	var unlit: CanvasItemMaterial = CanvasItemMaterial.new()
 	unlit.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	_debug.material = unlit
 	add_child(_debug)
+
+
+## The buffer in world px (the house, then the actor strip).
+func _buffer_size() -> Vector2i:
+	return Vector2i(_rect.size.x + STRIP.x, maxi(_rect.size.y, STRIP.y))
+
+
+## Ticket 37: the buffer light_res times finer; its rects keep world px (the 2D size override).
+func _apply_res() -> void:
+	_view.size = _buffer_size() * light_res
+	_view.size_2d_override = _buffer_size()
+	_view.size_2d_override_stretch = true
 
 
 func _rect_in(view: SubViewport, at: Vector2, size: Vector2) -> ColorRect:
@@ -320,6 +343,25 @@ func apply(sun: SunSample) -> void:
 	_set_all(&"door_sash", door_sash)
 	_set_all(&"door_k", door_k)
 	_set_all(&"lamp_size", bulb_m)
+	var ambients: PackedVector3Array = PackedVector3Array()
+	for room: RoomLighting in rooms.slice(0, MAX_ROOMS):
+		var amb: Color = room.ambient_color() * room.ambient_energy()
+		ambients.append(Vector3(amb.r, amb.g, amb.b))
+	_set_all(&"room_ambient", ambients)
+	_set_all(&"look", look)
+	if _view.size != _buffer_size() * light_res:
+		_apply_res()
+		_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size * light_res))
+		_debug.scale = Vector2.ONE / light_res
+	_set_all(&"light_res", float(light_res))
+	Lit.set_all(&"light_res", float(light_res))
+	_set_all(&"level_stops", level_stops)
+	_set_all(&"level_band", level_band)
+	_set_all(&"key_cut", key_cut)
+	_set_all(&"key_band", key_band)
+	_set_all(&"key_min", key_min)
+	_set_all(&"contact_m", contact_m)
+	_set_all(&"contact_k", contact_k)
 	_map.set_shader_parameter(&"debug_view", debug_view)
 	_map.set_shader_parameter(&"actor_k", actor_k)
 	_set_lamps()
