@@ -3,7 +3,7 @@ id: 14
 title: Światło w Poligonach: smugi, plama słońca, noc w mieście i poza nim
 labels: [wayfinder:prototype]
 status: open
-assignee:
+assignee: claude
 blocked_by: [11, 36]
 ---
 
