@@ -42,7 +42,6 @@ const AIR_FADE_M: float = 6.0
 const AIR_DENSITY: float = 0.08
 const DUST_GAIN: float = 2.0
 const DUST_AMOUNT_K: float = 3.0 ## More motes: they hang over the back wall too and only the lit ones show.
-const LOOK_LEVELS: PackedInt32Array = [0, 3, 2] ## smooth, 3 levels dithered, 2 hard
 
 ## Decided (tickets 31, 33: the critic's C, the human's picks); the Poligon may set them.
 static var enabled: bool = false
@@ -60,7 +59,6 @@ static var room_lamp_k: float = 1.0
 static var night_window_k: float = 1.0
 static var actor_k: float = 1.0 ## The light on the body (its front, a cylinder seen from the camera) × this.
 ## Variants (F1).
-static var shadow_look: int = 1 ## 0 smooth, 1 three levels dithered, 2 two levels hard.
 static var sun_disc_deg: float = 2.4 ## The sun's disc (radius, degrees): its shadows' softness.
 static var bulb_m: float = 0.1 ## A lamp's bulb across (m).
 static var top_beams: TopBeams = TopBeams.POLYGON
@@ -322,8 +320,6 @@ func apply(sun: SunSample) -> void:
 	_set_all(&"door_sash", door_sash)
 	_set_all(&"door_k", door_k)
 	_set_all(&"lamp_size", bulb_m)
-	_set_all(&"shadow_levels", LOOK_LEVELS[shadow_look])
-	_set_all(&"shadow_dither", 1 if shadow_look == 1 else 0)
 	_map.set_shader_parameter(&"debug_view", debug_view)
 	_map.set_shader_parameter(&"actor_k", actor_k)
 	_set_lamps()
@@ -853,6 +849,10 @@ func _set_geometry() -> void:
 	windows.resize(SunGeometry.MAX_SASHES)
 	_set_all(&"sash_window", windows)
 	_set_boxes()
+	if OS.get_cmdline_user_args().has("--sashes"):
+		print("SHELL ", geometry.shell_min, " ", geometry.shell_max)
+		for index: int in geometry.sashes.size():
+			print("SZYBA ", index, " wall=", geometry.sash_walls[index], " okno=", windows[index], " ", geometry.sashes[index])
 
 
 func _debug_lights() -> void:

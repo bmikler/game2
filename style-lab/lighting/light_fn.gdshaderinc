@@ -2,8 +2,8 @@
 // windows' ribbons, the sky through every sash and the street door, the night through the windows, the
 // rooms' lamps) is a sum of samples tested against the same occluders (sun_geometry: blocked_by). Per
 // source: arch = what the architecture lets through (shell, sashes, walls, partitions, lintels), lit =
-// what is left past the objects (furniture, stairs, the actor); the occluders' share (lit / arch) is the source's visibility, drawn in the look
-// (smooth, 3 levels dithered, 2 hard) before it scales the source's light. Samples turn per world
+// what is left past the objects (furniture, stairs, the actor); the occluders' share (lit / arch) is the source's visibility (smooth),
+// which scales the source's light. Samples turn per world
 // pixel by the game's Bayer 4×4: the penumbra is the game's dither, fixed in the world.
 
 #include "res://lighting/sun_geometry.gdshaderinc"
@@ -56,23 +56,11 @@ uniform float ribbon_widen = 0.25;
 uniform float ribbon_edge = 0.12;
 uniform float ribbon_facing_full = 0.6;
 uniform float ribbon_fade = 1.4;
-// The look: 0 smooth; else the visibility in this many levels (3 dithered, 2 hard).
-uniform int shadow_levels = 0;
-uniform int shadow_dither = 1;
-
-float look(float vis, vec2 px) {
-	if (shadow_levels < 2) {
-		return vis;
-	}
-	float steps = float(shadow_levels - 1);
-	// Dithered only in a band round each step (a full-range dither turned a faint shadow into sparse dots).
-	float t = shadow_dither == 1 ? 0.5 + (bayer4(px) - 0.5) * 0.6 : 0.5;
-	return clamp(floor(vis * steps + t), 0.0, steps) / steps;
-}
-
-// The share kept: lit / arch in the look (1 where the architecture lets nothing through).
+// The share kept: lit / arch, smooth (1 where the architecture lets nothing through). The levels and
+// dither per source are gone (the human: thresholds on each source's soft share drew short, long and
+// several hard shadows; the pixel-art look is to be done again, properly).
 float kept(vec2 al, vec2 px) {
-	return al.x > 1e-6 ? look(clamp(al.y / al.x, 0.0, 1.0), px) : 1.0;
+	return al.x > 1e-6 ? clamp(al.y / al.x, 0.0, 1.0) : 1.0;
 }
 
 // A far source through the sashes from o: x arch, y lit (means over the disc's samples).
@@ -119,31 +107,240 @@ vec3 sash_corner(int i, int k) {
 	return vec3(shell_max.x, u, z);
 }
 
-// The overlap of [a0, a1] × [b0, b1] with sash s (u from, u to, z from, z to), over its area.
-float rect_share(float a0, float a1, float b0, float b1, vec4 s) {
-	float area = max((s.y - s.x) * (s.w - s.z), 1e-6);
-	return max(0.0, min(a1, s.y) - max(a0, s.x)) * max(0.0, min(b1, s.w) - max(b0, s.z)) / area;
+// The objects' share of a sash's sky, exactly (the human: an actor under a window cast two crossed arms of
+// shadow and left a lit patch straight behind it: the share of the glass's area hidden by a rectangle is_round
+// the silhouette weighed the middle of the glass like its near edge, and lost the shadow beside the body).
+// In the frame of the sash's wall: u along it, n from it into the room (the wall at n = 0), z up.
+const int POLY_MAX = 16;
+
+vec3 wall_local(vec3 p, int wall) {
+	if (wall == 0) { return vec3(p.x, p.y - shell_min.y, p.z); }
+	if (wall == 1) { return vec3(p.x, shell_max.y - p.y, p.z); }
+	if (wall == 2) { return vec3(p.y, p.x - shell_min.x, p.z); }
+	return vec3(p.y, shell_max.x - p.x, p.z);
 }
 
-// The share of sash i's glass the objects (furniture, stairs, the actor) hide from o, analytically (no
-// samples: a big window close behind an object drew it as three fingers): each object's silhouette
-// projected from o onto the glass's wall, as a rectangle (u, z), its overlap with the glass; several
-// objects as independent (1 − Π). A box: its part between o and the wall, its corners; the actor's
-// cylinder: its tangents in plan, its height at its near and far side.
-float objects_hide(vec3 o, int i, bool with_actor) {
-	int wall = sash_wall[i];
-	vec4 s = sashes[i];
-	bool across = wall < 2; // the back and front walls: u = x, the normal along d
-	float plane = wall == 0 ? shell_min.y : (wall == 1 ? shell_max.y : (wall == 2 ? shell_min.x : shell_max.x));
-	float on = across ? o.y : o.x;
-	float ou = across ? o.x : o.y;
-	float span = plane - on;
-	if (abs(span) < 1e-3) {
+vec3 wall_local_dir(vec3 v, int wall) {
+	if (wall == 0) { return v; }
+	if (wall == 1) { return vec3(v.x, -v.y, v.z); }
+	if (wall == 2) { return vec3(v.y, v.x, v.z); }
+	return vec3(v.y, -v.x, v.z);
+}
+
+// Lambert's polygon form factor of p (on the wall, n = 0) from o with normal n, signed by the winding seen
+// from o (as the sashes' in sky_light).
+float polygon_factor(vec3 o, vec3 n, vec3 p[POLY_MAX], int count) {
+	vec3 middle = vec3(0.0);
+	for (int k = 0; k < count; k++) {
+		middle += p[k];
+	}
+	vec3 towards = normalize(middle / float(count) - o);
+	float f = 0.0;
+	float winding = 0.0;
+	for (int k = 0; k < count; k++) {
+		vec3 a = normalize(p[k] - o);
+		vec3 b = normalize(p[(k + 1) % count] - o);
+		vec3 g = cross(a, b);
+		float len = length(g);
+		if (len > 1e-7) {
+			float angle = acos(clamp(dot(a, b), -1.0, 1.0));
+			f += angle * dot(n, g / len);
+			winding += angle * dot(towards, g / len);
+		}
+	}
+	return max(f * sign(winding), 0.0) / 6.2832;
+}
+
+// The plan ray from o (unit dir) through the shape (is_round: middle c, radius r; else lo to hi): x in, y out;
+// y < 0 missed.
+vec2 shape_chord(vec2 o, vec2 dir, bool is_round, vec2 c, float r, vec2 lo, vec2 hi) {
+	if (is_round) {
+		vec2 to = c - o;
+		float along = dot(dir, to);
+		float q = r * r - (dot(to, to) - along * along);
+		if (q < 0.0 || along + sqrt(q) <= 0.0) {
+			return vec2(0.0, -1.0);
+		}
+		return vec2(max(along - sqrt(q), 0.0), along + sqrt(q));
+	}
+	float t0 = 0.0;
+	float t1 = 1e9;
+	for (int a = 0; a < 2; a++) {
+		if (abs(dir[a]) < 1e-7) {
+			if (o[a] < lo[a] || o[a] > hi[a]) {
+				return vec2(0.0, -1.0);
+			}
+			continue;
+		}
+		float x = (lo[a] - o[a]) / dir[a];
+		float y = (hi[a] - o[a]) / dir[a];
+		t0 = max(t0, min(x, y));
+		t1 = min(t1, max(x, y));
+	}
+	return t0 <= t1 ? vec2(t0, t1) : vec2(0.0, -1.0);
+}
+
+// Keeps the part of polygon p with side × (z − limit) ≥ 0 (Sutherland–Hodgman, one edge).
+int clip_z(inout vec3 p[POLY_MAX], int count, float limit, float side) {
+	vec3 kept_p[POLY_MAX];
+	int kept_count = 0;
+	for (int k = 0; k < count; k++) {
+		vec3 a = p[k];
+		vec3 b = p[(k + 1) % count];
+		float da = side * (a.z - limit);
+		float db = side * (b.z - limit);
+		if (da >= 0.0 && kept_count < POLY_MAX) {
+			kept_p[kept_count] = a;
+			kept_count++;
+		}
+		if ((da >= 0.0) != (db >= 0.0) && kept_count < POLY_MAX) {
+			kept_p[kept_count] = mix(a, b, da / (da - db));
+			kept_count++;
+		}
+	}
+	for (int k = 0; k < kept_count; k++) {
+		p[k] = kept_p[k];
+	}
+	return kept_count;
+}
+
+// The share of sash s's sky (glass: its form factor from o) one shape hides, all in the wall's frame. Its
+// silhouette on the wall by columns: the plan ray to each column through the shape, the column's top and
+// bottom from where the ray enters and leaves it (exact between a box's corners; a cylinder: 4 spans), the
+// polygon clipped to the glass, its form factor over the glass's.
+float shape_hide(vec3 o, vec3 n, vec4 s, float glass, bool is_round, vec2 c, float r, vec2 lo, vec2 hi, float z_lo, float z_hi) {
+	float u0 = 1e9;
+	float u1 = -1e9;
+	float breaks[4];
+	int break_count = 0;
+	if (is_round) {
+		vec2 to = c - o.xy;
+		float dist = length(to);
+		if (dist <= r) {
+			// Inside the body (the floor under it); above its top (a wall or a box front the cylinder
+			// touches, kept r behind the feet) the rays to a window pass over it.
+			return o.z <= z_hi ? 1.0 : 0.0;
+		}
+		if (to.y >= r) {
+			return 0.0; // all of it farther from the wall than o
+		}
+		float half_angle = asin(r / dist);
+		vec2 mid = to / dist;
+		float open_side = 0.0;
+		for (int k = -1; k <= 1; k += 2) {
+			float a = float(k) * half_angle;
+			vec2 d = vec2(mid.x * cos(a) - mid.y * sin(a), mid.x * sin(a) + mid.y * cos(a));
+			if (d.y >= 0.0) {
+				// Running away from the wall: the rays reaching it pass the body on its middle's side
+				// (this tangent's own side put the shadow on the wrong side of an actor beside o).
+				open_side = mid.x >= 0.0 ? 1.0 : -1.0;
+				continue;
+			}
+			float u = o.x - d.x * o.y / d.y;
+			u0 = min(u0, u);
+			u1 = max(u1, u);
+		}
+		if (open_side > 0.0) {
+			u1 = 1e9;
+		} else if (open_side < 0.0) {
+			u0 = -1e9;
+		}
+	} else {
+		// The box's part between o and the wall (2 cm off o: o on its face sees past it).
+		lo.y = max(lo.y, 0.0);
+		hi.y = min(hi.y, o.y - 0.02);
+		if (lo.y >= hi.y) {
+			return 0.0;
+		}
+		for (int k = 0; k < 4; k++) {
+			float bu = (k & 1) == 0 ? lo.x : hi.x;
+			float bn = k < 2 ? lo.y : hi.y;
+			float u = o.x + (bu - o.x) * o.y / (o.y - bn);
+			u0 = min(u0, u);
+			u1 = max(u1, u);
+			breaks[k] = u;
+		}
+		break_count = 4;
+	}
+	float a = max(u0, s.x);
+	float b = min(u1, s.y);
+	if (b <= a) {
 		return 0.0;
 	}
-	float near_n = on + sign(span) * 0.02;
-	float lo_n = min(near_n, plane);
-	float hi_n = max(near_n, plane);
+	// The columns (sorted): the ends, a box's corners between them, a cylinder's even spans.
+	float cols[6];
+	int count = 0;
+	cols[count] = a;
+	count++;
+	if (is_round) {
+		for (int k = 1; k < 4; k++) {
+			cols[count] = mix(a, b, float(k) / 4.0);
+			count++;
+		}
+	} else {
+		for (int k = 0; k < break_count; k++) {
+			if (breaks[k] > a && breaks[k] < b) {
+				cols[count] = breaks[k];
+				count++;
+			}
+		}
+	}
+	cols[count] = b;
+	count++;
+	for (int k = 1; k < count; k++) {
+		float v = cols[k];
+		int j = k - 1;
+		while (j >= 0 && cols[j] > v) {
+			cols[j + 1] = cols[j];
+			j--;
+		}
+		cols[j + 1] = v;
+	}
+	vec3 p[POLY_MAX];
+	float nudge = (b - a) * 1e-3; // the ends' rays only touch the shape: taken just inside
+	for (int k = 0; k < count; k++) {
+		float u = cols[k];
+		vec2 w = vec2(clamp(u, a + nudge, b - nudge) - o.x, -o.y);
+		float span = length(w);
+		vec2 ch = shape_chord(o.xy, w / span, is_round, c, r, lo, hi);
+		float top = s.z;
+		float bottom = s.z;
+		if (ch.y >= 0.0) {
+			float t_in = max(ch.x / span, 1e-4);
+			float t_out = clamp(ch.y / span, 1e-4, 1.0);
+			top = o.z + (z_hi - o.z) / (o.z <= z_hi ? t_in : t_out);
+			bottom = o.z + (z_lo - o.z) / (o.z >= z_lo ? t_in : t_out);
+		}
+		p[k] = vec3(u, 0.0, clamp(bottom, -100.0, 100.0));
+		p[2 * count - 1 - k] = vec3(u, 0.0, clamp(top, -100.0, 100.0));
+	}
+	int corners = clip_z(p, 2 * count, s.z, 1.0);
+	corners = clip_z(p, corners, s.w, -1.0);
+	if (corners < 3) {
+		return 0.0;
+	}
+	return clamp(polygon_factor(o, n, p, corners) / glass, 0.0, 1.0);
+}
+
+// The share of sash i's sky (weighed by the form factor, as its light) the objects (furniture, stairs, the
+// actor) hide from o with normal n; several objects as independent (1 − Π).
+float objects_hide(vec3 o, vec3 n, int i, bool with_actor) {
+	int wall = sash_wall[i];
+	vec4 s = sashes[i];
+	vec3 ol = wall_local(o, wall);
+	if (ol.y < 1e-3) {
+		return 0.0;
+	}
+	vec3 nl = wall_local_dir(n, wall);
+	vec3 glass_p[POLY_MAX];
+	glass_p[0] = vec3(s.x, 0.0, s.z);
+	glass_p[1] = vec3(s.y, 0.0, s.z);
+	glass_p[2] = vec3(s.y, 0.0, s.w);
+	glass_p[3] = vec3(s.x, 0.0, s.w);
+	float glass = polygon_factor(ol, nl, glass_p, 4);
+	if (glass < 1e-7) {
+		return 0.0;
+	}
 	float open = 1.0;
 	for (int b = 0; b < box_count + 1; b++) {
 		vec3 lo;
@@ -158,83 +355,17 @@ float objects_hide(vec3 o, int i, bool with_actor) {
 			if (!with_actor || actor_shape == 0) {
 				continue;
 			}
-			vec2 c = actor_body.xy;
-			float r = actor_body.z;
+			vec3 c = wall_local(vec3(actor_body.xy, 0.0), wall);
 			if (actor_shape == 1) {
-				// The cylinder: tangents in plan from o, then up the wall.
-				vec2 to = c - o.xy;
-				float dist = length(to);
-				float cn = across ? c.y : c.x;
-				if (dist <= r) {
-					// Inside the body (the floor under it); above its top (a wall or a box front the
-					// cylinder touches, kept r behind the feet) the rays to a window pass over it.
-					if (o.z <= actor_body.w) {
-						return 1.0;
-					}
-					continue;
-				}
-				if ((cn - on) * span <= 0.0 || abs(cn - on) >= abs(span)) {
-					continue;
-				}
-				float half_angle = asin(r / dist);
-				vec2 mid = to / dist;
-				// Where the tangents meet the wall; one running away from it (the cylinder beside the
-				// point): the rays between reach the wall only far out on that tangent's side.
-				float u0 = 1e9;
-				float u1 = -1e9;
-				float open_side = 0.0;
-				for (int k = -1; k <= 1; k += 2) {
-					float a = float(k) * half_angle;
-					vec2 d = vec2(mid.x * cos(a) - mid.y * sin(a), mid.x * sin(a) + mid.y * cos(a));
-					float dn = across ? d.y : d.x;
-					float du = across ? d.x : d.y;
-					if (dn * span <= 0.0) {
-						open_side = du >= 0.0 ? 1.0 : -1.0;
-						continue;
-					}
-					float u = ou + du * span / dn;
-					u0 = min(u0, u);
-					u1 = max(u1, u);
-				}
-				if (open_side > 0.0) {
-					u1 = 1e9;
-				} else if (open_side < 0.0) {
-					u0 = -1e9;
-				}
-				float mn = across ? mid.y : mid.x;
-				float to_wall = span / mn; // plan distance to the wall along the middle
-				float z0 = 1e9;
-				float z1 = -1e9;
-				for (int k = -1; k <= 1; k += 2) {
-					float at = max(dist + float(k) * r, 0.02);
-					z0 = min(z0, o.z + (0.0 - o.z) * to_wall / at);
-					z1 = max(z1, o.z + (actor_body.w - o.z) * to_wall / at);
-				}
-				open *= 1.0 - clamp(rect_share(u0, u1, z0, z1, s), 0.0, 1.0);
+				open *= 1.0 - shape_hide(ol, nl, s, glass, true, c.xy, actor_body.z, vec2(0.0), vec2(0.0), 0.0, actor_body.w);
 				continue;
 			}
-			lo = vec3(c - vec2(r), 0.0);
-			hi = vec3(c + vec2(r), actor_body.w);
+			lo = vec3(actor_body.xy - vec2(actor_body.z), 0.0);
+			hi = vec3(actor_body.xy + vec2(actor_body.z), actor_body.w);
 		}
-		float n0 = max(across ? lo.y : lo.x, lo_n);
-		float n1 = min(across ? hi.y : hi.x, hi_n);
-		if (n0 >= n1) {
-			continue;
-		}
-		float bu0 = across ? lo.x : lo.y;
-		float bu1 = across ? hi.x : hi.y;
-		float u0 = 1e9;
-		float u1 = -1e9;
-		float z0 = 1e9;
-		float z1 = -1e9;
-		for (int k = 0; k < 2; k++) {
-			float t = span / ((k == 0 ? n0 : n1) - on); // from o to the wall over from o to this face
-			u0 = min(u0, min(ou + (bu0 - ou) * t, ou + (bu1 - ou) * t));
-			u1 = max(u1, max(ou + (bu0 - ou) * t, ou + (bu1 - ou) * t));
-			z0 = min(z0, min(o.z + (lo.z - o.z) * t, o.z + (hi.z - o.z) * t));
-			z1 = max(z1, max(o.z + (lo.z - o.z) * t, o.z + (hi.z - o.z) * t));
-		}
-		open *= 1.0 - clamp(rect_share(u0, u1, z0, z1, s), 0.0, 1.0);
+		vec3 l = wall_local(lo, wall);
+		vec3 h = wall_local(hi, wall);
+		open *= 1.0 - shape_hide(ol, nl, s, glass, false, vec2(0.0), 0.0, min(l, h).xy, max(l, h).xy, lo.z, hi.z);
 	}
 	return 1.0 - open;
 }
@@ -306,7 +437,7 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor) {
 		}
 		// Each window its own source in the look: the actor hiding only the faint light through a
 		// doorway took a hard bite out of the whole sky there (the human).
-		pane_sum += w * open * vec2(1.0, 1.0 - objects_hide(o, i, with_actor));
+		pane_sum += w * open * vec2(1.0, 1.0 - objects_hide(o, n, i, with_actor));
 	}
 	al += vec2(pane_sum.x, pane_sum.x * kept(pane_sum, px));
 	return al / sky_ref;
