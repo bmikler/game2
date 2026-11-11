@@ -2,7 +2,7 @@
 id: 36
 title: Przebudowa światła wnętrza na jeden bufor z cieniami
 labels: [wayfinder:prototype]
-status: open
+status: closed
 assignee: claude
 blocked_by: []
 ---
@@ -106,3 +106,11 @@ Gałąź `t36-cien-nieba-kolumny` (od `t36-krytyk-naprawy`).
 - **Wniosek z oceny człowieka:** liczenie cieni jest poprawne, zły był wygląd. Progi na miękkim udziale każdego źródła osobno („2 twarde”, „3 poziomy”) dawały krótki cień przy oknie i długi dalej (postać przy dużym oknie zasłania 35–60% okna z prawie całego pokoju, wokół progu 50%), dziwne kontury daleko od postaci przy oknie bocznym i kilka cieni naraz z różnych źródeł. Mapa świata (szyby, walec) sprawdzona, zgodna z obrazem.
 - **Decyzja człowieka (2026-11-11):** wygląd z poziomami i ditherem usunięty (F1 „Cienie: wygląd”, `shadow_levels`, `shadow_dither`, `look()`); zostaje gładki. Wygląd pixel art cieni trzeba zrobić od nowa, poprawnie (pomysły z tej sesji: niebo tylko jako miękki cień kontaktowy, twardy cień od słońca i lamp; albo jeden próg na całe światło piksela zamiast osobnego na każde źródło). Próbkowanie tarcz słońca i żarówek z obrotem Bayera zostaje (to próbkowanie, nie wygląd).
 - Koszt (`--bench`, przed decyzją człowieka o pominięciu): nowy 64–169 kl./s, stary 31–200 zależnie od miejsca; wydajność i tak przy tworzeniu gry.
+
+## Resolution
+
+**Decyzja człowieka (2026-11-11): nowe światło wnętrza przyjmujemy** (gałąź `t36-cien-nieba-kolumny`). Jedna funkcja światła i jeden bufor dla wszystkich źródeł i przesłon; postać i meble rzucają cień tą samą funkcją (test „postać jako pudełko” = „pudełko w miejscu postaci”); cień nieba z okien liczony dokładnie (rzut bryły ważony współczynnikiem kształtu, zgodny ze wzorcem ≤ 0,02 dla okien wszystkich ścian, drzwi wejściowych i mebli); okno wokół postaci = cały dom bajt w bajt (poza słabym cieniem przez dwa przejścia w rogu salonu); smugi okien górnych, wstęgi i kurz z tej samej widoczności. Wydajność optymalizujemy przy tworzeniu gry.
+
+**Wygląd pixel art nie jest rozwiązany:** progi na udziale cienia osobno dla każdego źródła (3 poziomy z ditherem, 2 twarde) dawały krótkie, długie i zdublowane twarde cienie; usunięte, zostaje gładki. Stylizacja od nowa: [Stylizacja cieni i światła w pixel arcie](37-stylizacja-cieni-pixel-art.md).
+
+Przeniesione dalej: ulica z nowym modelem → [Światło w Poligonach](14-swiatlo-poligony.md); strojenie (wszystkie pokrętła, kolory, złota godzina, smugi do poprawy) i niesprawdzone przypadki (piętro i schody, wieczorne wstęgi, jasność postaci, ślad w rogu salonu) → [Krytyk strojenia światła i cieni: wnętrze i ulica](38-krytyk-strojenia-swiatla.md).
