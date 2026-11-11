@@ -75,7 +75,7 @@ static var key_band: float = 0.25
 static var key_min: float = 0.2
 static var contact_m: float = 0.45
 static var contact_k: float = 0.6
-static var light_res: int = 1 ## Buffer px per world px (the view renders as fine: LitView.render_scale).
+static var light_res: int = 1 ## The view this many times finer (LitView.render_scale): A's levels there; the buffer stays in world px.
 
 var geometry: SunGeometry
 var rooms: Array[RoomLighting] = []
@@ -138,10 +138,10 @@ func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, wi
 func _build_buffer() -> void:
 	_map = _material(MAP_SHADER)
 	_view = SubViewport.new()
-	_apply_res()
+	_view.size = _buffer_size()
 	_view.disable_3d = true
 	_view.use_hdr_2d = true
-	_view.transparent_bg = false
+	_view.transparent_bg = true # ticket 37: the alpha carries the ambient for A in a finer view
 	_view.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	_view.render_target_clear_mode = SubViewport.CLEAR_MODE_NEVER
 	_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -166,6 +166,7 @@ func _build_buffer() -> void:
 	_light.energy = 1.0
 	add_child(_light)
 	Lit.set_all(&"light_map", _view.get_texture())
+	Lit.set_all(&"light_map_smooth", _view.get_texture())
 	Lit.set_all(&"map_origin", Vector2(_rect.position))
 	Lit.set_all(&"map_size", Vector2(_buffer_size()))
 	Lit.set_all(&"house_w", float(_rect.size.x))
@@ -174,8 +175,7 @@ func _build_buffer() -> void:
 	_debug.texture = _view.get_texture()
 	_debug.centered = false
 	_debug.region_enabled = true
-	_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size * light_res))
-	_debug.scale = Vector2.ONE / light_res
+	_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size))
 	_debug.position = Vector2(_rect.position)
 	_debug.z_index = 200
 	var unlit: CanvasItemMaterial = CanvasItemMaterial.new()
@@ -188,12 +188,6 @@ func _build_buffer() -> void:
 func _buffer_size() -> Vector2i:
 	return Vector2i(_rect.size.x + STRIP.x, maxi(_rect.size.y, STRIP.y))
 
-
-## Ticket 37: the buffer light_res times finer; its rects keep world px (the 2D size override).
-func _apply_res() -> void:
-	_view.size = _buffer_size() * light_res
-	_view.size_2d_override = _buffer_size()
-	_view.size_2d_override_stretch = true
 
 
 func _rect_in(view: SubViewport, at: Vector2, size: Vector2) -> ColorRect:
@@ -349,12 +343,16 @@ func apply(sun: SunSample) -> void:
 		ambients.append(Vector3(amb.r, amb.g, amb.b))
 	_set_all(&"room_ambient", ambients)
 	_set_all(&"look", look)
-	if _view.size != _buffer_size() * light_res:
-		_apply_res()
-		_debug.region_rect = Rect2(Vector2.ZERO, Vector2(_rect.size * light_res))
-		_debug.scale = Vector2.ONE / light_res
+	# A's levels in a finer view are drawn by the sprites (lit.gdshader) from the smooth buffer (its
+	# alpha: the room's ambient); the beams are drawn in the view, so they go as fine.
+	var view_levels: bool = light_res > 1 and (look == 1 or look == 3)
 	_set_all(&"light_res", float(light_res))
+	_map.set_shader_parameter(&"light_res", 1.0)
+	_map.set_shader_parameter(&"view_levels", view_levels)
 	Lit.set_all(&"light_res", float(light_res))
+	Lit.set_all(&"view_levels", view_levels)
+	Lit.set_all(&"level_stops", level_stops)
+	Lit.set_all(&"level_band", level_band)
 	_set_all(&"level_stops", level_stops)
 	_set_all(&"level_band", level_band)
 	_set_all(&"key_cut", key_cut)

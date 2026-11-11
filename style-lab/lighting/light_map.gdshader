@@ -17,6 +17,9 @@ uniform float actor_bounce = 0.3; // the floor's light at the feet bounced up th
 // 0 the light; 1 the sun (and ribbons), 2 the sky, 3 the night, 4 the lamps; 5 the shadow share per
 // source (red the sun and ribbons, green the sky, blue the night).
 uniform int debug_view = 0;
+// Ticket 37: A's levels drawn in a finer view (lit.gdshader): the buffer stays smooth, its alpha the
+// room's ambient (luma) they need.
+uniform bool view_levels = false;
 
 varying vec2 buffer_px;
 
@@ -79,15 +82,17 @@ vec3 body_light(vec2 s, vec2 world) {
 void fragment() {
 	vec2 px = light_px_mid(buffer_px);
 	vec3 lit = vec3(0.0);
+	vec3 amb = vec3(0.0);
 	if (px.x >= house_w) {
 		vec2 s = px - vec2(house_w, 0.0);
 		if (s.x < strip_size.x && s.y < strip_size.y) {
 			vec2 world = actor_feet_px + s - vec2(strip_size.x * 0.5, strip_size.y);
 			lit = body_light(s, light_px(world));
-			if (look_levels() && debug_view == 0) {
+			vec2 feet = vec2(actor_feet_px.x / ppm, (actor_feet_px.y - floor_y) / (ppm * kd));
+			amb = room_ambient[room_index(feet)];
+			if (look_levels() && debug_view == 0 && !view_levels) {
 				// Dithered in the strip's own px: the pattern stays on the body as it walks.
-				vec2 feet = vec2(actor_feet_px.x / ppm, (actor_feet_px.y - floor_y) / (ppm * kd));
-				lit = light_levels(lit, room_ambient[room_index(feet)], light_px(s));
+				lit = light_levels(lit, amb, light_px(s));
 			}
 		}
 	} else {
@@ -96,10 +101,11 @@ void fragment() {
 		vec3 n;
 		if (surface_at(world, p, n)) {
 			lit = surface_light(p, n, light_px(world));
-			if (look_levels() && debug_view == 0) {
-				lit = light_levels(lit, room_ambient[room_index(p.xy)], light_px(world));
+			amb = room_ambient[room_index(p.xy)];
+			if (look_levels() && debug_view == 0 && !view_levels) {
+				lit = light_levels(lit, amb, light_px(world));
 			}
 		}
 	}
-	COLOR = vec4(lit, 1.0);
+	COLOR = vec4(lit, view_levels && debug_view == 0 ? luma(amb) : 1.0);
 }
