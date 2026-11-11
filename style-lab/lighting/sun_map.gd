@@ -61,7 +61,6 @@ static var night_window_k: float = 1.0
 static var actor_k: float = 1.0 ## The light on the body (its front, a cylinder seen from the camera) × this.
 ## Variants (F1).
 static var shadow_look: int = 1 ## 0 smooth, 1 three levels dithered, 2 two levels hard.
-static var look_total: bool = true ## The look of the whole light at once (one shadow a pixel), or per source.
 static var sun_disc_deg: float = 2.4 ## The sun's disc (radius, degrees): its shadows' softness.
 static var bulb_m: float = 0.1 ## A lamp's bulb across (m).
 static var top_beams: TopBeams = TopBeams.POLYGON
@@ -325,7 +324,6 @@ func apply(sun: SunSample) -> void:
 	_set_all(&"lamp_size", bulb_m)
 	_set_all(&"shadow_levels", LOOK_LEVELS[shadow_look])
 	_set_all(&"shadow_dither", 1 if shadow_look == 1 else 0)
-	_map.set_shader_parameter(&"look_total", 1 if look_total else 0)
 	_map.set_shader_parameter(&"debug_view", debug_view)
 	_map.set_shader_parameter(&"actor_k", actor_k)
 	_set_lamps()
