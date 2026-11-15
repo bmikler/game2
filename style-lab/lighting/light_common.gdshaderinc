@@ -207,12 +207,19 @@ vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 		vec3 u;
 		vec3 v;
 		basis(axis, u, v);
-		vec2 seen = vec2(0.0);
+		vec3 dirs[BUNDLE_MAX];
+		float ends[BUNDLE_MAX];
 		for (int k = 0; k < lamp_samples; k++) {
 			vec2 j = vogel(k, lamp_samples, turn) * lamp_size * 0.5;
-			vec3 spot = bulb + u * j.x + v * j.y;
-			seen += ray_al(occlusion(o, spot - o, 1.0, with_actor, true, bulb));
+			dirs[k] = bulb + u * j.x + v * j.y - o;
+			ends[k] = 1.0;
 		}
+		uint shut;
+		uint hidden;
+		bundle_hits(o, dirs, ends, lamp_samples, to, lamp_size * 0.5, with_actor, true, bulb, false, shut, hidden);
+		float n_rays = float(lamp_samples);
+		// ray_al per sample: architecture (0, 0), an object only (1, 0), open (1, 1).
+		vec2 seen = vec2(n_rays - float(bitCount(shut)), n_rays - float(bitCount(shut | hidden)));
 		vec3 through = lamp_color[i] * e * seen.x / float(lamp_samples);
 		arch += through;
 		total += through * kept(seen, px);

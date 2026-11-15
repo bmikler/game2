@@ -100,7 +100,6 @@ const DIVISION_ROWS: PackedInt32Array = [1, 2, 2]
 ## Ticket 31: the doorways between columns, a hole in the black wall top the player can read: the old gap
 ## (floor in the wall, threshold lines, one room's light) or the hole (floor without lines, lit by both rooms).
 const SIDE_GAPS: PackedStringArray = ["jak dotad", "dziura (podloga obu pokoi)"]
-const VIEW_ENVIRONMENT: Environment = preload("res://lighting/data/view_environment.tres")
 const DOOR_SASH_W: float = 0.9 ## The street door as an opening in the bottom wall (its light from the buffer).
 const DOOR_SASH_H: float = 1.9
 
@@ -179,7 +178,7 @@ func _add_layout_options() -> void:
 ## Ticket 36 (the human: the old variants out of F1): the panel shows the light's look and the quality
 ## checks; every other option keeps its value, hidden. The interior frame (resolution) stays.
 const SHOWN_OPTIONS: Array[StringName] = [&"kadr_wn", &"wyglad", &"swiatlo_res", &"slonce_tarcza", &"zarowka",
-		&"widok_debug", &"smugi_gorne", &"test_cienia"]
+		&"widok_debug", &"smugi_gorne", &"test_cienia", &"ziarno_poswiata"]
 const ACTOR_STEPS: PackedFloat32Array = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
 const FILL_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
 const NIGHT_WINDOW_STEPS: PackedFloat32Array = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0]
@@ -417,8 +416,6 @@ func _build_world() -> void:
 	SideWindowLight.night_patch = 0
 	WindowLight.night_patch = 0
 	Figure.blob = Figure.Blob.NONE
-	var environment: Environment = VIEW_ENVIRONMENT
-	environment.glow_enabled = false # the glass bloomed onto the wall (the human, ticket 31)
 	_door_h = minf(DOOR_MAX_M, WALL_M - DOOR_BELOW_CEILING_M)
 	_window_size = _value(&"okna")
 	_cols = DIVISION_COLS[_value(&"podzial")]

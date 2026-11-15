@@ -104,6 +104,8 @@ var _fixtures: Array[LightFixture] = []
 var _tops: PackedFloat32Array = PackedFloat32Array()
 var _dirty: bool = true
 var _last_window: Rect2 = Rect2()
+var _last_key: Rect2 = Rect2()
+var _last_feet: Vector2 = Vector2.INF
 ## The sources the actor's shadow reaches from (metres): far directions (away from the light) and points.
 var _away: Array[Vector3] = []
 var _points: Array[Vector3] = []
@@ -113,6 +115,8 @@ var _sash_rooms: Array[Rect2] = [] ## The floor (x, d metres) of each window's r
 var _planes: Array[WallPlane] = [] ## The walls by plane with their doorways (_wall_planes), kept while the walls stay.
 var _planes_of: Array[AABB] = []
 static var _current: SunMap
+## PROTOTYPE: `--ruch` (with --bench): the actor's window repainted every frame, as while walking.
+static var _bench_moving: bool = OS.get_cmdline_user_args().has("--ruch")
 
 
 func setup(data: SunGeometry, lit_rooms: Array[RoomLighting], player: Node2D, windows: WindowLightProfile) -> void:
@@ -140,6 +144,9 @@ func _build_buffer() -> void:
 	_view = SubViewport.new()
 	_view.size = _buffer_size()
 	_view.disable_3d = true
+	# Its own world, as the street's: the view's glow (WorldEnvironment) bloomed into the buffer and piled
+	# up where the actor's window did not repaint.
+	_view.own_world_3d = true
 	_view.use_hdr_2d = true
 	_view.transparent_bg = true # ticket 37: the alpha carries the ambient for A in a finer view
 	_view.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -560,6 +567,12 @@ func _process(_delta: float) -> void:
 	both = Rect2(both.position.floor(), (both.end.ceil() - both.position.floor()))
 	_window.position = both.position
 	_window.size = both.size
+	# Rendered only when something changed (as the street's: the actor still, nothing to repaint).
+	var key: Rect2 = both if not whole else Rect2(-1.0, -1.0, 0.0, 0.0)
+	var changed: bool = whole or key != _last_key or feet_px != _last_feet or _bench_moving
+	_last_key = key
+	_last_feet = feet_px
+	_view.render_target_update_mode = SubViewport.UPDATE_ONCE if changed else SubViewport.UPDATE_DISABLED
 
 
 ## Boxes with their shown tops (partitions cut down), the test boxes, and the actor.

@@ -56,10 +56,18 @@ vec2 far_source(vec3 o, vec3 toward, vec2 px, bool with_actor) {
 	vec3 v;
 	basis(axis, u, v);
 	float turn = 0.0; // the same pattern in every pixel (ticket 14: no 2×2 grain)
-	vec2 al = vec2(0.0);
+	// The rays through the glass first (their gains), then all of them past the occluders in one bundle.
+	vec3 dirs[BUNDLE_MAX];
+	float ends[BUNDLE_MAX];
+	float gains[BUNDLE_MAX];
+	uint through = 0u;
+	float reach = 0.0;
 	for (int i = 0; i < sun_samples; i++) {
 		vec2 j = vogel(i, sun_samples, turn) * sun_soft;
 		vec3 dir = axis + u * j.x + v * j.y;
+		dirs[i] = dir;
+		ends[i] = 0.0;
+		gains[i] = 0.0;
 		int face;
 		float t = shell_exit(o, dir, face);
 		if (face >= 2 && side_patch == 0) {
@@ -72,7 +80,26 @@ vec2 far_source(vec3 o, vec3 toward, vec2 px, bool with_actor) {
 		if (facing_full > 0.0 && length(dir.xy) > 1e-4) {
 			gain = smoothstep(0.0, facing_full, dot(normalize(dir.xy), wall_normal(face)));
 		}
-		al += gain * ray_al(occlusion(o, dir, t, with_actor, false, vec3(0.0)));
+		ends[i] = t;
+		gains[i] = gain;
+		through |= 1u << uint(i);
+		reach = max(reach, t);
+	}
+	vec2 al = vec2(0.0);
+	if (through == 0u) {
+		return al;
+	}
+	// A ray o + t·dir (dir = axis + an offset under sun_soft, t <= reach) strays at most reach·sun_soft
+	// from the axis segment.
+	uint shut;
+	uint hidden;
+	bundle_hits(o, dirs, ends, sun_samples, axis * reach, reach * sun_soft, with_actor, false, vec3(0.0), false, shut, hidden);
+	for (int i = 0; i < sun_samples; i++) {
+		uint bit = 1u << uint(i);
+		if ((through & bit) == 0u) {
+			continue;
+		}
+		al += gains[i] * ray_al((shut & bit) != 0u ? 2 : ((hidden & bit) != 0u ? 1 : 0));
 	}
 	return al / float(sun_samples);
 }
@@ -362,15 +389,22 @@ vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor, bool with_objects) {
 		float towards = max(0.2, 1.0 + dot(wall_normal(sash_wall[i]), sky_sun));
 		float w = f * other * towards * front_glow * (i == door_sash ? door_k : 1.0);
 		// The architecture by samples on the glass (smooth: not in the look); the objects analytically.
-		float open = 0.0;
+		// The glass's samples as one bundle (every point within half the pane's diagonal of its middle).
+		vec3 dirs[BUNDLE_MAX];
+		float ends[BUNDLE_MAX];
+		int count = 0;
 		for (int a = 0; a < sky_grid; a++) {
 			for (int b = 0; b < sky_grid; b++) {
 				vec2 at = (vec2(float(a), float(b)) + vec2(jx, jz)) / float(sky_grid);
-				vec3 q = c[0] + (c[1] - c[0]) * at.x + (c[3] - c[0]) * at.y;
-				open += arch_blocked(o, q - o, 0.999) ? 0.0 : 1.0;
+				dirs[count] = c[0] + (c[1] - c[0]) * at.x + (c[3] - c[0]) * at.y - o;
+				ends[count] = 0.999;
+				count++;
 			}
 		}
-		open /= cells;
+		uint shut;
+		uint hidden;
+		bundle_hits(o, dirs, ends, count, middle - o, 0.5 * distance(c[0], c[2]), false, false, vec3(0.0), true, shut, hidden);
+		float open = (cells - float(bitCount(shut))) / cells;
 		if (open <= 0.0) {
 			continue;
 		}

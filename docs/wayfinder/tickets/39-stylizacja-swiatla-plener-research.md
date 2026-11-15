@@ -3,7 +3,7 @@ id: 39
 title: Stylizacja światła i cieni w plenerze w pixel arcie
 labels: [wayfinder:research]
 status: open
-assignee:
+assignee: claude
 blocked_by: []
 ---
 

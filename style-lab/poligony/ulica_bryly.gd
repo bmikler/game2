@@ -1002,7 +1002,7 @@ func _occluder(foot: Vector2, size_m: Vector3) -> void:
 ## Ticket 14: the street's light (F1, live): the map or the old flat light, the buildings' shadows, the
 ## look shared with the house (the same ids: one choice for both), debug views and the critic's knobs.
 const SHOWN_OPTIONS: Array[StringName] = [&"kadr", &"swiatlo_ulicy", &"cienie_budynkow", &"niebo_ulica", &"wyglad",
-		&"swiatlo_res", &"widok_debug_ulica"]
+		&"swiatlo_res", &"widok_debug_ulica", &"ziarno_poswiata"]
 const SKY_OCCLUDERS: PackedStringArray = ["tylko architektura", "architektura i obiekty (postac, zaspy...)"]
 const STREET_LIGHTS: PackedStringArray = ["mapa (jak w domu)", "stare (plaskie, t27)"]
 const STREET_DEBUG: PackedStringArray = ["swiatlo", "tylko slonce", "tylko niebo", "tylko okna", "tylko latarnie",

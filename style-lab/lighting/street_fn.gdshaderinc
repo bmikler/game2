@@ -235,44 +235,53 @@ float street_lambert(vec3 n, vec3 toward) {
 // pattern is the same in every pixel (turned per pixel it drew a 2×2 grain beside A's 1-px dither).
 uniform float sun_pen_max = 0.06;
 
+// Occluders first, samples inside (the same result as samples first): one ray along the axis against the
+// occluder's box grown by how far any sample ray strays from it inside the box (a sample hit at p lies
+// within |p − o| · soft of the axis ray, and |p − o| is at most the box's farthest corner). Missing that,
+// no sample can hit it. Hits are kept as one bit per sample (architecture, objects and the actor).
 vec2 street_sun_light(vec3 o, vec2 px, bool with_actor) {
 	vec3 axis = normalize(sun_dir);
 	vec3 u;
 	vec3 v;
 	basis(axis, u, v);
-	// Each occluder's disc: its tangent, from its nearest point.
-	float soft[129];
-	for (int i = 0; i < box_count + 1; i++) {
+	vec3 axis_inv = inverse_dir(axis);
+	uint all_bits = sun_samples >= 32 ? 0xFFFFFFFFu : (1u << uint(sun_samples)) - 1u;
+	uint arch_bits = 0u;
+	uint object_bits = 0u;
+	int last = with_actor ? box_count : box_count - 1;
+	for (int i = 0; i <= last && arch_bits != all_bits; i++) {
+		bool actor = i == box_count;
+		bool arch = !actor && box_arch[i] == 1;
+		if (arch && building_shadows == 0) {
+			continue;
+		}
 		vec3 lo;
 		vec3 hi;
 		occluder_bounds(i, lo, hi);
-		float d = distance(o, clamp(o, lo, hi));
-		soft[i] = min(sun_soft, sun_pen_max / max(d, 1e-3));
-	}
-	vec2 al = vec2(0.0);
-	for (int k = 0; k < sun_samples; k++) {
-		vec2 j = vogel(k, sun_samples, 0.0);
-		vec3 off = u * j.x + v * j.y;
-		int occ = 0;
-		for (int i = 0; i < box_count && occ < 2; i++) {
-			bool arch = box_arch[i] == 1;
-			if (arch && building_shadows == 0) {
-				continue;
-			}
-			vec3 dir = axis + off * soft[i];
-			if (hit_occluder(i, o, dir, inverse_dir(dir), 1e4)) {
-				occ = arch ? 2 : 1;
-			}
+		// Its disc: the tangent from its nearest point (its penumbra at most sun_pen_max wide).
+		float soft = min(sun_soft, sun_pen_max / max(distance(o, clamp(o, lo, hi)), 1e-3));
+		float stray = length(max(abs(lo - o), abs(hi - o))) * soft;
+		if (!hit_box(o, axis_inv, lo - stray, hi + stray, 1e4)) {
+			continue;
 		}
-		if (occ == 0 && with_actor) {
-			vec3 dir = axis + off * soft[box_count];
-			if (hit_actor(o, dir, inverse_dir(dir), 1e4)) {
-				occ = 1;
-			}
+		uint bits = 0u;
+		for (int k = 0; k < sun_samples; k++) {
+			vec2 j = vogel(k, sun_samples, 0.0);
+			vec3 dir = axis + (u * j.x + v * j.y) * soft;
+			bool hit = actor ? hit_actor(o, dir, inverse_dir(dir), 1e4) : hit_occluder(i, o, dir, inverse_dir(dir), 1e4);
+			bits |= hit ? 1u << uint(k) : 0u;
 		}
-		al += ray_al(occ);
+		if (arch) {
+			arch_bits |= bits;
+		} else {
+			object_bits |= bits;
+		}
 	}
-	return al / float(sun_samples);
+	// ray_al per sample: architecture (0, 0), an object only (1, 0), open (1, 1).
+	float n = float(sun_samples);
+	float shut = float(bitCount(arch_bits));
+	float dark = float(bitCount(arch_bits | object_bits));
+	return vec2(n - shut, n - dark) / n;
 }
 
 // The lit windows from o (normal n); arch what the architecture lets through.

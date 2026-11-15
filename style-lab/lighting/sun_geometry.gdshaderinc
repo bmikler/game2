@@ -221,6 +221,50 @@ bool arch_blocked(vec3 o, vec3 dir, float t_max) {
 	return false;
 }
 
+// A bundle of rays o + t·dirs[k], t in (0, tmax[k]), against the occluders, as occlusion() ray by ray:
+// bits of the rays the architecture hides and of those an object or the actor hides. Every ray lies in the
+// capsule round the segment o → o + seg, `spread` wide; an occluder whose box (grown by spread) misses that
+// segment hides none of them and is skipped whole (the same result, far fewer tests). arch_only: only the
+// architecture (arch_blocked's rays).
+const int BUNDLE_MAX = 32;
+
+void bundle_hits(vec3 o, vec3 dirs[BUNDLE_MAX], float tmax[BUNDLE_MAX], int count, vec3 seg, float spread,
+		bool with_actor, bool skip_own, vec3 bulb, bool arch_only, out uint arch_bits, out uint object_bits) {
+	arch_bits = 0u;
+	object_bits = 0u;
+	vec3 seg_inv = inverse_dir(seg);
+	for (int i = 0; i < box_count; i++) {
+		bool arch = box_arch[i] == 1;
+		if (arch_only && !arch) {
+			continue;
+		}
+		if (skip_own && all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
+			continue;
+		}
+		if (!hit_box(o, seg_inv, box_min[i] - spread, box_max[i] + spread, 1.0)) {
+			continue;
+		}
+		uint bits = 0u;
+		for (int k = 0; k < count; k++) {
+			bits |= hit_occluder(i, o, dirs[k], inverse_dir(dirs[k]), tmax[k]) ? 1u << uint(k) : 0u;
+		}
+		if (arch) {
+			arch_bits |= bits;
+		} else {
+			object_bits |= bits;
+		}
+	}
+	if (with_actor && !arch_only && actor_shape != 0) {
+		vec3 lo = vec3(actor_body.xy - vec2(actor_body.z), 0.0);
+		vec3 hi = vec3(actor_body.xy + vec2(actor_body.z), actor_body.w);
+		if (hit_box(o, seg_inv, lo - spread, hi + spread, 1.0)) {
+			for (int k = 0; k < count; k++) {
+				object_bits |= hit_actor(o, dirs[k], inverse_dir(dirs[k]), tmax[k]) ? 1u << uint(k) : 0u;
+			}
+		}
+	}
+}
+
 // arch, lit for one ray: (1, 1) open, (1, 0) an object, (0, 0) architecture.
 vec2 ray_al(int occ) {
 	return occ == 0 ? vec2(1.0) : (occ == 1 ? vec2(1.0, 0.0) : vec2(0.0));

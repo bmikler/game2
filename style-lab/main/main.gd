@@ -15,6 +15,7 @@ const PX_PER_M: Array[float] = [32.0, 36.0, 40.0]
 ## the fade hides the jump), out and in, seconds each way.
 const DOOR_FADES: PackedStringArray = ["brak", "0,3 s", "0,6 s"]
 const DOOR_FADE_S: PackedFloat32Array = [0.0, 0.3, 0.6]
+const VIEW_ENVIRONMENT: Environment = preload("res://lighting/data/view_environment.tres")
 
 var _clock: GameClock = GameClock.new()
 var _poligon: Poligon
@@ -26,6 +27,8 @@ var _frames: Vector2i = Vector2i.ZERO ## Chosen frame index: x outside, y inside
 var _kept_spot: Vector2 = Vector2.INF
 var _door_fade_s: float = 0.0
 var _fade: ColorRect
+var _grain: float = 0.015
+var _post_fx: bool = false ## The grain and the glow (F1 „Ziarno i poświata”).
 
 @onready var _view: LitView = %LitView
 @onready var _panel: DebugPanel = %DebugPanel
@@ -133,7 +136,15 @@ func _register_options() -> void:
 	DebugRegistry.add_toggle(self, &"grade", "Grading nordic (game1)", true, func(on: bool) -> void:
 		display.set_shader_parameter(&"grade", grade if on else 0.0))
 	DebugRegistry.add_slider(self, &"ziarno", "Ziarno (natężenie)", grain_names, 3, func(index: int) -> void:
-		display.set_shader_parameter(&"grain", grain_levels[index]))
+		_grain = grain_levels[index]
+		display.set_shader_parameter(&"grain", _grain if _post_fx else 0.0))
+	# Ticket 14: the grain and the renderer's glow hide the dither while the shadows are judged; off until
+	# the tuning (the human), one switch for the house and the street.
+	DebugRegistry.add_toggle(self, &"ziarno_poswiata", "Ziarno i poświata", false, func(on: bool) -> void:
+		_post_fx = on
+		display.set_shader_parameter(&"grain", _grain if on else 0.0)
+		var environment: Environment = VIEW_ENVIRONMENT
+		environment.glow_enabled = on)
 	var layer: CanvasLayer = CanvasLayer.new()
 	layer.layer = 50
 	_fade = ColorRect.new()
