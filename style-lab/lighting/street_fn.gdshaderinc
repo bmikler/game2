@@ -242,9 +242,12 @@ vec3 window_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 			continue; // behind the facade
 		}
 		vec3 near = vec3(clamp(o.x, w.x, w.y), d, clamp(o.z, w.z, w.w));
-		if (distance(near, o) > win_reach) {
+		float gap = distance(near, o);
+		if (gap > win_reach) {
 			continue;
 		}
+		// Faded out towards the reach (a hard cut drew arcs on the snow).
+		float fade = 1.0 - smoothstep(win_reach * 0.5, win_reach, gap);
 		vec3 p[POLY_MAX];
 		p[0] = vec3(w.x, d, w.z); p[1] = vec3(w.y, d, w.z); p[2] = vec3(w.y, d, w.w); p[3] = vec3(w.x, d, w.w);
 		int count = clip_plane(p, 4, n, o);
@@ -264,7 +267,7 @@ vec3 window_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 			}
 		}
 		seen /= float(win_grid * win_grid);
-		vec3 through = win_color[i] * f * seen.x;
+		vec3 through = win_color[i] * f * fade * seen.x;
 		arch += through;
 		total += through * kept(seen, px);
 	}
