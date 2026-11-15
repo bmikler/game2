@@ -9,7 +9,13 @@ const SUNRISE_H: float = 6.9
 const SUNSET_H: float = 18.1
 ## The sun clears the roofs half an hour after sunrise and hides behind them half an hour before sunset.
 const ROOF_DELAY_H: float = 0.5
-const NOON_SIN_ELEVATION: float = 0.26
+## !!! CHANGED SUN ANGLE, NOT SCANDINAVIAN !!! (human, 2026-11-15)
+## Noon elevation 38° = southern Poland (49° N) on 1 October / mid March, picked from the
+## October–March range there (17.5° on 21 December … 45° at the end of March), not summer.
+## The cheat sheet's February Norway sun was 0.26 (about 15°): with it the tenement houses shaded
+## the whole street all day. If the game is set in Scandinavia and should be realistic, put the
+## Scandinavian value back (0.26) and solve readable shadows another way.
+const NOON_SIN_ELEVATION: float = 0.616
 const SUNRISE_AZIMUTH_FROM_SOUTH: float = 43.0
 
 

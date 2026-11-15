@@ -36,19 +36,19 @@ position_m = Vector3(0, -10, 0)
 position = Vector2(-580, 0)
 script = ExtResource("6")
 position_m = Vector3(-14.5, 0, 0)
-size_m = Vector3(27, 10, 12)
+size_m = Vector3(27, 6, 8.3)
 
 [node name="HouseMiddle" type="Node2D" parent="Alley"]
-position = Vector2(180, 0)
+position = Vector2(320, 0)
 script = ExtResource("6")
-position_m = Vector3(4.5, 0, 0)
-size_m = Vector3(7, 10, 14)
+position_m = Vector3(8, 0, 0)
+size_m = Vector3(14, 6, 11)
 
 [node name="HouseEast" type="Node2D" parent="Alley"]
-position = Vector2(880, 0)
+position = Vector2(900, 0)
 script = ExtResource("6")
-position_m = Vector3(22, 0, 0)
-size_m = Vector3(16, 10, 11)
+position_m = Vector3(22.5, 0, 0)
+size_m = Vector3(15, 6, 8.3)
 
 [node name="Facades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
 script = ExtResource("7")
