@@ -60,6 +60,10 @@ _Avoid_: profil pogody, pora dnia (jako nazwa danych)
 Obraz światła całej Lokacji, piksel w piksel z obrazem gry, złożony z warstw, które zmieniają się w różnym tempie (niebo, nieruchome Źródła, słońce, ruchome Przesłony). Jeden dla całej Lokacji, wnętrza i pleneru.
 _Avoid_: mapa światła, SunMap, StreetMap
 
+**Bramka bufora**:
+Automatyczny test Silnika światła na małej, sztucznej Lokacji: sprawdza zasadę (np. cień po przeciwnej stronie niż Źródło, suma dwóch Źródeł) albo porównuje ustalone punkty Bufora światła z zaakceptowanym wzorcem. Nie ocenia wyglądu.
+_Avoid_: test wizualny, snapshot
+
 **Smuga**:
 Widoczne w powietrzu światło Źródła na drodze przez Otwór lub między Przesłonami, czasem z drobinkami kurzu. Powstaje z gęstości powietrza Lokacji.
 _Avoid_: wstęga, promień, god ray

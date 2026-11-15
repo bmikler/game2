@@ -31,7 +31,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - **Smugi z górnych okien są obowiązkowe (człowiek, 2026-11-15):** we wnętrzach smuga światła z górnych okien, plama światła z okna na podłodze i drobinki kurzu w smudze (dziś: `sun_beam.gdshader`, `sun_dust.gdshader`, plama w `SunMap`) muszą być w nowym silniku, z geometrii okna i słońca, nie jako dekoracja pod scenę. Okna ze wszystkich ścian: smuga i plama tam, gdzie wyliczy je silnik (zmiana w „Jeden model światła i cienia dla wszystkich źródeł”).
 - **Wszystkie źródła od razu:** słońce, niebo, lampy, latarnie, świecące okna, w kontrakcie i w implementacji; chcemy widzieć, jak cienie z różnych źródeł wyglądają i się nakładają. Pełna doba (24 h) ze zmianą na żywo; godzina jest jednym wejściem silnika dla całego bufora.
 - **Kto decyduje (człowiek, 2026-11-15):** człowiek jest inżynierem aplikacji biznesowych, nie grafikiem; ocenia wygląd na żywo w grze, a szczegóły techniczne rozstrzyga Claude (trudniejsze z subagentem na Opusie). Pytania do człowieka tylko o wygląd i zakres.
-- **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); reszta na końcu wykonania w scenach testowych. Strojenie: dobra praktyka ze `style-lab` to agent krytyk proponujący 3 warianty strojenia, więc silnik musi wczytywać zestawy wartości na żywo, żeby warianty dało się przeklikać w grze.
+- **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); w wykonaniu człowiek sprawdza ręcznie każdy zaimplementowany ticket (z „Strategia testów i sceny testowe”). Strojenie: dobra praktyka ze `style-lab` to agent krytyk proponujący 3 warianty strojenia, więc silnik musi wczytywać zestawy wartości na żywo, żeby warianty dało się przeklikać w grze.
 - **Już ustalone w mapie grafiki (wejście, nie do ponownego otwierania bez powodu):**
   - jedna funkcja światła i jeden bufor, postać i meble jedną funkcją cienia, cień nieba z okien dokładny (36);
   - całe światło okien z geometrii, bez strojenia okien; okna boczne tylko wstęgi (27, 31);
@@ -60,13 +60,14 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Kontrakt danych sceny](tickets/08-kontrakt-danych-sceny.md): Lokacja z węzłów w metrach (Otoczenie Lokacji z profilem nieba miasto/wieś, Ściana z Otworami i wypełnieniem jak żaluzje, Przesłona z Brył, Źródło z mnożnikiem do animacji, ruchome i przyczepione); silnik nie zna pokoi ani rodzajów; asset = sprite + uproszczone Bryły + opcjonalna mapa normalnych.
 - [Nakładanie cieni z kilku źródeł](tickets/09-nakladanie-cieni-prototyp.md): nakładanie z sumy w HDR wygląda dobrze; bufor niesie dwa kanały (naturalny, sztuczny, pole Źródła); stylizacja w dwóch trybach w `.tres` (A′ na sumie albo A′ na każdym kanale), wybór przy strojeniu; tryb „barwa w stopniach” odrzucony.
 - [Bufor i przeliczanie](tickets/10-bufor-i-przeliczanie.md): bufor ×1 w warstwach według zmienności (niebo i nieruchome Źródła raz przy wczytaniu, słońce kaflami z przenikaniem, ruchome Przesłony i Źródła w oknach co klatkę), przycinanie kaflami, `canvas_item` bez C++; budżet 4 ms GPU, 1 ms CPU, wczytanie ≤ 2 s; cel 8 postaci + samochód + 4 drzewa; wiatr jako wychylenie Przesłony, A/B do oceny.
+- [Strategia testów i sceny testowe](tickets/11-strategia-testow.md): GUT 9.7.1 + bramki buforów na syntetycznych scenach (zasady, nie wygląd) + człowiek tylko wygląd; trudne sceny w dwóch Poligonach z przełącznikiem w F1; każdy ticket wykonawczy sprawdzany ręcznie („Jak sprawdzić”, pionowe plastry, widok debug silnika w F1); test końcowy: Lokacje buduje subagent na ślepo z dokumentacji kontraktu.
 
 ## Not yet specified
 
 - **Stylizacja rozproszenia w powietrzu:** drobinki kurzu i ewentualny dither smug (poza A′); warianty szwu w F1. Tryby A′ ustalone w „Nakładanie cieni z kilku źródeł”.
 - **Strojenie:** układ zasobów (`.tres`) i zestawów (wnętrza, plener, warianty krytyka), F1, `--set=`; które parametry są krzywymi doby.
 - **Noc i pora dnia:** krzywe Stanu doby (droga słońca, kolory, włączanie lamp i świecących okien, schemat pogody): które krzywe i jakie punkty kontrolne; zależy od układu zasobów strojenia.
-- **Migracja:** jak przejść z `SunMap`/`StreetMap` bez gubienia ustaleń mapy grafiki; co z bramkami buforów liczonymi na starym silniku.
+- **Migracja:** jak przejść z `SunMap`/`StreetMap` bez gubienia ustaleń mapy grafiki; co ze starymi bramkami buforów (`bufor_roznica.mjs` itd.); nowe bramki ustalone w „Strategia testów i sceny testowe”.
 
 ## Out of scope
 
