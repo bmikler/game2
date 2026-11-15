@@ -105,7 +105,7 @@ Nowe Poligony (Ulica, Dom) są zbudowane wyłącznie z węzłów kontraktu i zaw
 
 ### F1, zrzuty, widok debug
 
-64. Jako człowiek chcę w F1 tylko minimum: godzina, tempo czasu, Wariant, przycisk „Zrzut”, „Widok debug” i przełączniki bieżącego ticketu, aby panel był prosty.
+64. Jako człowiek chcę w F1 tylko minimum: godzina, tempo czasu, Wariant, przycisk „Zrzut”, „Widok debug”, kadr (960×540 jak w game2 / 640×360) i przełączniki bieżącego ticketu, aby panel był prosty.
 65. Jako człowiek chcę widok debug silnika (brak / Bryły / Odbiorniki / kafle i warstwy / kanały / odczyt Stanu doby) działający w każdej Lokacji, aby zobaczyć, co silnik widzi.
 66. Jako człowiek chcę, żeby przycisk „Zrzut” i F12 zapisywały PNG z opisem stanu (scena, godzina, Wariant, pozycja postaci, przełączniki) i kopiowały ścieżkę do schowka, aby wkleić ją agentowi.
 67. Jako agent chcę odtworzyć tę samą klatkę z `--z-zrzutu=plik`, aby zobaczyć dokładnie to, co człowiek.
