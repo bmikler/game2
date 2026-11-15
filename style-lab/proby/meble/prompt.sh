@@ -1,0 +1,5 @@
+# PROTOTYP (ticket silnika 02): prompt Qwen dla mebla. Obraz 1 = szary render z Prowadnic v2 (tylko prowadnica
+# położenia, wielkości i kąta, jak manekin MPFB przy postaci), obraz 2 = bibliotekarka (wzór stylu).
+prompt_mebla() { # $1 = mebel, $2 = szczegóły
+  echo "Create $1 with natural lived-in details: $2. The grey shape in image 1 is only a placement guide: the furniture stands exactly where the grey shape is, fills the same outline with the same size, proportions and position in the frame, seen from the same camera angle, from the front and slightly above with the top surface visible. Details may hang over its edges or stand on top of it. Paint it in exactly the drawing style of image 2: hand-painted digital illustration, video game concept art painting, visible brush strokes, slightly stylized drawn look like a graphic novel, thin dark line work, not a photograph, muted cold palette with warm accents, Nordic noir mood. Soft even light, no cast shadow, no floor, no wall, nothing else in the picture, no people. Plain light grey background."
+}

@@ -17,16 +17,59 @@ Odpowiedź na pytanie człowieka, zanim powstanie silnik: czy mebel wygenerowany
 
 ## Kryteria akceptacji
 
-- [ ] Przed generacją pytanie do człowieka (co, po co, koszt: lokalnie w ComfyUI, 0 zł); odrzucone obrazy usuwane od razu.
-- [ ] Wycięcie tła i cienia generatora (maska z renderu albo jak w Przepisie postaci).
-- [ ] Pikselizacja do 40 px/m tym samym łańcuchem co postacie, wyrównana do punktu zaczepienia, bez podwójnych i poszarpanych pikseli; jeden skrypt dla wszystkich mebli.
-- [ ] Sito: każda wersja porównana z rzutem z Blendera (kąt, sylwetka, skala); do HTML trafiają tylko zgodne.
-- [ ] HTML wyboru: kilka wersji każdego mebla obok postaci, w skali gry i powiększeniu; wybór człowieka zapisany w tickecie.
-- [ ] Wybrane meble w prototypie ze światłem i cieniem z Brył, obok postać; bez przełączania generacji w F1.
-- [ ] Kod prototypu poza `lighting/` i poza przyszłym addonem; nie trafia do silnika.
-- [ ] Zapis oceny człowieka i decyzji technicznych Claude'a w tickecie (do „Poprawki kontraktu assetu”).
+- [x] Przed generacją pytanie do człowieka (co, po co, koszt: lokalnie w ComfyUI, 0 zł); odrzucone obrazy usuwane od razu.
+- [x] Wycięcie tła i cienia generatora (maska z renderu albo jak w Przepisie postaci).
+- [x] Pikselizacja do 40 px/m tym samym łańcuchem co postacie, wyrównana do punktu zaczepienia, bez podwójnych i poszarpanych pikseli; jeden skrypt dla wszystkich mebli.
+- [x] Sito: każda wersja porównana z rzutem z Blendera (kąt, sylwetka, skala); do HTML trafiają tylko zgodne.
+- [x] HTML wyboru: kilka wersji każdego mebla obok postaci, w skali gry i powiększeniu; wybór człowieka zapisany w tickecie.
+- [x] Wybrane meble w prototypie ze światłem i cieniem z Brył, obok postać; bez przełączania generacji w F1.
+- [x] Kod prototypu poza `lighting/` i poza przyszłym addonem; nie trafia do silnika.
+- [ ] Zapis oceny człowieka i decyzji technicznych Claude'a w tickecie (do „Poprawki kontraktu assetu”). Decyzje zapisane, ocena prototypu czeka.
 
 ## Jak sprawdzić
 
 1. Otwórz HTML wyboru: czy wersje mebla wyglądają jak z tej samej gry co postać i mają ten sam kąt; wybierz po jednej.
 2. Uruchom prototyp w dzień i w nocy: czy wybrany mebel wygląda jak część sceny, czy jego cień i światło lampy z boku są wiarygodne.
+
+## Wykonanie (2026-11-15, Claude)
+
+### Krok 1: meble z ComfyUI i wybór
+
+- **Generacja** (lokalnie, 0 zł, za zgodą człowieka): Qwen-Image-Edit-2511 przez `tools/postac/qwen_kat.mjs`, obraz 1 = szary render z Prowadnic v2 (`shots/prowadnice_v2/<mebel>/prowadnica_szary.png`), obraz 2 = bibliotekarka (`proby/bibliotekarka/qwen/przod_a15_s9000.png`) jako wzór stylu, LoRA kątów 0 (kąt daje render). Ok. 1,5–2 min na obraz. Skrypty: `proby/meble/prompt.sh`, `proby/meble/generuj.sh`.
+- **Seria 1** (12 obrazów, prompt „przemaluj szary model”): wszystkie zgodne z rzutem, ale meble gołe. **Uwaga człowieka:** render z Blendera ma dawać tylko rzut, położenie i wielkość (jak manekin MPFB przy postaci), a mebel ze szczegółami (poduszka, narzuta, obrus, przedmioty) ma powstać w ComfyUI, w jednym assecie; wzór bogactwa: meble z Pixellab w game1 (`repo/game1/game/world/station/sprites/{armchair,sofa,desk}.png`).
+- **Seria 2** (prompt „szary kształt to tylko prowadnica położenia; stwórz mebel z naturalnymi szczegółami”): przerwana przez człowieka po 3 ladach (nadal dość skromne; bogactwo szczegółów przeniesione do mapy grafiki: „Przepis mebli i rekwizytów”, pomysł: najpierw mebel ze szczegółami, potem przeróbka pod rzut). Ten ticket sprawdza cienie, nie szczegóły assetów.
+- **Wybór człowieka:** lada `b_s9100` (seria 2, zielona ze słojem), stół i fotel `a_s9000` (seria 1). Sprite'y: `proby/meble/wybrane/{lada,stol,fotel}.png`. Strona wyboru: `proby/meble/wybor.html` (`node proby/meble/wybor.mjs`). Odrzucone obrazy usunięte.
+- **Liczba kolorów (człowiek):** wszystkie assety mają mieć tyle kolorów co animacja z Pixellab. Pomiar: klatki chodu D 32–46 kolorów, stanie D z ComfyUI 974, bibliotekarka 1164, meble po zmniejszeniu 540–1160. Meble: paleta 40 kolorów. Stanie postaci D i bibliotekarki nie jest jeszcze na palecie chodu (poza tym ticketem; wpis w mapie grafiki).
+
+### Łańcuch mebla: `tools/meble/mebel_piksele.gd`
+
+Jeden skrypt dla wszystkich mebli (testy: `tools/meble/test_mebel_piksele.gd`, 6 testów, headless):
+
+```
+"$G" --headless --path . --script tools/meble/mebel_piksele.gd -- shots/prowadnice_v2/<mebel> proby/meble/<mebel>/wynik proby/meble/<mebel>/qwen/*.png
+```
+
+1. Obraz z Qwen (1024 px) wraca na płótno prowadnic (960 px, Lanczos).
+2. **Maska generatora:** tło zalane od krawędzi (kolor rogu, tolerancja 0,08 jak `crop_ref` w Przepisie postaci); wszystko poniżej linii podłogi z Blendera (+1 px gry) odcięte, to cień generatora.
+3. **Sito** względem maski z Blendera: podstawa pokryta ≥ 95%, dodatki poza podstawą ≤ 30% jej powierzchni, dolna krawędź na linii podłogi ±10 px prowadnic (1 px gry). Pokrycie i linia podłogi trzymają kąt, skalę i położenie; dodatki mogą wychodzić poza podstawę. Wynik w `sito.jsonl` i `<nazwa>_kontrola.png` (kontur Blendera czerwony, generatora turkusowy). Seria 1: pokrycie 100%, dodatki 1–4%, dół 1–3 px; seria 2 (lady): pokrycie 100%, dodatki 4–5%.
+4. **Pikselizacja** jak u postaci (Lanczos, twarda alfa): płótno zmniejszane dokładnie ×1/10 (płótno to wielokrotność siatki gry wyrównana do punktu zaczepienia, więc bez podwójnych pikseli); alfa = udział pikseli mebla w pikselu gry > 0,5; przed zmniejszeniem piksele tła dostają kolor najbliższego piksela mebla (bez szarej obwódki).
+5. **Paleta** 40 kolorów: median cut w Lab + 8 kroków k-średnich, kolor = średnia klastra.
+
+### Krok 2: prototyp w świetle (gałąź `silnik-02-proto` od `proto-09-nakladanie`)
+
+- Kopia robocza: `C:\Users\bartl\Desktop\game2-proto-02`, uruchomienie `style-lab/nakladanie.bat`. Kod tylko w `proby/nakladanie/` i `proby/meble_proto/` (poza `lighting/` i addonem), do wyrzucenia.
+- Ulica i wnętrze z proto-09 (słońce, niebo, lampy, A′), w obu lada, stół i fotel na swoich Bryłach, obok postać (pudełko). Klawisze: `M` modelowanie, `K` lampa stojąca przy stole: brak / z boku / z tyłu. Zrzuty wsadowe: `-- --meble-shots` (dzień 10:00 i 14:30, noc 21:00 z lampą z boku i z tyłu); kopie w `proby/meble/zrzuty/`.
+
+**Decyzje techniczne (do „Poprawki kontraktu assetu”):**
+
+- **Bryły mebla** z `bryly.json` jako niewidoczne pudełka (tylko zasłaniają): rzucają cień i zasłaniają niebo tym samym raycastem co reszta sceny. Kolor daje sprite.
+- **Pozycja piksela sprite'a:** linia widzenia piksela trafia w Bryły mebla (przód albo wierzch, najbliżej kamery). Z tego trafienia pochodzi punkt do świateł i cieni oraz głębia do zasłaniania (mebel za postacią i przed nią).
+- **Piksele bez Bryły pod spodem:** przedmiot ponad wierzchem Bryły (kasa, słój, monitor) stoi na pionowej płaszczyźnie w połowie głębokości tego wierzchu. Reszta (np. zwisająca narzuta obok Brył, prześwity między uproszczonymi Bryłami) leży na płaszczyźnie przodu obrysu Brył.
+- **Normalne:** domyślnie z mapy z Blendera (`normalne_gra.png`, modelowanie kształtu, np. zaokrąglony fotel); do porównania w `M`: normalna ściany Bryły (płasko) albo pół na pół. Siła modelowania = wybór człowieka w `M`.
+- **Namalowane światło w sprite'cie** zostaje jako część albedo (bez spłaszczania). Generator dostaje w prompcie „soft even light, no cast shadow”, więc namalowane cieniowanie jest słabe; spłaszczanie niszczyłoby malarski styl. Światło sceny dokłada kierunek.
+- **Cienie własne:** punkt odsunięty 2 cm od ściany Bryły wzdłuż jej normalnej, żeby promienie nie startowały w niej.
+- **Punkt zaczepienia** w sprite'cie (`zaczepienie_gra`) na rogu piksela; pozycje mebli w metrach na siatce 1/40 m, więc sprite i Bryły leżą w tym samym miejscu co do piksela.
+
+### Ocena człowieka
+
+Czeka (prototyp: dzień i noc, lampa z boku i z tyłu, modelowanie `M`).
