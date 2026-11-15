@@ -63,10 +63,11 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Strategia testów i sceny testowe](tickets/11-strategia-testow.md): GUT 9.7.1 + bramki buforów na syntetycznych scenach (zasady, nie wygląd) + człowiek tylko wygląd; trudne sceny w dwóch Poligonach z przełącznikiem w F1; każdy ticket wykonawczy sprawdzany ręcznie („Jak sprawdzić”, pionowe plastry, widok debug silnika w F1); test końcowy: Lokacje buduje subagent na ślepo z dokumentacji kontraktu.
 - [Migracja ze starego silnika](tickets/16-migracja.md): stare Poligony nietknięte do końca jako porównanie; nowe Poligony pod testy (Ulica: Uliczka, Sklep, Skwer; Dom: salon, kuchnia, pracownia), najpierw Ulica; południe na górze ekranu w całej grze; stare ustalenia tylko jako Ściąga wyglądu; stare bramki nie przechodzą; osobny ticket usunięcia starego silnika przed testem końcowym.
 - [Układ strojenia](tickets/13-uklad-strojenia.md): Krzywe doby wspólne dla całej gry + dwa Zestawy strojenia ze stałymi; stroi się tylko Wariantami krytyków (kilku krytyków, A/B/C, przeładowanie na żywo), bez suwaków; F1 minimum (godzina, tempo, Warianty, zrzut ze ścieżką w schowku, widok debug, przełączniki bieżącego ticketu).
+- [Specyfikacja silnika](tickets/12-specyfikacja-silnika.md): spec w `docs/silnik/spec.md` (moduły, szwy testów, Poligony, migracja, test końcowy, kolejność plastrów) + Ściąga wyglądu dla krytyków; mapa dotarła do celu, dalej `/to-tickets`.
 
 ## Not yet specified
 
-- (pusto: został ticket „Specyfikacja silnika”)
+- (pusto: mapa zakończona, cel osiągnięty)
 
 ## Out of scope
 
