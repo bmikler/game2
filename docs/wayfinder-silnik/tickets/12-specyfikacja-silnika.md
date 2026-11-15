@@ -4,7 +4,7 @@ title: Specyfikacja silnika
 labels: [wayfinder:task]
 status: open
 assignee:
-blocked_by: [07, 08, 09, 10, 11]
+blocked_by: [07, 08, 09, 10, 11, 13, 14, 15, 16]
 ---
 
 ## Question

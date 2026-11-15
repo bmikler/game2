@@ -64,10 +64,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 
 ## Not yet specified
 
-- **Stylizacja rozproszenia w powietrzu:** drobinki kurzu i ewentualny dither smug (poza A′); warianty szwu w F1. Tryby A′ ustalone w „Nakładanie cieni z kilku źródeł”.
-- **Strojenie:** układ zasobów (`.tres`) i zestawów (wnętrza, plener, warianty krytyka), F1, `--set=`; które parametry są krzywymi doby.
-- **Noc i pora dnia:** krzywe Stanu doby (droga słońca, kolory, włączanie lamp i świecących okien, schemat pogody): które krzywe i jakie punkty kontrolne; zależy od układu zasobów strojenia.
-- **Migracja:** jak przejść z `SunMap`/`StreetMap` bez gubienia ustaleń mapy grafiki; co ze starymi bramkami buforów (`bufor_roznica.mjs` itd.); nowe bramki ustalone w „Strategia testów i sceny testowe”.
+- (pusto: pozostała mgła przeszła w tickety „Układ strojenia”, „Krzywe doby i noc”, „Stylizacja rozproszenia w powietrzu”, „Migracja ze starego silnika”)
 
 ## Out of scope
 
