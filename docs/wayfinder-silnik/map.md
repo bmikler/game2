@@ -61,16 +61,18 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Nakładanie cieni z kilku źródeł](tickets/09-nakladanie-cieni-prototyp.md): nakładanie z sumy w HDR wygląda dobrze; bufor niesie dwa kanały (naturalny, sztuczny, pole Źródła); stylizacja w dwóch trybach w `.tres` (A′ na sumie albo A′ na każdym kanale), wybór przy strojeniu; tryb „barwa w stopniach” odrzucony.
 - [Bufor i przeliczanie](tickets/10-bufor-i-przeliczanie.md): bufor ×1 w warstwach według zmienności (niebo i nieruchome Źródła raz przy wczytaniu, słońce kaflami z przenikaniem, ruchome Przesłony i Źródła w oknach co klatkę), przycinanie kaflami, `canvas_item` bez C++; budżet 4 ms GPU, 1 ms CPU, wczytanie ≤ 2 s; cel 8 postaci + samochód + 4 drzewa; wiatr jako wychylenie Przesłony, A/B do oceny.
 - [Strategia testów i sceny testowe](tickets/11-strategia-testow.md): GUT 9.7.1 + bramki buforów na syntetycznych scenach (zasady, nie wygląd) + człowiek tylko wygląd; trudne sceny w dwóch Poligonach z przełącznikiem w F1; każdy ticket wykonawczy sprawdzany ręcznie („Jak sprawdzić”, pionowe plastry, widok debug silnika w F1); test końcowy: Lokacje buduje subagent na ślepo z dokumentacji kontraktu.
+- [Migracja ze starego silnika](tickets/16-migracja.md): stare Poligony nietknięte do końca jako porównanie; nowe Poligony pod testy (Ulica: Uliczka, Sklep, Skwer; Dom: salon, kuchnia, pracownia), najpierw Ulica; południe na górze ekranu w całej grze; stare ustalenia tylko jako Ściąga wyglądu; stare bramki nie przechodzą; osobny ticket usunięcia starego silnika przed testem końcowym.
 - [Układ strojenia](tickets/13-uklad-strojenia.md): Krzywe doby wspólne dla całej gry + dwa Zestawy strojenia ze stałymi; stroi się tylko Wariantami krytyków (kilku krytyków, A/B/C, przeładowanie na żywo), bez suwaków; F1 minimum (godzina, tempo, Warianty, zrzut ze ścieżką w schowku, widok debug, przełączniki bieżącego ticketu).
 
 ## Not yet specified
 
-- (pusto: pozostała mgła przeszła w tickety; zostały „Migracja ze starego silnika” i „Specyfikacja silnika”)
+- (pusto: został ticket „Specyfikacja silnika”)
 
 ## Out of scope
 
 - Strojenie wartości i kolorów światła (ticket 38 mapy grafiki), Wariantami krytyków na zaimplementowanym silniku. Tu też [Krzywe doby i noc](tickets/14-krzywe-doby-i-noc.md) i [Stylizacja rozproszenia w powietrzu](tickets/15-stylizacja-rozproszenia.md): wartości i wygląd to strojenie, wymagania przeniesione do „Specyfikacja silnika” (człowiek, 2026-11-15).
 - Produkcja assetów i Przepisy (mapa grafiki).
-- Płynne przejście ulica → wnętrze bez wczytania (wnętrza to osobne Lokacje).
+- Płynne przejście ulica → wnętrze bez wczytania (wnętrza to osobne Lokacje). Nowe Poligony nie mają też drzwi ulica → dom, pięter ani schodów (z „Migracja ze starego silnika”).
+- Brzeg kadru w czerni: prototyp kilku wariantów na działającym silniku, w mapie grafiki (tamże).
 - Odczyt poziomu światła przez logikę gry: żadna mechanika nie używa cienia (z „Jeden model światła i cienia dla wszystkich źródeł”).
 - Pogoda zmienna między dniami: jeden stały schemat dobowy wystarczy (tamże).

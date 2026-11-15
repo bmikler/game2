@@ -9,11 +9,11 @@ Mała, grywalna scena testowa w projekcie `style-lab/`, która służy do oceny 
 _Avoid_: mapa testowa, scena testowa, prototyp mapy
 
 **Poligon Ulica**:
-Poligon z plenerem: krótka ulica małego miasteczka z trzema budynkami różnej skali, jednym z nich do wejścia.
+Poligon z plenerem: ulica miasta przewijana w poziomie, ułożona pod trudne sceny Silnika światła (uliczka, sklep z latarniami, skwer). Nie ma wejścia do Poligonu Dom.
 _Avoid_: mapa zewnętrzna
 
 **Poligon Dom**:
-Poligon z wnętrzem domu z Poligonu Ulica, do którego gracz wchodzi z ulicy.
+Poligon z wnętrzem: jedno piętro z kilkoma pomieszczeniami, ułożone pod trudne sceny Silnika światła; osobna Lokacja, bez wejścia z ulicy.
 _Avoid_: mapa wewnętrzna
 
 **Mapa**:
@@ -83,6 +83,10 @@ _Avoid_: wstęga, promień, god ray
 **Plama okna**:
 Jasny ślad bezpośredniego słońca na podłodze lub ścianie, w kształcie Otworu, przez który wpadło.
 _Avoid_: rzut okna
+
+**Ściąga wyglądu**:
+Spis klimatu i ustaleń starych Poligonów (sprzed nowego Silnika światła), który podpowiada krytykom i człowiekowi, do czego dążyć przy strojeniu. Nie zawiera wymagań: reguły silnika pochodzą tylko z mapy silnika, a stare wartości są najwyżej punktem startowym.
+_Avoid_: lista wymagań, stare ustalenia
 
 **Kotwica stylu**:
 Jedna z najwyżej 3 istniejących gier wybranych przez człowieka jako wzorzec docelowego wyglądu w nazwanej roli (np. Kotwica proporcji, Kotwica światła). Poza swoją rolą nie jest wzorcem.
