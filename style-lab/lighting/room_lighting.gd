@@ -29,6 +29,11 @@ static var night_ambient_k: float = 1.0
 static var art_fill_k: float = 1.0
 
 var exposure: float = 1.0
+## style-lab (ticket 14): the share of the sky a light map draws itself (with its shadows); the flat
+## ambient keeps the rest (the bounce) and the sun's share.
+var sky_in_map: float = 0.0
+var sky_tint: Color = Color.WHITE ## The sky's colour, as last applied.
+var sky_energy: float = 0.0 ## The whole sky's light on open ground (flat, no peak), as last applied.
 var light_lux: float = 0.0 ## The room's light level, including floor_lux.
 var fixture_level: float = 0.0
 var active: bool = true
@@ -140,13 +145,19 @@ func apply_in_space(sun: SunSample, flux: Vector3, area: float) -> void:
 	exposure = Exposure.target(light_lux, profile.exposure_alpha) * lerpf(night_exposure_k, day_exposure_k, sun.day)
 
 	var grey: float = sun.ambient_tint.get_luminance()
-	var sky_tint: Color = Color(grey, grey, grey).lerp(sun.ambient_tint, profile.tint_saturation)
+	var sky_tint_now: Color = Color(grey, grey, grey).lerp(sun.ambient_tint, profile.tint_saturation)
 	var day_lux: float = day.x + profile.sun_ambient_share * day.y
 	var art_weight: float = art / maxf(art + day_lux, 0.001)
 	# Flat light (Lit: no N·L), so no peak: L_REF lx at exposure 1 shows the albedo.
 	var filled_lux: float = day_lux + profile.art_ambient_share * art_fill_k * art + profile.floor_lux
-	_ambient.color = sky_tint.lerp(profile.art_tint, art_weight)
-	_ambient.energy = minf(filled_lux * exposure / Exposure.L_REF, profile.ambient_max) 			* lerpf(night_ambient_k, day_ambient_k, sun.day)
+	var filled: float = filled_lux * exposure / Exposure.L_REF
+	# The cap scales the whole fill; a light map's sky share (ticket 14) leaves it at the same scale.
+	var capped: float = minf(filled, profile.ambient_max) / maxf(filled, 1e-6)
+	var dark_k: float = lerpf(night_ambient_k, day_ambient_k, sun.day)
+	sky_tint = sky_tint_now
+	sky_energy = day.x * exposure / Exposure.L_REF * capped * dark_k
+	_ambient.color = sky_tint_now.lerp(profile.art_tint, art_weight)
+	_ambient.energy = (filled - day.x * sky_in_map * exposure / Exposure.L_REF) * capped * dark_k
 
 	for window: WindowLight in _windows:
 		window.apply(sun, exposure)

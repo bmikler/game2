@@ -245,5 +245,6 @@ func _save_shot() -> void:
 	if error == OK:
 		print("Zrzut: ", path)
 		SunMap.dump_buffer(path.get_basename() + ".bufor")
+		StreetMap.dump_current(path.get_basename() + ".bufor")
 	else:
 		push_error("Zrzut nieudany (%s): %s" % [error_string(error), path])

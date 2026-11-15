@@ -157,10 +157,13 @@ var _zone_door: Rect2 = Rect2()
 var _stair_lag: float = 0.0
 var _door_time: float = 0.0
 var _door_down: float = 0.0
+var _street_map: StreetMap ## Ticket 14: the street's light from one buffer.
+var _street_box: RoomBox
+var _ground_m: Vector2 = Vector2.ZERO
 
 
 func _add_layout_options() -> void:
-	_layout_option(&"gora_mapy", "Góra ekranu", DomBryly.TOPS, 0)
+	_layout_option(&"gora_mapy", "Góra ekranu", DomBryly.TOPS, 1) # decided: south (tickets 27, 31), as the house
 	_layout_option(&"slonce_fasady", "Słońce na ulicy", SUN_ON_FACADES, 1)
 	_layout_option(&"szyby_dzien", "Szyby w dzień", GLASS_BY_DAY, 2)
 	_layout_option(&"poswiata", "Poświata okien na śniegu", ON_OFF, 0)
@@ -182,6 +185,7 @@ func _add_layout_options() -> void:
 	_layout_option(&"schody", "Schody na taras (układ A)", STAIR_MODES, 1)
 	_layout_option(&"prog", "Próg drzwi domu (raczej nie)", DOORSTEP_MODES, 0)
 	_layout_option(&"chod_pion", "Chód w pionie (ekran)", VERTICAL_NAMES, 0)
+	_add_street_light_options()
 	DebugRegistry.add_toggle(self, &"podglad", "Podgląd całości ×0,5 (nie do oceny pikseli)", false, func(on: bool) -> void:
 		_overview = on
 		_apply_overview())
@@ -200,6 +204,7 @@ func _build_world() -> void:
 	var south_z: float = road_z + _street.y
 	var bottom_z: float = south_z + _street.z + NEAR_STRIP_M
 
+	_street_map = StreetMap.new()
 	var box: RoomBox = RoomBox.new()
 	box.width_m = WIDTH_M
 	box.depth_m = bottom_z
@@ -208,6 +213,8 @@ func _build_world() -> void:
 	box.floor_color = SNOW
 	var street: RoomLighting = _room(Vector2.ZERO, box, OUTDOOR)
 	_street_room = street
+	_street_box = box
+	_ground_m = Vector2(WIDTH_M, bottom_z)
 	_paint_ground(street, layout, road_z, south_z)
 	_build_sun(street, box)
 	_grid(street, box.floor_rect(), 0)
@@ -219,6 +226,7 @@ func _build_world() -> void:
 		var fixture: LightFixture = LightFixture.new()
 		fixture.def = STREET_LAMP
 		spot.add_child(fixture)
+		_street_map.fixtures.append(fixture)
 		street.add_child(spot)
 	world.add_child(street)
 	for lamp: Vector2 in lamps:
@@ -255,10 +263,16 @@ func _build_world() -> void:
 	_spawn("z_domu", ground(door_x, house_front + 1.2))
 	_spawn("przerwa", ground((GAP_X.x + GAP_X.y) / 2.0, FRONT_Z_M + 1.0)) # shots: the gap between the house and the shop
 	_build_sky(box)
+	for child: Node in world.get_children():
+		if child is Block:
+			_street_map.add_block(child as Block)
+	world.add_child(_street_map)
 
 
 func start(spawn: StringName) -> void:
 	super.start(spawn)
+	_street_map.setup(_street_room, player, _street_box.ambient_rect(), _ground_m)
+	_apply_street_light()
 	player.vertical_speed = VERTICAL_SPEEDS[_value(&"chod_pion")]
 	_apply_overview()
 
@@ -284,6 +298,7 @@ func apply_time(hour: float) -> void:
 	for painter: ShapePainter in _night_painters:
 		painter.modulate = Color(1.0, 1.0, 1.0, night)
 	_apply_sun(night)
+	_apply_street_light()
 
 
 func _readout_extra() -> String:
@@ -338,6 +353,7 @@ func _building(spec: Vector4, front: float, lift_m: float, color: Color, roof: i
 	var height: float = storeys * _storey_m
 	var w: float = config.px(width)
 	var h: float = config.px(height)
+	_add_building_box(spec, depth, front, lift_m, height, roof)
 	paint.add_rect(_px(Rect2(-w / 2.0, -h, w, h)), color)
 	paint.add_rect(_px(Rect2(-w / 2.0, -config.px(0.4), w, config.px(0.4))), PLINTH)
 
@@ -417,6 +433,9 @@ func _window(paint: ShapePainter, lit: ShapePainter, window: Rect2, w: float, sn
 		lit.add_rect(_front(Rect2(window.get_center().x + 0.04, window.position.y,
 				window.size.x / 2.0 - 0.04, window.size.y), w), glow)
 		_add_glow(window, glow)
+		_street_map.add_window(Vector4(_building_spec.x + window.position.x, _building_spec.x + window.end.x,
+				_building_lift + window.position.y, _building_lift + window.end.y), _building_front, glow,
+				_window_count % DAY_LAMP_EVERY == 0)
 		if _window_count % DAY_LAMP_EVERY == 0:
 			_building_day_lamps.add_rect(_front(window, w), glow)
 	if snow:
@@ -495,6 +514,7 @@ func _terrace() -> void:
 	var lift: Vector2 = Vector2(0.0, config.px(TERRACE_M))
 	var paint: ShapePainter = ShapePainter.new(LightMasks.of(0, LightMasks.Receiver.FLOOR), RoomBox.WALL_Z + 3)
 	var top_from: Vector2 = ground(GAP_X.x, TERRACE_Z.x) - lift
+	_street_map.add_box(AABB(Vector3(GAP_X.x, TERRACE_Z.x, 0.0), Vector3(GAP_X.y - GAP_X.x, TERRACE_Z.y - TERRACE_Z.x, TERRACE_M)), true, true)
 	var top_to: Vector2 = ground(GAP_X.y, TERRACE_Z.y) - lift
 	paint.add_rect(_px(Rect2(top_from, top_to - top_from)), Color("e0e5ec"))
 	var face: Rect2 = Rect2(top_from.x, top_to.y, top_to.x - top_from.x, lift.y)
@@ -695,6 +715,7 @@ func _bare_tree(foot: Vector2, height_m: float) -> void:
 	var config: ProjectionConfig = ProjectionConfig.current()
 	var h: float = config.px(height_m)
 	var node: Node2D = _prop(foot, Vector2(0.4, 0.3))
+	_occluder(foot, Vector3(0.4, 0.3, height_m * 0.55))
 	var paint: ShapePainter = node.get_child(0) as ShapePainter
 	paint.add_rect(_px(Rect2(-3.0, -h * 0.55, 6.0, h * 0.55)), TRUNK)
 	var branches: Array[Vector4] = [Vector4(0.0, 0.5, -0.35, 0.95), Vector4(0.0, 0.45, 0.3, 0.9),
@@ -714,6 +735,7 @@ func _spruce(foot: Vector2, height_m: float) -> void:
 	var config: ProjectionConfig = ProjectionConfig.current()
 	var h: float = config.px(height_m)
 	var node: Node2D = _prop(foot, Vector2(0.5, 0.4))
+	_occluder(foot, Vector3(height_m * 0.3, height_m * 0.3, height_m))
 	var paint: ShapePainter = node.get_child(0) as ShapePainter
 	paint.add_rect(_px(Rect2(-3.0, -h * 0.15, 6.0, h * 0.15)), TRUNK)
 	var tiers: int = 4
@@ -734,6 +756,7 @@ func _car(foot: Vector2) -> void:
 	var body_h: float = config.px(0.8)
 	var deep: float = config.depth_px(1.8)
 	var node: Node2D = _prop(foot, Vector2(4.2, 1.8))
+	_occluder(foot, Vector3(4.2, 1.8, 1.65))
 	var paint: ShapePainter = node.get_child(0) as ShapePainter
 	var capped: bool = _value(&"czapy") == 0
 	# Body top (bonnet and boot), the cabin set back, then the body's side and the wheels.
@@ -943,3 +966,95 @@ func _apply_sun(night: float) -> void:
 		var light: PointLight2D = _glows[index]
 		light.energy = Exposure.energy(WINDOW_GLOW_LUX * _glow_ks[index] * night, exposure, radial_peak)
 		light.enabled = glows and light.energy > WindowLight.MIN_LIGHT_ENERGY
+
+
+## Ticket 14: a building as the map's box (its footprint as drawn: depth already scaled), with its roof.
+func _add_building_box(spec: Vector4, depth: float, front: float, lift_m: float, height: float, roof: int) -> void:
+	var rise: float = 0.0
+	var kind: int = 0
+	match roof:
+		1:
+			kind = 1
+			rise = _pitch * depth / 2.0
+		2:
+			kind = 2
+			rise = _pitch * spec.y / 2.0
+	_street_map.add_box(AABB(Vector3(spec.x, front - depth, lift_m), Vector3(spec.y, depth, height + rise)), true, true,
+			Vector2(kind, rise))
+
+
+## Ticket 14: a drawn prop (tree, car) as the map's box standing behind its foot.
+func _occluder(foot: Vector2, size_m: Vector3) -> void:
+	var at: Vector2 = StreetMap.ground_m(foot)
+	_street_map.add_box(AABB(Vector3(at.x - size_m.x / 2.0, at.y - size_m.y, 0.0), size_m), true, false)
+
+
+## Ticket 14: the street's light (F1, live): the map or the old flat light, the buildings' shadows, the
+## look shared with the house (the same ids: one choice for both), debug views and the critic's knobs.
+const STREET_LIGHTS: PackedStringArray = ["mapa (jak w domu)", "stare (plaskie, t27)"]
+const STREET_DEBUG: PackedStringArray = ["swiatlo", "tylko slonce", "tylko niebo", "tylko okna", "tylko latarnie",
+		"udzial cienia (R slonce, G niebo, B okna)"]
+const STREET_TESTS: PackedStringArray = ["brak", "pudelko w miejscu postaci (postac bez cienia)"]
+const STREET_K_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+const SKY_SHARE_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
+
+
+func _add_street_light_options() -> void:
+	DebugRegistry.add_variant(self, &"swiatlo_ulicy", "Światło ulicy", STREET_LIGHTS, 0, func(index: int) -> void:
+		StreetMap.enabled = index == 0
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"cienie_budynkow", "Cienie budynków od słońca", ON_OFF, 0, func(index: int) -> void:
+		StreetMap.building_shadows = index == 0
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"wyglad", "Cienie i światło: wygląd", DomBryly.LOOKS, 1, func(index: int) -> void:
+		SunMap.look = index
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"swiatlo_res", "Światło i cienie: rozdzielczość", DomBryly.LIGHT_RES, 1, func(index: int) -> void:
+		SunMap.light_res = index + 1
+		get_tree().call_group(&"lit_view", &"set", &"render_scale", index + 1)
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"widok_debug_ulica", "Widok debug (bufor ulicy)", STREET_DEBUG, 0, func(index: int) -> void:
+		StreetMap.debug_view = index
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"test_ulica", "Test cieni (ulica)", STREET_TESTS, 0, func(index: int) -> void:
+		StreetMap.test_box = index == 1
+		_refresh_light())
+	_k_slider(&"ulica_slonce", "Ulica: słońce", STREET_K_STEPS, 0.5, func(k: float) -> void: StreetMap.sun_k = k)
+	_k_slider(&"ulica_niebo", "Ulica: udział nieba w mapie (reszta płaska)", SKY_SHARE_STEPS, 0.75, func(k: float) -> void: StreetMap.sky_share = k)
+	_k_slider(&"ulica_okna", "Ulica: światło zapalonych okien", STREET_K_STEPS, 1.0, func(k: float) -> void: StreetMap.window_k = k)
+	_k_slider(&"ulica_latarnie", "Ulica: latarnie", STREET_K_STEPS, 1.0, func(k: float) -> void: StreetMap.lamp_k = k)
+
+
+func _k_slider(id: StringName, label: String, steps: PackedFloat32Array, start: float, set_k: Callable) -> void:
+	var names: PackedStringArray = PackedStringArray()
+	for k: float in steps:
+		names.append("x%s" % String.num(k, 2).replace(".", ","))
+	DebugRegistry.add_slider(self, id, label, names, DomBryly._nearest(steps, start), func(index: int) -> void:
+		set_k.call(steps[index])
+		_refresh_light())
+
+
+func _refresh_light() -> void:
+	if director != null and director.sun != null:
+		apply_time(director.sun.hour)
+
+
+## The map's sources for this hour; the old flat lights step aside while it lights the street.
+func _apply_street_light() -> void:
+	if _street_map == null or _street_map.room == null or director.sun == null:
+		return
+	var on: bool = StreetMap.enabled
+	Figure.blob = Figure.Blob.NONE if on else Figure.Blob.FIXED
+	_street_map.window_night_k = 0.0 if _value(&"okna") == 1 else 1.0
+	_street_map.window_day_k = DAY_LAMP_K if _value(&"lampy_dzien") == 0 and _value(&"okna") == 0 else 0.0
+	_street_map.apply(director.sun)
+	if on:
+		_sun_light.enabled = false
+		for light: PointLight2D in _glows:
+			light.enabled = false
+
+
+func _exit_tree() -> void:
+	LightFixture.map_lamps = false
+	LightFixture.map_actor = false
+	Figure.blob = Figure.Blob.FIXED

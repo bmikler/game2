@@ -10,3 +10,5 @@ shape = 1
 texture_scale = 1.4
 height = 60.0
 footprint_m2 = 6.0
+map_source = true
+source_height_m = 4.0
