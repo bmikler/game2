@@ -10,14 +10,17 @@ uniform float floor_y = 88.0;
 uniform vec3 shell_min;
 uniform vec3 shell_max;
 uniform int sash_count = 0;
-uniform vec4 sashes[64]; // u from, u to (x for back and front walls, d for side walls), z from, z to
-uniform int sash_wall[64]; // 0 back (d min), 1 front (d max), 2 left (x min), 3 right (x max)
-uniform int sash_window[64]; // the window a sash (a pane) belongs to: its panes are one source
+uniform vec4 sashes[128]; // u from, u to (x for back and front walls, d for side walls), z from, z to
+uniform int sash_wall[128]; // 0 back (d min), 1 front (d max), 2 left (x min), 3 right (x max)
+uniform int sash_window[128]; // the window a sash (a pane) belongs to: its panes are one source
 uniform int box_count = 0;
-uniform vec3 box_min[64];
-uniform vec3 box_max[64];
-uniform float box_top[64]; // shown top (a receiver), < 0: only an occluder
-uniform int box_arch[64]; // 1: architecture (walls, lintels, partitions): its shadow is not drawn in the look
+uniform vec3 box_min[128];
+uniform vec3 box_max[128];
+uniform float box_top[128]; // shown top (a receiver), < 0: only an occluder
+uniform int box_arch[128]; // 1: architecture (walls, lintels, partitions): its shadow is not drawn in the look
+// Ticket 14: a box with a roof (the street's buildings): x the type (0 none, 1 ridge along x: slopes to
+// -d and +d, 2 ridge along d: slopes to -x and +x), y the rise; the box's top is the ridge, the eaves rise lower.
+uniform vec2 box_roof[128];
 uniform int actor_shape = 0; // 0 none, 1 cylinder, 2 box
 uniform vec4 actor_body = vec4(0.0, 0.0, 0.26, 1.8); // middle x, middle d, radius (half width), height
 uniform int room_count = 0;
@@ -68,6 +71,59 @@ bool hit_box(vec3 o, vec3 inv, vec3 lo, vec3 hi, float t_max) {
 	float tn = max(max(near.x, near.y), near.z);
 	float tf = min(min(far.x, far.y), far.z);
 	return tf >= max(tn, 0.0) && tn < t_max;
+}
+
+// The two roof planes of box i (n · p <= c), when it has a roof.
+void roof_planes(int i, out vec4 a, out vec4 b) {
+	vec3 lo = box_min[i];
+	vec3 hi = box_max[i];
+	float rise = box_roof[i].y;
+	float h = hi.z - rise;
+	int axis = box_roof[i].x > 1.5 ? 0 : 1;
+	float half_span = max((hi[axis] - lo[axis]) * 0.5, 1e-4);
+	float k = rise / half_span;
+	vec3 n = vec3(0.0, 0.0, 1.0);
+	n[axis] = -k;
+	a = vec4(n, h - k * lo[axis]);
+	n[axis] = k;
+	b = vec4(n, h + k * hi[axis]);
+}
+
+// A box cut by its roof planes (a convex body) on o + t·dir, t in (0, t_max).
+bool hit_roofed(int i, vec3 o, vec3 dir, vec3 inv, float t_max) {
+	vec3 a = (box_min[i] - o) * inv;
+	vec3 b = (box_max[i] - o) * inv;
+	vec3 near = min(a, b);
+	vec3 far = max(a, b);
+	float tn = max(max(near.x, near.y), near.z);
+	float tf = min(min(far.x, far.y), far.z);
+	vec4 planes[2];
+	roof_planes(i, planes[0], planes[1]);
+	for (int k = 0; k < 2; k++) {
+		float den = dot(planes[k].xyz, dir);
+		float num = planes[k].w - dot(planes[k].xyz, o);
+		if (abs(den) < 1e-8) {
+			if (num < 0.0) {
+				return false;
+			}
+			continue;
+		}
+		float t = num / den;
+		if (den > 0.0) {
+			tf = min(tf, t);
+		} else {
+			tn = max(tn, t);
+		}
+	}
+	return tf >= max(tn, 0.0) && tn < t_max;
+}
+
+// Occluder i (a box, or a roofed box) on o + t·dir.
+bool hit_occluder(int i, vec3 o, vec3 dir, vec3 inv, float t_max) {
+	if (box_roof[i].x > 0.5) {
+		return hit_roofed(i, o, dir, inv, t_max);
+	}
+	return hit_box(o, inv, box_min[i], box_max[i], t_max);
 }
 
 bool hit_cylinder(vec3 o, vec3 dir, float t_max, vec4 cyl) {
@@ -121,7 +177,7 @@ bool blocked_by(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, v
 		if (skip_own && all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
 			continue;
 		}
-		if (hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+		if (hit_occluder(i, o, dir, inv, t_max)) {
 			return true;
 		}
 	}
@@ -141,7 +197,7 @@ int occlusion(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, vec
 		if (skip_own && all(greaterThanEqual(bulb, box_min[i] - 0.02)) && all(lessThanEqual(bulb, box_max[i] + vec3(0.02, 0.02, 0.15)))) {
 			continue;
 		}
-		if ((box_arch[i] == 1 || found == 0) && hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+		if ((box_arch[i] == 1 || found == 0) && hit_occluder(i, o, dir, inv, t_max)) {
 			if (box_arch[i] == 1) {
 				return 2;
 			}
@@ -158,7 +214,7 @@ int occlusion(vec3 o, vec3 dir, float t_max, bool with_actor, bool skip_own, vec
 bool arch_blocked(vec3 o, vec3 dir, float t_max) {
 	vec3 inv = inverse_dir(dir);
 	for (int i = 0; i < box_count; i++) {
-		if (box_arch[i] == 1 && hit_box(o, inv, box_min[i], box_max[i], t_max)) {
+		if (box_arch[i] == 1 && hit_occluder(i, o, dir, inv, t_max)) {
 			return true;
 		}
 	}

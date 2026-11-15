@@ -9,8 +9,8 @@ extends RefCounted
 
 enum Wall { BACK, FRONT, LEFT, RIGHT }
 
-const MAX_SASHES: int = 64
-const MAX_BOXES: int = 63 ## One more slot is the actor's.
+const MAX_SASHES: int = 128
+const MAX_BOXES: int = 127 ## One more slot is the actor's.
 const BAR_M: float = 0.06 ## Mullion and transom of a window the 3/4 view does not draw.
 
 var floor_y: float = 0.0 ## World y (px) of the back wall's foot (d 0, z 0).
