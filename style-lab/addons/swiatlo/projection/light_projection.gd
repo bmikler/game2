@@ -1,3 +1,4 @@
+@tool
 class_name LightProjection
 extends Resource
 ## The game's projection: world metres → screen pixels. World axes: x to the right (west), d towards

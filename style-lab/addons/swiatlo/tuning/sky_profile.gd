@@ -1,3 +1,4 @@
+@tool
 class_name SkyProfile
 extends Resource
 ## A Location's sky profile: the night sky (e.g. with a city glow, or dark with a moon). The daytime

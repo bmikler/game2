@@ -1,3 +1,4 @@
+@tool
 class_name DayCurves
 extends Resource
 ## Day curves: the one set of artistic data for the whole game from which the day state is made.
