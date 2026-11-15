@@ -2,7 +2,7 @@
 id: 04
 title: Szkielet silnika i doba na podłodze
 labels: [ready-for-agent]
-status: do sprawdzenia
+status: closed
 assignee:
 blocked_by: [03]
 ---
@@ -35,3 +35,8 @@ Uruchom nowy Poligon Ulica, F1: przewiń godzinę od 0 do 24. Podłoga przechodz
 - Światło podłogi na razie jako mnożnik całego obrazu Lokacji (bez Bufora, ten od ticketu 06).
 - GUT 9.7.1 w `style-lab/addons/gut/`; w `project.godot` ostrzeżenia typów włączone z powrotem dla `res://addons/swiatlo` (GUT dalej wyłączony). `node tools/test.mjs` (z `style-lab`): 41 testów zielonych, w tym GPU.
 - Poligon: `style-lab/street_engine.bat` → `engine_poligons/street/poligon_street.tscn`. Kadr skalowany do wysokości okna (jak stary LitView; przy oknie ok. 990 px skala całkowita dawała ×1).
+- Poprawka po sprawdzeniu: zasoby silnika (`LightProjection`, `DayCurves`, `SkyProfile`, `TuningSet`) jako `@tool`, bo w edytorze były zaślepkami i `street.tscn` był czarny.
+
+### Ocena człowieka
+
+2026-11-15: „ok teraz to widać, wygląda że działa” (ulica widoczna w edytorze, doba w Poligonie).
