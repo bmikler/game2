@@ -2,8 +2,8 @@
 id: 02
 title: Sprawdzian assetu w prototypie
 labels: [ready-for-agent]
-status: open
-assignee:
+status: closed
+assignee: claude
 blocked_by: [01]
 ---
 
@@ -24,7 +24,7 @@ Odpowiedź na pytanie człowieka, zanim powstanie silnik: czy mebel wygenerowany
 - [x] HTML wyboru: kilka wersji każdego mebla obok postaci, w skali gry i powiększeniu; wybór człowieka zapisany w tickecie.
 - [x] Wybrane meble w prototypie ze światłem i cieniem z Brył, obok postać; bez przełączania generacji w F1.
 - [x] Kod prototypu poza `lighting/` i poza przyszłym addonem; nie trafia do silnika.
-- [ ] Zapis oceny człowieka i decyzji technicznych Claude'a w tickecie (do „Poprawki kontraktu assetu”). Decyzje zapisane, ocena prototypu czeka.
+- [x] Zapis oceny człowieka i decyzji technicznych Claude'a w tickecie (do „Poprawki kontraktu assetu”).
 
 ## Jak sprawdzić
 
@@ -72,4 +72,10 @@ Jeden skrypt dla wszystkich mebli (testy: `tools/meble/test_mebel_piksele.gd`, 6
 
 ### Ocena człowieka
 
-Czeka (prototyp: dzień i noc, lampa z boku i z tyłu, modelowanie `M`).
+2026-11-15, w prototypie:
+
+- Meble wyglądają jak część sceny, cienie są wiarygodne. **Cienie od nieba „wyglądają super”.** Od lamp czasami dziwnie, ale prawdopodobnie tak powinno być przy takim ustawieniu lamp.
+- Modelowanie `M` widać w zasadzie tylko na ladzie. Przy normalnej ściany Bryły słój i książka ponad krawędzią lady są trochę przezroczyste; z Blendera jest dobrze. **Wybór: normalne z Blendera.**
+- Na podłodze dziwne układy cieni niezwiązane z meblami: to poziomy i dither A′ z proto-09, do dopracowania w ticketach stylu (11) i strojenia (12).
+
+**Otwarte do „Poprawki kontraktu assetu” (ticket 03):** piksele dodatków spoza modelu z Blendera (słój, książka, narzuta) nie mają normalnej: mapa ma tam (128, 128, 128), czyli wektor zerowy, więc w trybie „z Blendera” dostają tylko ambient i przez to wyglądają na pełne. To przypadek, nie reguła. Przy normalnej ściany Bryły (płaszczyzna jak ściana za nimi) dostają to samo światło co tło i wyglądają na przezroczyste. Kontrakt musi dać dodatkom własne normalne (np. z obrazu generatora albo przyjęta stała normalna dla „przedmiotu na wierzchu”) i sprawdzić to na meblu z bogatymi dodatkami.
