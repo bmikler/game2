@@ -178,6 +178,17 @@ vec2 street_sky_light(vec3 o, vec3 n, bool with_actor, bool with_objects) {
 		if (dist2 > radius2 && radius2 < sky_cull * dist2) {
 			continue;
 		}
+		// o under it (inside its footprint, below its top: the ground under the actor, between its feet):
+		// none of its faces face o, yet it hides all the sky (as shape_hide in the house). A lit spot under
+		// the actor, the human.
+		if (away <= 0.0 && o.z < hi.z) {
+			if (arch) {
+				keep_arch = 0.0;
+			} else {
+				keep_obj = 0.0;
+			}
+			continue;
+		}
 		float f = 0.0;
 		int faces = !actor && box_roof[i].x > 0.5 ? 6 : 5;
 		for (int k = 0; k < faces; k++) {
