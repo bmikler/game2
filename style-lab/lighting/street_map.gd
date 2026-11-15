@@ -29,7 +29,9 @@ static var lamp_k: float = 1.0
 static var building_shadows: bool = true
 static var debug_view: int = 0
 static var actor_shadow: bool = true
-static var test_box: bool = false ## The quality gate: a box in the actor's place (the actor casting nothing).
+## The quality gate (as the house's): 1 the actor as a box, 2 a box in its place (the actor casting nothing):
+## 1 and 2 must give the same buffer outside the actor's strip.
+static var test: int = 0
 
 ## Filled by the Poligon (metres: x across, d into the depth from the street's back edge, z up).
 var boxes: Array[AABB] = []
@@ -108,6 +110,10 @@ func setup(street: RoomLighting, player: Node2D, area: Rect2, ground: Vector2) -
 	_view = SubViewport.new()
 	_view.size = Vector2i(_rect.size.x + STRIP.x, maxi(_rect.size.y, STRIP.y))
 	_view.disable_3d = true
+	# Its own 2D world: the street's glow (WorldEnvironment) bloomed into the buffer and piled up where
+	# the actor's window did not repaint.
+	_view.world_2d = World2D.new()
+	_view.own_world_3d = true # the environment (glow) lives in the 3D world
 	_view.use_hdr_2d = true
 	_view.transparent_bg = true
 	_view.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -317,7 +323,7 @@ func _process(_delta: float) -> void:
 	var window: Rect2 = _actor_window()
 	var both: Rect2 = window.merge(_last_window) if _last_window.has_area() else window
 	_last_window = window
-	var whole: bool = _dirty
+	var whole: bool = _dirty or SunMap.whole_every_frame
 	_dirty = false
 	_whole.visible = whole
 	_window.visible = not whole and both.has_area()
@@ -343,7 +349,9 @@ func _set_boxes() -> void:
 	if is_instance_valid(actor):
 		var feet: Vector2 = ground_m(actor.global_position)
 		_actor_middle = Vector2(feet.x, feet.y - r)
-	if test_box:
+	if test == 1:
+		shape = 2
+	elif test == 2:
 		shape = 0
 		lows.append(Vector3(_actor_middle.x - r, _actor_middle.y - r, 0.0))
 		highs.append(Vector3(_actor_middle.x + r, _actor_middle.y + r, height))
@@ -369,7 +377,7 @@ func _set_boxes() -> void:
 ## The buffer px the actor's shadows can change: round it (sky and contact), and where rays from the sun,
 ## the lamps and the lit windows past its corners meet the ground or the first architecture.
 func _actor_window() -> Rect2:
-	if not actor_shadow and not test_box:
+	if not actor_shadow and test == 0:
 		return Rect2()
 	var r: float = ACTOR_RADIUS_M
 	var h: float = ProjectionConfig.current().actor_height_m

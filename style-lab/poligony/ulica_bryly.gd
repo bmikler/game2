@@ -994,7 +994,7 @@ func _occluder(foot: Vector2, size_m: Vector3) -> void:
 const STREET_LIGHTS: PackedStringArray = ["mapa (jak w domu)", "stare (plaskie, t27)"]
 const STREET_DEBUG: PackedStringArray = ["swiatlo", "tylko slonce", "tylko niebo", "tylko okna", "tylko latarnie",
 		"udzial cienia (R slonce, G niebo, B okna)"]
-const STREET_TESTS: PackedStringArray = ["brak", "pudelko w miejscu postaci (postac bez cienia)"]
+const STREET_TESTS: PackedStringArray = ["brak", "postac jako pudelko", "pudelko w miejscu postaci (postac bez cienia)"]
 const STREET_K_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
 const SKY_SHARE_STEPS: PackedFloat32Array = [0.0, 0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
 
@@ -1017,7 +1017,10 @@ func _add_street_light_options() -> void:
 		StreetMap.debug_view = index
 		_refresh_light())
 	DebugRegistry.add_variant(self, &"test_ulica", "Test cieni (ulica)", STREET_TESTS, 0, func(index: int) -> void:
-		StreetMap.test_box = index == 1
+		StreetMap.test = index
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"liczenie", "Liczenie (koszt)", DomBryly.COMPUTES, 0, func(index: int) -> void:
+		SunMap.whole_every_frame = index == 1
 		_refresh_light())
 	_k_slider(&"ulica_slonce", "Ulica: słońce", STREET_K_STEPS, 0.5, func(k: float) -> void: StreetMap.sun_k = k)
 	_k_slider(&"ulica_niebo", "Ulica: udział nieba w mapie (reszta płaska)", SKY_SHARE_STEPS, 0.75, func(k: float) -> void: StreetMap.sky_share = k)
