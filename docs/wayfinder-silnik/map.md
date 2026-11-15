@@ -28,6 +28,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
   - **oprawa artystyczna ponad realizm:** logika cieni sztywna (cień zawsze od źródła, spójny kierunek, poprawne nakładanie), ale wszystko, co jest nastrojem, to dane artystyczne, nie fizyka: droga słońca w czasie (krzywa godzina → wysokość i azymut, np. długi wschód i zachód), kolory i jasności źródeł w ciągu doby (gradienty), długość cieni, szerokość półcienia, siła nieba. Fizyka daje punkt startu, krzywe w `.tres` mogą ją wygiąć.
 - **Granice:** silnik powstaje jako samodzielny katalog w projekcie `style-lab/` (np. `style-lab/addons/swiatlo/`), bez zależności od reszty `style-lab` (`config/`, `world/`, debug); do gry przenoszony przez skopiowanie katalogu. Nowy silnik obok starego; Poligony przechodzą na nowy; stary `lighting/` (`SunMap`, `StreetMap` itd.) usuwany na końcu wykonania (zostaje w historii gita).
 - **Poligony jako sceny edytora:** Poligon Dom i Poligon Ulica przebudowane jako sceny układane w edytorze z węzłów kontraktu sceny; nie muszą być 1:1 jak dziś, ważne, żeby była Lokacja w plenerze i Lokacja wnętrza. Wnętrza to osobne Lokacje z wczytaniem; płynnego przejścia ulica → dom bez przeskoku nie przewidujemy.
+- **Smugi z górnych okien są obowiązkowe (człowiek, 2026-11-15):** we wnętrzach smuga światła z górnych okien, plama światła z okna na podłodze i drobinki kurzu w smudze (dziś: `sun_beam.gdshader`, `sun_dust.gdshader`, plama w `SunMap`) muszą być w nowym silniku, z geometrii okna i słońca, nie jako dekoracja pod scenę. Okna boczne nadal tylko wstęgi, bez plamy (27, 31).
 - **Wszystkie źródła od razu:** słońce, niebo, lampy, latarnie, świecące okna, w kontrakcie i w implementacji; chcemy widzieć, jak cienie z różnych źródeł wyglądają i się nakładają. Pełna doba (24 h) ze zmianą na żywo; godzina jest jednym wejściem silnika dla całego bufora.
 - **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); reszta na końcu wykonania w scenach testowych. Strojenie: dobra praktyka ze `style-lab` to agent krytyk proponujący 3 warianty strojenia, więc silnik musi wczytywać zestawy wartości na żywo, żeby warianty dało się przeklikać w grze.
 - **Już ustalone w mapie grafiki (wejście, nie do ponownego otwierania bez powodu):**
@@ -47,6 +48,13 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 ## Decisions so far
 
 <!-- jedna linia na zamknięty ticket -->
+
+- [Cienie w pixel arcie w Project Shadowglass](tickets/01-project-shadowglass-research.md): gra 3D FPP, technika nieujawniona; algorytmu do przeniesienia brak, tylko uwagi praktyczne (ambient a paleta, zanik lamp jako krzywa, słońce pod kamerę jako trudna scena).
+- [Nakładanie cieni i światła z wielu źródeł w 2D i pixel arcie](tickets/02-nakladanie-cieni-wiele-zrodel-research.md): źródła się dodają w HDR, cień bez własnego koloru (kolor pozostałych źródeł), kwantyzacja sumy, nie źródeł; luka: A′ nie kwantyzuje barwy (ciepłe/chłodne).
+- [Światło i cienie w Kotwicach i Referencjach](tickets/03-swiatlo-w-kotwicach-research.md): brak gotowego wzoru technicznego; reguły: cienie równoległe z jednym kierunkiem, kolor cienia jako dana pory dnia, fizykę nagina się w oświetleniu postaci, czasie i pogodzie, nie w kierunku cieni; nakładania wielu źródeł nikt nie pokazuje.
+- [C++ (GDExtension) czy shadery i GDScript dla Silnika światła](tickets/04-cpp-czy-shadery-research.md): koszt prawie cały na GPU (źródła × próbki × pudła na piksel); C++ nie teraz, 60 fps algorytmem: światło statyczne osobno od ruchomych przesłon, przycinanie per kafel, ewentualnie compute.
+- [Testy w Godot 4.7 dla Silnika światła](tickets/05-testy-godot-research.md): GUT 9.7.1 (za zgodą), testy shaderów nie w headless, tylko w oknie poza ekranem z GPU; jedna komenda dla /implement.
+- [Podgląd światła w edytorze Godota 4.7](tickets/06-podglad-w-edytorze-research.md): wykonalny; węzły kontraktu @tool w grupie + jeden kontroler z SubViewport renderowanym tylko po zmianie; pomocnicze węzły bez owner nie trafiają do .tscn.
 
 ## Not yet specified
 
