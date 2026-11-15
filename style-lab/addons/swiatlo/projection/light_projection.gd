@@ -20,3 +20,8 @@ func to_screen(point: Vector3) -> Vector2:
 ## A world direction → a unit direction on screen (zero when it points straight into the camera).
 func direction_on_screen(direction: Vector3) -> Vector2:
 	return Vector2(direction.x, direction.y * depth_factor - direction.z).normalized()
+
+
+## The world direction towards the camera: moving along it keeps a point on the same screen pixel.
+func toward_camera() -> Vector3:
+	return Vector3(0.0, 1.0, depth_factor).normalized()

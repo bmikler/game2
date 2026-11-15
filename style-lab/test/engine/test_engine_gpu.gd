@@ -1,5 +1,6 @@
 extends GutTest
 ## Location → picture (GPU, window off screen): white ground under the engine shines with the hour.
+## The ground is the top of a flat solid at z = 0.
 
 
 func _read(hour: float) -> Color:
@@ -11,6 +12,12 @@ func _read(hour: float) -> Color:
 	ground.color = Color.WHITE
 	ground.size = Vector2(8, 8)
 	view.add_child(ground)
+	var floor_solid: Solid = Solid.new()
+	floor_solid.position_m = Vector3(0.0, 10.0, -0.1)
+	floor_solid.size_m = Vector3(20.0, 20.0, 0.1)
+	var occluder: Occluder = Occluder.new()
+	occluder.add_child(floor_solid)
+	view.add_child(occluder)
 	var engine: LightEngine = LightEngine.new()
 	engine.rate = 0.0
 	view.add_child(engine)

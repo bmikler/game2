@@ -2,10 +2,16 @@ class_name LightEngine
 extends Node
 ## The light engine's controller, one per Location. The hour is the only time input: from the day
 ## curves and the sky profile of the LocationEnvironment it makes the day state once per frame, and
-## from that the Location's light. For now: flat ground without shadows (sun, sky, ambient) as a
-## multiplier of the whole Location picture. The engine must sit in the Location's viewport.
+## from that and the scene description (the Location's contract nodes) the light buffer, shown over
+## the Location's picture. The engine must sit in the Location's viewport.
 
 signal state_changed(state: DayState)
+
+## What the engine shows over the picture: nothing extra, the solids' edges, or the receivers.
+enum DebugView { NONE, SOLIDS, RECEIVERS }
+
+## The one projection of the engine, shared with the contract nodes.
+const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/projection.tres")
 
 @export var curves: DayCurves = preload("res://addons/swiatlo/tuning/day_curves.tres")
 ## Hour of the day, 0–24.
@@ -16,17 +22,23 @@ signal state_changed(state: DayState)
 var _state: DayState = DayState.new()
 var _environment: LocationEnvironment
 var _fallback_sky: SkyProfile = SkyProfile.new()
-var _modulate: CanvasModulate
+var _description: SceneDescription = SceneDescription.new()
+var _debug_view: DebugView = DebugView.NONE
+# Helper nodes without an owner: never saved into the scene.
+var _buffer: LightBuffer
+var _solids_overlay: SolidsOverlay
 
 
 func _ready() -> void:
 	refresh_environment()
-	# A helper node without an owner: never saved into the scene.
-	_modulate = CanvasModulate.new()
-	add_child(_modulate)
+	_buffer = LightBuffer.new()
+	add_child(_buffer)
+	_solids_overlay = SolidsOverlay.new()
+	_solids_overlay.visible = false
+	add_child(_solids_overlay)
 	for warning: String in warnings():
 		push_warning("Light engine: %s" % warning)
-	_recompute()
+	rebuild_scene()
 
 
 func _process(delta: float) -> void:
@@ -44,6 +56,14 @@ func refresh_environment() -> void:
 	if not found.is_empty():
 		_environment = found[0] as LocationEnvironment
 		_environment.changed.connect(_recompute)
+
+
+## Builds the scene description again from the Location's contract nodes.
+func rebuild_scene() -> void:
+	_description = SceneDescription.from_tree(get_tree(), PROJECTION)
+	_buffer.set_scene(_description, PROJECTION)
+	_solids_overlay.boxes = _description.solids
+	_recompute()
 
 
 ## Scene errors the author should see (no LocationEnvironment, or several).
@@ -68,8 +88,32 @@ func advance(seconds: float) -> void:
 	_recompute()
 
 
+func set_debug_view(view: DebugView) -> void:
+	_debug_view = view
+	_solids_overlay.visible = view == DebugView.SOLIDS
+	_buffer.set_view(LightBuffer.View.RECEIVERS if view == DebugView.RECEIVERS else LightBuffer.View.LIGHT)
+
+
+func debug_view() -> DebugView:
+	return _debug_view
+
+
 func state() -> DayState:
 	return _state
+
+
+func scene_description() -> SceneDescription:
+	return _description
+
+
+## Screen pixels the light buffer covers, relative to the Location's origin.
+func buffer_area() -> Rect2i:
+	return _buffer.area()
+
+
+## The light buffer as last rendered (natural light in lux per pixel).
+func buffer_image() -> Image:
+	return _buffer.image()
 
 
 func sky() -> SkyProfile:
@@ -80,6 +124,6 @@ func sky() -> SkyProfile:
 
 func _recompute() -> void:
 	_state.compute(curves, sky(), hour)
-	if is_instance_valid(_modulate):
-		_modulate.color = _state.floor_light()
+	if is_instance_valid(_buffer):
+		_buffer.set_state(_state)
 	state_changed.emit(_state)

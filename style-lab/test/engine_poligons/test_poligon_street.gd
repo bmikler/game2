@@ -42,7 +42,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	var description: ShotDescription = shot.describe()
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
-	assert_eq(description.switches, {"kadr": "960×540"})
+	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -71,3 +71,29 @@ func test_engine_panel_shot_button_takes_a_shot() -> void:
 	(poligon.get_node("%EnginePanel") as EnginePanel).shot_requested.emit()
 	DisplayServer.clipboard_set(before)
 	assert_signal_emitted(shot, "taken")
+
+
+func test_the_alley_has_a_two_metre_gap_between_tenement_houses() -> void:
+	var engine: LightEngine = _poligon().get_node("%Engine") as LightEngine
+	var gaps: Array[float] = []
+	var houses: Array[AABB] = []
+	for box: AABB in engine.scene_description().solids:
+		if box.size.z > 1.0:
+			houses.append(box)
+	houses.sort_custom(func(a: AABB, b: AABB) -> bool: return a.position.x < b.position.x)
+	for index: int in range(1, houses.size()):
+		gaps.append(houses[index].position.x - houses[index - 1].end.x)
+	assert_has(gaps, 2.0)
+
+
+func test_debug_view_from_f1_reaches_the_engine_and_the_shot() -> void:
+	var poligon: Node = _poligon()
+	var choice: OptionButton = (poligon.get_node("%EnginePanel") as EnginePanel).debug_view_choice()
+	choice.select(1)
+	choice.item_selected.emit(1)
+	assert_eq((poligon.get_node("%Engine") as LightEngine).debug_view(), LightEngine.DebugView.SOLIDS)
+	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	assert_eq(description.switches["widok debug"], "Bryły")
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%Engine") as LightEngine).debug_view(), LightEngine.DebugView.SOLIDS)

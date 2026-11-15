@@ -4,6 +4,9 @@
 [ext_resource type="Script" path="res://engine_poligons/street/street_floor.gd" id="2"]
 [ext_resource type="Resource" path="res://addons/swiatlo/tuning/outdoor.tres" id="3"]
 [ext_resource type="Resource" path="res://addons/swiatlo/tuning/sky_city.tres" id="4"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/occluder.gd" id="5"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/solid.gd" id="6"]
+[ext_resource type="Script" path="res://engine_poligons/street/facades.gd" id="7"]
 
 [node name="Street" type="Node2D"]
 
@@ -14,3 +17,40 @@ sky = ExtResource("4")
 
 [node name="Floor" type="Node2D" parent="."]
 script = ExtResource("2")
+
+[node name="Ground" type="Node2D" parent="."]
+script = ExtResource("5")
+
+[node name="Slab" type="Node2D" parent="Ground"]
+position = Vector2(0, 196)
+script = ExtResource("6")
+position_m = Vector3(0, 8, -0.1)
+size_m = Vector3(80, 32, 0.1)
+
+[node name="Alley" type="Node2D" parent="."]
+position = Vector2(0, -240)
+script = ExtResource("5")
+position_m = Vector3(0, -10, 0)
+
+[node name="HouseWest" type="Node2D" parent="Alley"]
+position = Vector2(-580, 0)
+script = ExtResource("6")
+position_m = Vector3(-14.5, 0, 0)
+size_m = Vector3(27, 10, 12)
+
+[node name="HouseMiddle" type="Node2D" parent="Alley"]
+position = Vector2(180, 0)
+script = ExtResource("6")
+position_m = Vector3(4.5, 0, 0)
+size_m = Vector3(7, 10, 14)
+
+[node name="HouseEast" type="Node2D" parent="Alley"]
+position = Vector2(880, 0)
+script = ExtResource("6")
+position_m = Vector3(22, 0, 0)
+size_m = Vector3(16, 10, 11)
+
+[node name="Facades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
+script = ExtResource("7")
+occluder = NodePath("../Alley")
+front_colors = PackedColorArray(0.66, 0.47, 0.42, 1, 0.78, 0.7, 0.55, 1, 0.55, 0.6, 0.66, 1)

@@ -19,6 +19,7 @@ func _ready() -> void:
 	_picture.texture = _frame.get_texture()
 	_engine_panel.hour_set.connect(_engine.set_hour)
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
+	_engine_panel.debug_view_set.connect(_engine.set_debug_view)
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
 	_engine_panel.show_state(_engine.state())
@@ -32,6 +33,7 @@ func _ready() -> void:
 	_engine_panel.shot_requested.connect(func() -> void: _shot.take())
 	_shot.taken.connect(_engine_panel.show_shot)
 	_shot.add_switch("kadr", _frame_name, _select_frame)
+	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -57,6 +59,19 @@ func _select_frame(frame_name: String) -> void:
 			_set_frame(index)
 			return
 	push_warning("Unknown frame in the shot: %s" % frame_name)
+
+
+func _debug_view_name() -> String:
+	return EnginePanel.DEBUG_VIEWS[_engine.debug_view()]
+
+
+func _select_debug_view(view_name: String) -> void:
+	var index: int = EnginePanel.DEBUG_VIEWS.find(view_name)
+	if index < 0:
+		push_warning("Unknown debug view in the shot: %s" % view_name)
+		return
+	_engine_panel.debug_view_choice().select(index)
+	_engine.set_debug_view(index as LightEngine.DebugView)
 
 
 ## The whole frame as large as the window allows, centred. The scale need not be whole (a maximised

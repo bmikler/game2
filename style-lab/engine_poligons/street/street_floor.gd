@@ -8,7 +8,7 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 
 ## Strips along x: d from, d to (metres, d grows towards the camera), with their albedo below.
 const STRIPS_D: Array[Vector2] = [
-	Vector2(-16.0, -8.0), # south pavement, under snow
+	Vector2(-24.0, -8.0), # south pavement, under snow (and under the houses)
 	Vector2(-8.0, -7.8), # kerb
 	Vector2(-7.8, 0.0), # roadway
 	Vector2(0.0, 0.2), # kerb

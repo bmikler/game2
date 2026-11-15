@@ -8,10 +8,13 @@ extends VBoxContainer
 signal hour_set(hour: float)
 signal rate_set(minutes_per_second: float)
 signal shot_requested
+signal debug_view_set(view: LightEngine.DebugView)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
 const COMPASS: Vector2 = Vector2(64.0, 64.0)
+## Debug view names in LightEngine.DebugView order.
+const DEBUG_VIEWS: PackedStringArray = ["brak", "Bryły", "Odbiorniki"]
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -23,6 +26,7 @@ var _rate_label: Label
 var _rate: HSlider
 var _readout: Label
 var _shot_label: Label
+var _debug_view: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -84,11 +88,30 @@ func _ready() -> void:
 	_shot_label.custom_minimum_size = Vector2(WIDTH, 0.0)
 	add_child(_shot_label)
 
+	var debug_row: HBoxContainer = HBoxContainer.new()
+	add_child(debug_row)
+	var debug_label: Label = Label.new()
+	debug_label.text = "Widok debug"
+	debug_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	debug_row.add_child(debug_label)
+	_debug_view = OptionButton.new()
+	_debug_view.focus_mode = Control.FOCUS_NONE
+	for view_name: String in DEBUG_VIEWS:
+		_debug_view.add_item(view_name)
+	_debug_view.item_selected.connect(func(index: int) -> void:
+		debug_view_set.emit(index as LightEngine.DebugView))
+	debug_row.add_child(_debug_view)
+
 
 ## Sets the rate slider without reporting a change (the engine's starting value).
 func set_rate(minutes_per_second: float) -> void:
 	_rate.set_value_no_signal(minutes_per_second)
 	_show_rate(minutes_per_second)
+
+
+## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).
+func debug_view_choice() -> OptionButton:
+	return _debug_view
 
 
 ## Shows the day state (the embedder calls it on every change).
