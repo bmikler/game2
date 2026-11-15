@@ -16,7 +16,7 @@ Poligony do decyzji graficznych game2 (Godot 4.7.2). To nie jest kod gry. Mapa: 
 - `rzut.bat`: kwartał miasta (`poligony/rzut_ulica`) i dom z dwoma pokojami (`rzut_dom`, wejście drzwiami środkowego domu w dolnym rzędzie). Budowane kodem (`RzutPoligon`), układ w metrach na ziemi.
 - **F2** kąt (głębia : szerokość), **F3** px/m, **F4** kadr bieżącego miejsca (osobno ulica i wnętrze); po przełączeniu gracz zostaje w tym samym miejscu. Reszta w F1: piętro fasady, ściana pokoju, ściana działowa (pełna / obcięta / wierzch), otoczenie pokoju, siatka 1 m, odczyt wymiarów.
 - Kadr pokazuje dokładnie zadaną wysokość, skalowaną do okna (także niecałkowicie), żeby kadry dało się porównać na każdym ekranie.
-- Arkusz zrzutów: `node tools/arkusz_rzutu.mjs` → `shots/arkusz_rzut/arkusz.html`. Prowadnice z Blendera: `tools/blender/zestaw_testowy.py` (opis w pliku).
+- Arkusz zrzutów: `node tools/arkusz_rzutu.mjs` → `shots/arkusz_rzut/arkusz.html`. Prowadnice z Blendera (v2, ticket silnika 01): `tools/blender/zestaw_testowy.py` (opis w pliku): z kolekcji `Model` i `Bryly` sceny mebla szary render i depth dla ComfyUI, maska, normalne, `bryly.json` i `kontrola.png`; testy `tools/blender/test_zestaw_testowy.py`.
 
 ## Prototyp Poligonu Ulica w bryłach (ticket „Poligon Ulica w bryłach”)
 
