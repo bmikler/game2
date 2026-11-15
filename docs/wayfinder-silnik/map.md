@@ -12,7 +12,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 1. testy jednostkowe i bramki buforów zielone;
 2. trudne sceny testowe ocenione przez człowieka na żywo w grze;
 3. w silniku nie ma kodu ani przełączników pod scenę;
-4. każda wartość wizualna w `.tres`, zmieniana na żywo w F1, zapisywana w zestawach;
+4. każda wartość wizualna w `.tres`; Warianty strojenia przełączane na żywo w F1 (bez ręcznych suwaków, z „Układ strojenia”);
 5. powyżej 60 fps na sprzęcie człowieka;
 6. test końcowy: nowa Lokacja wnętrza i nowa Lokacja w plenerze, zupełnie inne od Poligonów, zbudowane w edytorze wyłącznie z węzłów kontraktu sceny; cienie działają od razu. Każda potrzebna zmiana w kodzie silnika to wynik negatywny i powrót do modelu, nie łatka.
 
@@ -31,7 +31,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - **Smugi z górnych okien są obowiązkowe (człowiek, 2026-11-15):** we wnętrzach smuga światła z górnych okien, plama światła z okna na podłodze i drobinki kurzu w smudze (dziś: `sun_beam.gdshader`, `sun_dust.gdshader`, plama w `SunMap`) muszą być w nowym silniku, z geometrii okna i słońca, nie jako dekoracja pod scenę. Okna ze wszystkich ścian: smuga i plama tam, gdzie wyliczy je silnik (zmiana w „Jeden model światła i cienia dla wszystkich źródeł”).
 - **Wszystkie źródła od razu:** słońce, niebo, lampy, latarnie, świecące okna, w kontrakcie i w implementacji; chcemy widzieć, jak cienie z różnych źródeł wyglądają i się nakładają. Pełna doba (24 h) ze zmianą na żywo; godzina jest jednym wejściem silnika dla całego bufora.
 - **Kto decyduje (człowiek, 2026-11-15):** człowiek jest inżynierem aplikacji biznesowych, nie grafikiem; ocenia wygląd na żywo w grze, a szczegóły techniczne rozstrzyga Claude (trudniejsze z subagentem na Opusie). Pytania do człowieka tylko o wygląd i zakres.
-- **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); w wykonaniu człowiek sprawdza ręcznie każdy zaimplementowany ticket (z „Strategia testów i sceny testowe”). Strojenie: dobra praktyka ze `style-lab` to agent krytyk proponujący 3 warianty strojenia, więc silnik musi wczytywać zestawy wartości na żywo, żeby warianty dało się przeklikać w grze.
+- **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); w wykonaniu człowiek sprawdza ręcznie każdy zaimplementowany ticket (z „Strategia testów i sceny testowe”). Strojenie: wyłącznie Warianty strojenia od agentów krytyków (kilku, po 3 warianty), przełączane na żywo w F1; bez ręcznych suwaków (człowiek, 2026-11-15).
 - **Już ustalone w mapie grafiki (wejście, nie do ponownego otwierania bez powodu):**
   - jedna funkcja światła i jeden bufor, postać i meble jedną funkcją cienia, cień nieba z okien dokładny (36);
   - całe światło okien z geometrii, bez strojenia okien; okna boczne tylko wstęgi (27, 31);
@@ -40,7 +40,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
   - Kotwice (08): Beat Cop (rzut), NORCO (kolor, malarskość), REPLACED (postać i światło, bez pomarańczy); Referencje: Gemini Rue, Disco Elysium, Kentucky Route Zero; światło Octopath (01); baza chłodna, ciepło tylko przy źródłach;
   - strojenie kolorów i wartości poza tą mapą: ticket 38 mapy grafiki.
 - **Kolejność (człowiek, 2026-11-15):** ta mapa i wykonanie najpierw; potem pozostałe tickety mapy grafiki (meble, makieta z teksturami, ulica, ozdoby itd.) na działającym silniku; na końcu globalne strojenie. Kontrakt danych assetu (co mebel, ściana i postać dają silnikowi) ustalić tu, bo Przepis mebli (ticket 13 mapy grafiki) ma go produkować.
-- **Strojenie jest wymaganiem:** parametry w zasobach (`Resource`, `.tres`), suwaki F1 na żywo, zapis zestawów (presetów) i `--set=` w zrzutach. Strojenie nie może wymagać zmian w shaderach.
+- **Strojenie jest wymaganiem:** parametry w zasobach (`Resource`, `.tres`), Warianty strojenia przełączane w F1 i `--set=` w zrzutach (szczegóły: „Układ strojenia”). Strojenie nie może wymagać zmian w shaderach.
 - **Testy:** wykonanie test-first. Kandydaci: GUT lub gdUnit4 (addon do dodania za zgodą człowieka) do logiki w GDScript; bramki buforów (`style-lab/tools/pomiar/bufor_roznica.mjs`, `bufor_ulica_roznica.mjs`: różnica pikseli w ustalonych punktach) jako testy regresji shaderów; benchmark `--bench=godzina [--ruch]`.
 - **Research:** subagent ze skillem „research”; kluczowe na Opusie (`model: opus`; domyślny model subagentów to Sonnet), **model potwierdzany z człowiekiem przed odpaleniem**. Wyniki w `docs/research/` od numeru 85 (repo bez remote'a, więc bez gałęzi `research/*`).
 - Godot 4.7.2: `C:/Users/bartl/Desktop/repo/game1/tools/godot/Godot_v4.7.2-stable_win64.exe` (konsolowy: `..._console.exe`). Skille: grilling → „grilling” + „domain-modeling”; research → „research”; prototype → „prototype”; specyfikacja → `/to-spec`, `/to-tickets`; wykonanie → `/implement`.
@@ -61,6 +61,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Nakładanie cieni z kilku źródeł](tickets/09-nakladanie-cieni-prototyp.md): nakładanie z sumy w HDR wygląda dobrze; bufor niesie dwa kanały (naturalny, sztuczny, pole Źródła); stylizacja w dwóch trybach w `.tres` (A′ na sumie albo A′ na każdym kanale), wybór przy strojeniu; tryb „barwa w stopniach” odrzucony.
 - [Bufor i przeliczanie](tickets/10-bufor-i-przeliczanie.md): bufor ×1 w warstwach według zmienności (niebo i nieruchome Źródła raz przy wczytaniu, słońce kaflami z przenikaniem, ruchome Przesłony i Źródła w oknach co klatkę), przycinanie kaflami, `canvas_item` bez C++; budżet 4 ms GPU, 1 ms CPU, wczytanie ≤ 2 s; cel 8 postaci + samochód + 4 drzewa; wiatr jako wychylenie Przesłony, A/B do oceny.
 - [Strategia testów i sceny testowe](tickets/11-strategia-testow.md): GUT 9.7.1 + bramki buforów na syntetycznych scenach (zasady, nie wygląd) + człowiek tylko wygląd; trudne sceny w dwóch Poligonach z przełącznikiem w F1; każdy ticket wykonawczy sprawdzany ręcznie („Jak sprawdzić”, pionowe plastry, widok debug silnika w F1); test końcowy: Lokacje buduje subagent na ślepo z dokumentacji kontraktu.
+- [Układ strojenia](tickets/13-uklad-strojenia.md): Krzywe doby wspólne dla całej gry + dwa Zestawy strojenia ze stałymi; stroi się tylko Wariantami krytyków (kilku krytyków, A/B/C, przeładowanie na żywo), bez suwaków; F1 minimum (godzina, tempo, Warianty, zrzut ze ścieżką w schowku, widok debug, przełączniki bieżącego ticketu).
 
 ## Not yet specified
 

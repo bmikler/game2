@@ -56,6 +56,18 @@ _Avoid_: szyba (to tylko część okna)
 Wszystko, co w danej chwili zależy od godziny: kierunek słońca, kolory i natężenia Źródeł, zachmurzenie, ekspozycja. Jeden dla całej Lokacji w danej klatce.
 _Avoid_: profil pogody, pora dnia (jako nazwa danych)
 
+**Krzywe doby**:
+Jedne dla całej gry dane artystyczne, z których powstaje Stan doby: droga słońca, kolory i natężenia słońca i nieba, ambient, zachmurzenie, tarcza słońca, ekspozycja, każde jako krzywa od godziny. Wspólne dla wnętrz i pleneru.
+_Avoid_: profil doby, cykl dnia
+
+**Zestaw strojenia**:
+Stałe wartości wyglądu, niezależne od godziny (stylizacja, półcień, Odbiorniki, siła Smug i Plam okna, kurz). Są dwa: wnętrza i plener; Lokacja wybiera jeden.
+_Avoid_: preset, ustawienia krytyka
+
+**Wariant strojenia**:
+Propozycja krytyka: kopia dowolnych danych strojenia (Zestawów, Krzywych doby, profili) z opisem w jednym zdaniu, przełączana na żywo w grze. Wybrany Wariant zastępuje dane domyślne.
+_Avoid_: preset, zestaw krytyka
+
 **Bufor światła**:
 Obraz światła całej Lokacji, piksel w piksel z obrazem gry, złożony z warstw, które zmieniają się w różnym tempie (niebo, nieruchome Źródła, słońce, ruchome Przesłony). Jeden dla całej Lokacji, wnętrza i pleneru.
 _Avoid_: mapa światła, SunMap, StreetMap
