@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="SkyProfile" format=3]
+
+[ext_resource type="Script" path="res://addons/swiatlo/tuning/sky_profile.gd" id="1_70t4m"]
+
+[resource]
+script = ExtResource("1_70t4m")
+night_color = Color(0.14901961, 0.1882353, 0.36078432, 1)
+night_intensity = 3.0

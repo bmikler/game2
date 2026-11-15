@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://engine_poligons/street/poligon_street.gd" id="1"]
+[ext_resource type="PackedScene" path="res://engine_poligons/street/street.tscn" id="2"]
+[ext_resource type="Script" path="res://addons/swiatlo/light_engine.gd" id="3"]
+[ext_resource type="Script" path="res://addons/swiatlo/panel/engine_panel.gd" id="4"]
+
+[node name="PoligonStreet" type="Node"]
+script = ExtResource("1")
+
+[node name="Frame" type="SubViewport" parent="."]
+unique_name_in_owner = true
+canvas_item_default_texture_filter = 0
+size = Vector2i(960, 540)
+render_target_update_mode = 4
+
+[node name="Street" parent="Frame" instance=ExtResource("2")]
+
+[node name="Engine" type="Node" parent="Frame"]
+unique_name_in_owner = true
+script = ExtResource("3")
+hour = 7.5
+
+[node name="Camera" type="Camera2D" parent="Frame"]
+position = Vector2(0, -96)
+
+[node name="Picture" type="TextureRect" parent="."]
+unique_name_in_owner = true
+texture_filter = 1
+expand_mode = 1
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="F1" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+layer = 10
+
+[node name="Panel" type="PanelContainer" parent="F1"]
+offset_left = 8.0
+offset_top = 8.0
+
+[node name="Box" type="VBoxContainer" parent="F1/Panel"]
+
+[node name="Title" type="Label" parent="F1/Panel/Box"]
+text = "Poligon Ulica, nowy silnik (F1 ukrywa)"
+
+[node name="FrameRow" type="HBoxContainer" parent="F1/Panel/Box"]
+
+[node name="FrameLabel" type="Label" parent="F1/Panel/Box/FrameRow"]
+size_flags_horizontal = 3
+text = "Kadr"
+
+[node name="FrameChoice" type="OptionButton" parent="F1/Panel/Box/FrameRow"]
+unique_name_in_owner = true
+focus_mode = 0
+
+[node name="Separator" type="HSeparator" parent="F1/Panel/Box"]
+
+[node name="EnginePanel" type="VBoxContainer" parent="F1/Panel/Box"]
+unique_name_in_owner = true
+script = ExtResource("4")

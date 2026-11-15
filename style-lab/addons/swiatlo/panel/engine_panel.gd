@@ -1,0 +1,156 @@
+class_name EnginePanel
+extends VBoxContainer
+## The engine panel for a Location's F1: hour, time rate and the day state readout. It only reports
+## changes through signals; whoever embeds it wires them to the LightEngine and calls `show_state`.
+## UI text is Polish (for the human).
+
+signal hour_set(hour: float)
+signal rate_set(minutes_per_second: float)
+
+const WIDTH: float = 300.0
+const RATE_MAX: float = 60.0
+const COMPASS: Vector2 = Vector2(64.0, 64.0)
+## Swatch rows: key → Polish label shown in F1.
+const SOURCE_LABELS: Dictionary[String, String] = {
+	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
+}
+
+var _hour_label: Label
+var _hour: HSlider
+var _rate_label: Label
+var _rate: HSlider
+var _readout: Label
+var _compass: Control
+var _swatches: Dictionary[String, ColorRect] = {}
+var _swatch_labels: Dictionary[String, Label] = {}
+## The sun's direction on the map (x right, d down) and whether it is up, for the compass.
+var _sun_on_map: Vector2 = Vector2.ZERO
+var _sun_up: bool = false
+var _sun_color: Color = Color.WHITE
+
+
+func _ready() -> void:
+	custom_minimum_size = Vector2(WIDTH, 0.0)
+	var title: Label = Label.new()
+	title.text = "Silnik światła"
+	add_child(title)
+
+	_hour_label = Label.new()
+	add_child(_hour_label)
+	_hour = _slider(0.0, 24.0, 0.01)
+	_hour.value_changed.connect(func(value: float) -> void: hour_set.emit(value))
+	add_child(_hour)
+
+	_rate_label = Label.new()
+	add_child(_rate_label)
+	_rate = _slider(0.0, RATE_MAX, 0.5)
+	_rate.value_changed.connect(func(value: float) -> void:
+		_show_rate(value)
+		rate_set.emit(value))
+	add_child(_rate)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	add_child(row)
+	_compass = Control.new()
+	_compass.custom_minimum_size = COMPASS
+	_compass.draw.connect(_draw_compass)
+	row.add_child(_compass)
+	var swatches: VBoxContainer = VBoxContainer.new()
+	row.add_child(swatches)
+	for source: String in SOURCE_LABELS:
+		var line: HBoxContainer = HBoxContainer.new()
+		var swatch: ColorRect = ColorRect.new()
+		swatch.custom_minimum_size = Vector2(14.0, 14.0)
+		line.add_child(swatch)
+		var label: Label = Label.new()
+		line.add_child(label)
+		swatches.add_child(line)
+		_swatches[source] = swatch
+		_swatch_labels[source] = label
+
+	_readout = Label.new()
+	add_child(_readout)
+
+
+## Sets the rate slider without reporting a change (the engine's starting value).
+func set_rate(minutes_per_second: float) -> void:
+	_rate.set_value_no_signal(minutes_per_second)
+	_show_rate(minutes_per_second)
+
+
+## Shows the day state (the embedder calls it on every change).
+func show_state(state: DayState) -> void:
+	var minutes: int = int(state.hour * 60.0)
+	_hour_label.text = "Godzina: %02d:%02d" % [minutes / 60, minutes % 60]
+	_hour.set_value_no_signal(state.hour)
+
+	_sun_on_map = Vector2(state.sun_direction.x, state.sun_direction.y).normalized()
+	_sun_up = state.sun_elevation > 0.0
+	_sun_color = state.sun_color
+	_compass.queue_redraw()
+
+	_show_swatch("sun", state.sun_color, "%.0f lx" % state.sun_intensity)
+	_show_swatch("sky", state.sky_color, "%.0f lx" % state.sky_intensity)
+	_show_swatch("ambient", state.ambient_color, "%.0f lx" % state.ambient_intensity)
+	var ground: Color = state.floor_light()
+	_show_swatch("ground", ground, "%.2f %.2f %.2f" % [ground.r, ground.g, ground.b])
+
+	_readout.text = _decimal_comma(
+			"Słońce: wys. %.1f°, azymut %.0f° (%s)\nTarcza %.1f°, zachmurzenie %.0f %%\nEkspozycja ×%.5f" % [
+			state.sun_elevation, state.sun_azimuth, _sun_side(state), state.sun_disc,
+			state.cloud_cover * 100.0, state.exposure])
+
+
+func _show_swatch(source: String, color: Color, text: String) -> void:
+	var shown: Color = color.clamp()
+	shown.a = 1.0
+	_swatches[source].color = shown
+	_swatch_labels[source].text = _decimal_comma("%s %s" % [SOURCE_LABELS[source], text])
+
+
+## Where the sun is on screen: east on the left, west on the right, south at the top.
+static func _sun_side(state: DayState) -> String:
+	if state.sun_elevation <= 0.0:
+		return "pod horyzontem"
+	var x: float = state.sun_direction.x
+	if x < -0.2:
+		return "lewo, wschód"
+	if x > 0.2:
+		return "prawo, zachód"
+	return "góra, południe"
+
+
+## Top-down map: south at the top, east on the left; a line to the sun in its colour.
+func _draw_compass() -> void:
+	var centre: Vector2 = COMPASS * 0.5
+	var radius: float = COMPASS.x * 0.5 - 10.0
+	_compass.draw_arc(centre, radius, 0.0, TAU, 32, Color(1, 1, 1, 0.4), 1.0)
+	var font: Font = get_theme_default_font()
+	_compass.draw_string(font, Vector2(centre.x - 4.0, 9.0), "S", HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+	_compass.draw_string(font, Vector2(0.0, centre.y + 4.0), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+	_compass.draw_string(font, Vector2(COMPASS.x - 8.0, centre.y + 4.0), "W", HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+	var tip: Vector2 = centre + _sun_on_map * radius
+	var color: Color = _sun_color.clamp() if _sun_up else Color(0.5, 0.5, 0.6)
+	color.a = 1.0
+	_compass.draw_line(centre, tip, color, 2.0)
+	_compass.draw_circle(tip, 4.0 if _sun_up else 2.0, color)
+
+
+func _show_rate(minutes_per_second: float) -> void:
+	_rate_label.text = _decimal_comma("Tempo: %.1f min gry / s" % minutes_per_second)
+
+
+## Controls never take keyboard focus (keys keep driving the game).
+static func _slider(from: float, to: float, step: float) -> HSlider:
+	var slider: HSlider = HSlider.new()
+	slider.min_value = from
+	slider.max_value = to
+	slider.step = step
+	slider.focus_mode = Control.FOCUS_NONE
+	slider.custom_minimum_size = Vector2(WIDTH - 16.0, 0.0)
+	return slider
+
+
+## Polish decimal comma for the UI.
+static func _decimal_comma(text: String) -> String:
+	return text.replace(".", ",")
