@@ -15,4 +15,6 @@ Które ozdoby z researchu Tanie ozdoby atmosfery w 2D wchodzą do gry i w jakiej
 
 **Dopisane (człowiek, 2026-11-15): pogoda na ulicy to lekka plucha, nie wielkie zaspy.** Śnieg zostaje, ale z szarym błotem pośniegowym (rozjeżdżona breja na jezdni, przy krawężnikach, w koleinach), kałuże itp.; to bardziej klimatyczne niż czyste zaspy. Do sprawdzenia na Poligonie Ulica: breja i kałuże jako nawierzchnia i decale (wariant obok obecnych zasp), odbicia latarń i zapalonych okien w kałużach nocą (czy tanio z mapy światła), mniejsze, brudne zaspy przy krawężnikach. Uwaga dla mapy: „pogoda stała (zima, śnieg)” w Notes oznacza zimę z pluchą.
 
+**Dopisane (człowiek, 2026-11-15): padający śnieg zsynchronizowany wnętrze ↔ ulica.** Przez okna domu widać padający śnieg, a na ulicy nie pada. Opady (śnieg, plucha) mają być jednym stanem pogody wspólnym dla obu Poligonów: jeśli pada za oknem, pada też na ulicy, w tym samym natężeniu i kierunku wiatru (wspólny uniform wiatru z researchu ozdób).
+
 **Zrobione gdzie indziej:** kurz w smugach (świeci tylko w promieniu słońca, `sun_dust.gdshader`) w ticketcie [31](31-dynamiczne-slonce-okien-prototyp.md).
