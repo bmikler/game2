@@ -41,3 +41,19 @@ Gałąź `t14-ulica-swiatlo` (od `t37-stylizacja`). Opis i uruchamianie: `style-
 - **Uwagi:** dzień jasny (słońce na śniegu ×0,5, do strojenia w [38](38-krytyk-strojenia-swiatla.md)); poświata renderera (glow) na ulicy włączona, w domu wyłączona, a dom wyłącza ją na wspólnym zasobie środowiska bez przywracania (po wizycie w domu ulica też bez glow) — do ujednolicenia przy strojeniu; dekoracje z ticketu 27 (ciepła krawędź śniegu, błysk w szybach) nie znają cieni mapy.
 
 **Po ocenie człowieka (2026-11-15):** z domu nie dało się wyjść (przednia krawędź korytarza bez przerwy na drzwi; błąd sprzed tego ticketu) — naprawione. Cienie na ulicy inne niż w domu: budynki 6–10 m od ziemi rozlewały półcień tarczy słońca na ~40 cm ziarnistego pasa; teraz półcień ograniczony do `sun_pen_max` (6 cm) przy najbliższej przesłonie (próbki tarczy drugi raz na zwężonej tarczy tylko w półcieniu), krawędzie zwarte jak w domu. Wydajność: obiekty dalej niż zasięg ich cienia nieba pomijane przed liczeniem ścian, ulica przeliczana co 5 minut gry (opcje od razu) w 16 pasach; w ruchu 116–161 kl./s (było 70–90), pełne przeliczenie ~36 ms rozłożone na 16 klatek. F1 na ulicy jak w domu: kadr, światło ulicy (mapa / stare), cienie budynków, wygląd, rozdzielczość, widok debug; reszta ukryta (`--set=` działa). Bramki po zmianach: pudełko = postać i spacer = całość, 0 różnych px.
+
+## Notatka dla następnej sesji (2026-11-15, zaparkowane)
+
+Gałąź `t14-ulica-swiatlo`, ostatni commit z poprawkami A/B/C. Zrobione w tej sesji po uwagach człowieka:
+- wyjście z domu (przerwa w krawędzi korytarza), F1 na ulicy skrócone, wydajność (ulica w ruchu 130–213 kl./s);
+- półcień słońca osobno dla każdej przesłony (najwyżej `sun_pen_max` 6 cm przy jej odległości; wcześniej najbliższa przesłona decydowała za wszystkie i robiła jasną ramkę wokół cienia postaci);
+- próbki tarczy słońca, żarówek, wstęg i nieba ze stałym wzorem (bez obrotu Bayera w każdym pikselu: dawało ziarno 2×2 obok ditheru A 1 px), więcej próbek (słońce 16, lampy 16, siatka nieba 4×4) — **zmienia też bufor domu** (świadomie; dom sprawdzony wzrokowo, bramki domu bajt w bajt nie dotyczą tej zmiany);
+- na ulicy niebo zasłania tylko architektura (F1 „Cień nieba zasłania”: tylko architektura / architektura i obiekty); znikła plamka pod postacią i „uszy” przy zaspach;
+- bramki ulicy: postać jako pudełko = pudełko w miejscu postaci, spacer = całość co klatkę (0 px).
+
+Ocena człowieka: lampy nocą „spoko”; dzień „średnio”: na całej ulicy siatkowaty cień. Przyczyna: wygląd A na bardzo łagodnym przejściu nieba (pas ditheru jako część kroku EV rozlewa się na dziesiątki px). Zamiast łatać: research [Stylizacja światła i cieni w plenerze w pixel arcie](39-stylizacja-swiatla-plener-research.md).
+
+Otwarte:
+- **błąd:** auto jest jednym pudłem 1,65 m, a narysowane jest niższe nadwozie (1,05 m) z cofniętą kabiną (0,6 m) — piksele nad maską biorą światło dachu pudła (jasne miejsce nad autem, człowiek). Poprawka: dwa pudła zgodnie z `_car()` w `ulica_bryly.gd`;
+- w domu cień skrzynki (komoda pod oknem w prawym górnym pokoju parteru) na ścianie obok: to cień nieba z okna w prawej ścianie (geometria zgodna ze wzorcem z ticketu 36), wygląda jak „pływający” prostokąt; plus dither A — do oceny razem z researchem 39;
+- decyzja człowieka w tym tickecie (zestaw technik na ulicy) po prototypie z researchu 39.
