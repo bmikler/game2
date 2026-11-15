@@ -12,7 +12,8 @@ const MAP_SHADER: Shader = preload("res://lighting/street_map.gdshader")
 const STRIP: Vector2i = Vector2i(32, 96)
 ## A whole repaint (each game minute) spread over this many frames, a band of rows each (one frame took
 ## ~110 ms: a stutter every real second).
-const BANDS: int = 8
+const BANDS: int = 16
+const REPAINT_MINUTES: float = 5.0
 const MAX_BOXES: int = 127 ## One more slot is the actor's (the shader's arrays: 128).
 const MAX_WINDOWS: int = 64
 const MAX_LAMPS: int = 16
@@ -60,6 +61,7 @@ var _whole: ColorRect
 var _window: ColorRect
 var _light: PointLight2D
 var _debug: Sprite2D
+var _painted_hour: float = -100.0
 var _band: int = 0 ## The next band of a whole repaint; BANDS: none pending.
 var _last_window: Rect2 = Rect2()
 var _away: Array[Vector3] = [] ## Directions away from the sun (its disc's rim too).
@@ -193,9 +195,16 @@ static func dump_current(path: String) -> void:
 		file.store_buffer(_current._view.get_texture().get_image().get_data())
 
 
-func apply(sun: SunSample) -> void:
+## Each game minute, but the street is repainted only when its light changed enough: an option
+## (`force`), or the clock past REPAINT_MINUTES since the last paint (a whole repaint is ~110 ms of GPU).
+func apply(sun: SunSample, force: bool = false) -> void:
 	if room == null:
 		return
+	var minutes: float = absf(sun.hour - _painted_hour) * 60.0
+	minutes = minf(minutes, 24.0 * 60.0 - minutes)
+	if not force and minutes < REPAINT_MINUTES:
+		return
+	_painted_hour = sun.hour
 	visible = enabled
 	_light.visible = enabled
 	LightFixture.map_lamps = enabled

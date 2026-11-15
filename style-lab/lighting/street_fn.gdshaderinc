@@ -166,6 +166,11 @@ vec2 street_sky_light(vec3 o, vec3 n, bool with_actor, bool with_objects) {
 		if (hi.z <= o.z + 1e-3) {
 			continue;
 		}
+		// An object's sky shadow ends object_sky_reach from its footprint (skipped before its faces: cost).
+		float away = distance(o.xy, clamp(o.xy, lo.xy, hi.xy));
+		if (!arch && away >= object_sky_reach) {
+			continue;
+		}
 		vec3 c = (lo + hi) * 0.5;
 		vec3 to = c - o;
 		float radius2 = dot(hi - lo, hi - lo) * 0.25;
@@ -192,7 +197,6 @@ vec2 street_sky_light(vec3 o, vec3 n, bool with_actor, bool with_objects) {
 		}
 		float hide = clamp(f / open, 0.0, 1.0);
 		if (!arch) {
-			float away = distance(o.xy, clamp(o.xy, lo.xy, hi.xy));
 			hide *= 1.0 - smoothstep(object_sky_reach * 0.6, object_sky_reach, away);
 		}
 		if (arch) {
@@ -210,23 +214,103 @@ float street_lambert(vec3 n, vec3 toward) {
 	return clamp(dot(n, axis) / max(axis.z, 0.05), 0.0, wall_max);
 }
 
-// The sun from o: x arch, y lit (means over the disc's samples).
+// Where o + t·dir enters occluder i (t >= 0), or -1: missed. The actor: its box (only the distance is used).
+float occluder_t(int i, vec3 o, vec3 dir, vec3 inv) {
+	vec3 lo;
+	vec3 hi;
+	occluder_bounds(i, lo, hi);
+	vec3 a = (lo - o) * inv;
+	vec3 b = (hi - o) * inv;
+	vec3 near = min(a, b);
+	vec3 far = max(a, b);
+	float tn = max(max(near.x, near.y), near.z);
+	float tf = min(min(far.x, far.y), far.z);
+	if (i < box_count && box_roof[i].x > 0.5) {
+		vec4 planes[2];
+		roof_planes(i, planes[0], planes[1]);
+		for (int k = 0; k < 2; k++) {
+			float den = dot(planes[k].xyz, dir);
+			float num = planes[k].w - dot(planes[k].xyz, o);
+			if (abs(den) < 1e-8) {
+				if (num < 0.0) {
+					return -1.0;
+				}
+				continue;
+			}
+			if (den > 0.0) {
+				tf = min(tf, num / den);
+			} else {
+				tn = max(tn, num / den);
+			}
+		}
+	}
+	return tf >= max(tn, 0.0) ? max(tn, 0.0) : -1.0;
+}
+
+// One sun ray: what stands on it (as occlusion(): 2 architecture, 1 an object, 0 nothing) and how far the
+// nearest occluder is (t).
+int street_ray(vec3 o, vec3 dir, bool with_actor, out float t) {
+	vec3 inv = inverse_dir(dir);
+	int found = 0;
+	t = 1e9;
+	for (int i = 0; i < box_count; i++) {
+		bool arch = box_arch[i] == 1;
+		if (arch && building_shadows == 0) {
+			continue;
+		}
+		float hit = occluder_t(i, o, dir, inv);
+		if (hit >= 0.0) {
+			t = min(t, hit);
+			found = max(found, arch ? 2 : 1);
+		}
+	}
+	if (with_actor && hit_actor(o, dir, inv, 1e4)) {
+		t = min(t, max(occluder_t(box_count, o, dir, inv), 0.0));
+		found = max(found, 1);
+	}
+	return found;
+}
+
+// The sun from o: x arch, y lit (means over the disc's samples). The disc's samples first at its full size;
+// where they disagree (a penumbra), again on a disc narrowed so the penumbra is at most sun_pen_max wide at
+// the nearest occluder's distance (a building 10 m off spread a 40 cm grainy band; inside, the occluders
+// stand a metre or two off: the same tight edges on the street).
+uniform float sun_pen_max = 0.06;
+
+vec2 sun_disc(vec3 o, vec3 axis, vec3 u, vec3 v, float soft, float turn, bool with_actor, out int hits, out float nearest) {
+	vec2 al = vec2(0.0);
+	hits = 0;
+	nearest = 1e9;
+	for (int i = 0; i < sun_samples; i++) {
+		vec2 j = vogel(i, sun_samples, turn) * soft;
+		float t;
+		int occ = street_ray(o, axis + u * j.x + v * j.y, with_actor, t);
+		if (occ > 0) {
+			hits++;
+			nearest = min(nearest, t);
+		}
+		al += ray_al(occ);
+	}
+	return al / float(sun_samples);
+}
+
 vec2 street_sun_light(vec3 o, vec2 px, bool with_actor) {
 	vec3 axis = normalize(sun_dir);
 	vec3 u;
 	vec3 v;
 	basis(axis, u, v);
 	float turn = bayer4(px) * 6.2832;
-	vec2 al = vec2(0.0);
-	for (int i = 0; i < sun_samples; i++) {
-		vec2 j = vogel(i, sun_samples, turn) * sun_soft;
-		int occ = occlusion(o, axis + u * j.x + v * j.y, 1e4, with_actor, false, vec3(0.0));
-		if (occ == 2 && building_shadows == 0) {
-			occ = 0;
-		}
-		al += ray_al(occ);
+	int hits;
+	float nearest;
+	vec2 al = sun_disc(o, axis, u, v, sun_soft, turn, with_actor, hits, nearest);
+	if (hits == 0 || hits == sun_samples) {
+		return al;
 	}
-	return al / float(sun_samples);
+	float soft = min(sun_soft, sun_pen_max / max(nearest, 1e-3));
+	if (soft >= sun_soft * 0.999) {
+		return al;
+	}
+	return sun_disc(o, axis, u, v, soft, turn, with_actor, hits, nearest);
 }
 
 // The lit windows from o (normal n); arch what the architecture lets through.

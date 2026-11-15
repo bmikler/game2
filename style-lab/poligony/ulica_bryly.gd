@@ -160,6 +160,7 @@ var _door_down: float = 0.0
 var _street_map: StreetMap ## Ticket 14: the street's light from one buffer.
 var _street_box: RoomBox
 var _ground_m: Vector2 = Vector2.ZERO
+var _force_light: bool = true ## The next street light repaints whatever the clock (an option changed).
 
 
 func _add_layout_options() -> void:
@@ -272,6 +273,15 @@ func _build_world() -> void:
 func start(spawn: StringName) -> void:
 	super.start(spawn)
 	_street_map.setup(_street_room, player, _street_box.ambient_rect(), _ground_m)
+	# As the house (the human: too many options to check): the light's few choices; the rest keeps its value, hidden.
+	var hidden: Array[StringName] = []
+	for option: DebugOption in DebugRegistry.options():
+		if not SHOWN_OPTIONS.has(option.id):
+			hidden.append(option.id)
+	DebugRegistry.hidden = hidden
+	DebugRegistry.minimal = true
+	DebugRegistry.options_changed.emit()
+	_readout.visible = false
 	_apply_street_light()
 	player.vertical_speed = VERTICAL_SPEEDS[_value(&"chod_pion")]
 	_apply_overview()
@@ -991,6 +1001,8 @@ func _occluder(foot: Vector2, size_m: Vector3) -> void:
 
 ## Ticket 14: the street's light (F1, live): the map or the old flat light, the buildings' shadows, the
 ## look shared with the house (the same ids: one choice for both), debug views and the critic's knobs.
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr", &"swiatlo_ulicy", &"cienie_budynkow", &"wyglad", &"swiatlo_res",
+		&"widok_debug_ulica"]
 const STREET_LIGHTS: PackedStringArray = ["mapa (jak w domu)", "stare (plaskie, t27)"]
 const STREET_DEBUG: PackedStringArray = ["swiatlo", "tylko slonce", "tylko niebo", "tylko okna", "tylko latarnie",
 		"udzial cienia (R slonce, G niebo, B okna)"]
@@ -1039,6 +1051,7 @@ func _k_slider(id: StringName, label: String, steps: PackedFloat32Array, start: 
 
 func _refresh_light() -> void:
 	if director != null and director.sun != null:
+		_force_light = true
 		apply_time(director.sun.hour)
 
 
@@ -1050,7 +1063,8 @@ func _apply_street_light() -> void:
 	Figure.blob = Figure.Blob.NONE if on else Figure.Blob.FIXED
 	_street_map.window_night_k = 0.0 if _value(&"okna") == 1 else 1.0
 	_street_map.window_day_k = DAY_LAMP_K if _value(&"lampy_dzien") == 0 and _value(&"okna") == 0 else 0.0
-	_street_map.apply(director.sun)
+	_street_map.apply(director.sun, _force_light)
+	_force_light = false
 	if on:
 		_sun_light.enabled = false
 		for light: PointLight2D in _glows:
@@ -1058,6 +1072,8 @@ func _apply_street_light() -> void:
 
 
 func _exit_tree() -> void:
+	DebugRegistry.hidden = []
+	DebugRegistry.minimal = false
 	LightFixture.map_lamps = false
 	LightFixture.map_actor = false
 	Figure.blob = Figure.Blob.FIXED
