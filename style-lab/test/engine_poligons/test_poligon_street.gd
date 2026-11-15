@@ -35,3 +35,39 @@ func test_engine_panel_sets_the_engine_hour() -> void:
 	var panel: EnginePanel = poligon.get_node("%EnginePanel") as EnginePanel
 	panel.hour_set.emit(18.0)
 	assert_almost_eq(engine.hour, 18.0, 0.0001)
+
+
+func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
+	var shot: EngineShot = _poligon().get_node("%Shot") as EngineShot
+	var description: ShotDescription = shot.describe()
+	assert_eq(description.scene, SCENE)
+	assert_almost_eq(description.hour, 7.5, 0.05)
+	assert_eq(description.switches, {"kadr": "960×540"})
+
+
+func test_replayed_shot_matches_its_description() -> void:
+	var original: Node = _poligon()
+	(original.get_node("%Engine") as LightEngine).set_hour(19.75)
+	var choice: OptionButton = original.get_node("%FrameChoice") as OptionButton
+	choice.select(1)
+	choice.item_selected.emit(1)
+	var description: ShotDescription = (original.get_node("%Shot") as EngineShot).describe()
+
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%Frame") as SubViewport).size, Vector2i(640, 360))
+	assert_almost_eq((replay.get_node("%Engine") as LightEngine).hour, 19.75, 0.0001)
+	assert_true((replay.get_node("%Shot") as EngineShot).describe().matches(description))
+
+
+func test_engine_panel_shot_button_takes_a_shot() -> void:
+	var poligon: Node = _poligon()
+	var shot: EngineShot = poligon.get_node("%Shot") as EngineShot
+	shot.folder = "user://test_poligon_street_shots"
+	var before: String = DisplayServer.clipboard_get()
+	watch_signals(shot)
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	(poligon.get_node("%EnginePanel") as EnginePanel).shot_requested.emit()
+	DisplayServer.clipboard_set(before)
+	assert_signal_emitted(shot, "taken")

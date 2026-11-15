@@ -1,11 +1,13 @@
 class_name EnginePanel
 extends VBoxContainer
-## The engine panel for a Location's F1: hour, time rate and the day state readout. It only reports
-## changes through signals; whoever embeds it wires them to the LightEngine and calls `show_state`.
+## The engine panel for a Location's F1: hour, time rate, the day state readout and the shot button.
+## It only reports changes through signals; whoever embeds it wires them to the LightEngine and the
+## EngineShot and calls `show_state` and `show_shot`.
 ## UI text is Polish (for the human).
 
 signal hour_set(hour: float)
 signal rate_set(minutes_per_second: float)
+signal shot_requested
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -20,6 +22,7 @@ var _hour: HSlider
 var _rate_label: Label
 var _rate: HSlider
 var _readout: Label
+var _shot_label: Label
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -71,6 +74,16 @@ func _ready() -> void:
 	_readout = Label.new()
 	add_child(_readout)
 
+	var shot: Button = Button.new()
+	shot.text = "Zrzut (F12)"
+	shot.focus_mode = Control.FOCUS_NONE
+	shot.pressed.connect(func() -> void: shot_requested.emit())
+	add_child(shot)
+	_shot_label = Label.new()
+	_shot_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	_shot_label.custom_minimum_size = Vector2(WIDTH, 0.0)
+	add_child(_shot_label)
+
 
 ## Sets the rate slider without reporting a change (the engine's starting value).
 func set_rate(minutes_per_second: float) -> void:
@@ -99,6 +112,11 @@ func show_state(state: DayState) -> void:
 			"Słońce: wys. %.1f°, azymut %.0f° (%s)\nTarcza %.1f°, zachmurzenie %.0f %%\nEkspozycja ×%.5f" % [
 			state.sun_elevation, state.sun_azimuth, _sun_side(state), state.sun_disc,
 			state.cloud_cover * 100.0, state.exposure])
+
+
+## Shows where the last shot went (its path is also on the clipboard).
+func show_shot(path: String) -> void:
+	_shot_label.text = "Zapisano, ścieżka w schowku:\n%s" % path
 
 
 func _show_swatch(source: String, color: Color, text: String) -> void:

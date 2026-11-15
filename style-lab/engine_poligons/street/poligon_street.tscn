@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://engine_poligons/street/street.tscn" id="2"]
 [ext_resource type="Script" path="res://addons/swiatlo/light_engine.gd" id="3"]
 [ext_resource type="Script" path="res://addons/swiatlo/panel/engine_panel.gd" id="4"]
+[ext_resource type="Script" path="res://addons/swiatlo/shot/engine_shot.gd" id="5"]
 
 [node name="PoligonStreet" type="Node"]
 script = ExtResource("1")
@@ -23,6 +24,13 @@ hour = 7.5
 
 [node name="Camera" type="Camera2D" parent="Frame"]
 position = Vector2(0, -96)
+
+[node name="Shot" type="Node" parent="." node_paths=PackedStringArray("frame", "engine")]
+unique_name_in_owner = true
+script = ExtResource("5")
+frame = NodePath("../Frame")
+engine = NodePath("../Frame/Engine")
+folder = "res://shots/engine"
 
 [node name="Picture" type="TextureRect" parent="."]
 unique_name_in_owner = true

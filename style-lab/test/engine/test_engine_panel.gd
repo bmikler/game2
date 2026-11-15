@@ -47,3 +47,14 @@ func test_hour_slider_reports_the_hour() -> void:
 	var slider: HSlider = panel.find_children("*", "HSlider", true, false)[0] as HSlider
 	slider.value = 15.25
 	assert_signal_emitted_with_parameters(panel, "hour_set", [15.25])
+
+
+func test_shot_button_asks_for_a_shot_and_shows_the_path() -> void:
+	var panel: EnginePanel = _panel()
+	watch_signals(panel)
+	var button: Button = panel.find_children("*", "Button", true, false)[0] as Button
+	assert_eq(button.text, "Zrzut (F12)")
+	button.pressed.emit()
+	assert_signal_emitted(panel, "shot_requested")
+	panel.show_shot("C:/shots/a.png")
+	assert_string_contains(_text(panel), "a.png")

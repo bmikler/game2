@@ -1,6 +1,7 @@
 extends Node
 ## The new street Poligon (light engine): a Location built from contract nodes, rendered at the game
-## frame and scaled to the window, with an F1 holding the engine panel and the frame switch.
+## frame and scaled to the window, with an F1 holding the engine panel and the frame switch. Shots
+## (F12 or the panel's button) record the frame switch too.
 
 ## 960×540 as in game2 (×2 on 1080p), or 640×360 as in the engine map's prototypes.
 const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
@@ -11,6 +12,7 @@ const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
 @onready var _f1: CanvasLayer = %F1
 @onready var _engine_panel: EnginePanel = %EnginePanel
 @onready var _frame_choice: OptionButton = %FrameChoice
+@onready var _shot: EngineShot = %Shot
 
 
 func _ready() -> void:
@@ -27,6 +29,10 @@ func _ready() -> void:
 	_set_frame(0)
 	get_viewport().size_changed.connect(_fit_picture)
 
+	_engine_panel.shot_requested.connect(func() -> void: _shot.take())
+	_shot.taken.connect(_engine_panel.show_shot)
+	_shot.add_switch("kadr", _frame_name, _select_frame)
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"toggle_debug"):
@@ -38,6 +44,19 @@ func _unhandled_input(event: InputEvent) -> void:
 func _set_frame(index: int) -> void:
 	_frame.size = FRAMES[index]
 	_fit_picture()
+
+
+func _frame_name() -> String:
+	return _frame_choice.get_item_text(_frame_choice.selected)
+
+
+func _select_frame(frame_name: String) -> void:
+	for index: int in _frame_choice.item_count:
+		if _frame_choice.get_item_text(index) == frame_name:
+			_frame_choice.select(index)
+			_set_frame(index)
+			return
+	push_warning("Unknown frame in the shot: %s" % frame_name)
 
 
 ## The whole frame as large as the window allows, centred. The scale need not be whole (a maximised
