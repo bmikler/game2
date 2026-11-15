@@ -32,6 +32,8 @@ static var window_k: float = 1.0 ## The lit windows' light on the snow.
 static var window_lux: float = 1100.0 ## A lit pane's light per form factor (lux on a face it fills).
 static var lamp_k: float = 1.0
 static var building_shadows: bool = true
+## The sky hidden by the architecture alone (the human's pick), or by the objects and the actor too.
+static var sky_objects: bool = false
 static var debug_view: int = 0
 static var actor_shadow: bool = true
 ## The quality gate (as the house's): 1 the actor as a box, 2 a box in its place (the actor casting nothing):
@@ -221,6 +223,7 @@ func apply(sun: SunSample, force: bool = false) -> void:
 	p.set_shader_parameter(&"sun_on", 1 if sun_on else 0)
 	p.set_shader_parameter(&"sun_soft", tan(deg_to_rad(SunMap.sun_disc_deg)))
 	p.set_shader_parameter(&"building_shadows", 1 if building_shadows else 0)
+	p.set_shader_parameter(&"sky_objects", 1 if sky_objects else 0)
 	p.set_shader_parameter(&"lamp_size", SunMap.bulb_m)
 	var amb: Color = room.ambient_color() * room.ambient_energy()
 	p.set_shader_parameter(&"room_ambient", PackedVector3Array([_rgb(amb), Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]))
@@ -419,7 +422,8 @@ func _actor_window() -> Rect2:
 			for z: float in [0.0, h]:
 				corners.append(Vector3(_actor_middle.x + x, _actor_middle.y + y, z))
 	var ends: Array[Vector3] = []
-	var reach: float = SKY_REACH_M + r
+	# Its sky shadow (when objects hide the sky), else B's contact shadow (at most 1 m).
+	var reach: float = (SKY_REACH_M if sky_objects else 1.0) + r
 	# Within reach of its middle, up to reach high too (a facade or a snowbank's top behind it).
 	for x: float in [-reach, reach]:
 		for y: float in [-reach, reach]:

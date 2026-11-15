@@ -1001,8 +1001,9 @@ func _occluder(foot: Vector2, size_m: Vector3) -> void:
 
 ## Ticket 14: the street's light (F1, live): the map or the old flat light, the buildings' shadows, the
 ## look shared with the house (the same ids: one choice for both), debug views and the critic's knobs.
-const SHOWN_OPTIONS: Array[StringName] = [&"kadr", &"swiatlo_ulicy", &"cienie_budynkow", &"wyglad", &"swiatlo_res",
-		&"widok_debug_ulica"]
+const SHOWN_OPTIONS: Array[StringName] = [&"kadr", &"swiatlo_ulicy", &"cienie_budynkow", &"niebo_ulica", &"wyglad",
+		&"swiatlo_res", &"widok_debug_ulica"]
+const SKY_OCCLUDERS: PackedStringArray = ["tylko architektura", "architektura i obiekty (postac, zaspy...)"]
 const STREET_LIGHTS: PackedStringArray = ["mapa (jak w domu)", "stare (plaskie, t27)"]
 const STREET_DEBUG: PackedStringArray = ["swiatlo", "tylko slonce", "tylko niebo", "tylko okna", "tylko latarnie",
 		"udzial cienia (R slonce, G niebo, B okna)"]
@@ -1017,6 +1018,9 @@ func _add_street_light_options() -> void:
 		_refresh_light())
 	DebugRegistry.add_variant(self, &"cienie_budynkow", "Cienie budynków od słońca", ON_OFF, 0, func(index: int) -> void:
 		StreetMap.building_shadows = index == 0
+		_refresh_light())
+	DebugRegistry.add_variant(self, &"niebo_ulica", "Cień nieba zasłania", SKY_OCCLUDERS, 0, func(index: int) -> void:
+		StreetMap.sky_objects = index == 1
 		_refresh_light())
 	DebugRegistry.add_variant(self, &"wyglad", "Cienie i światło: wygląd", DomBryly.LOOKS, 1, func(index: int) -> void:
 		SunMap.look = index

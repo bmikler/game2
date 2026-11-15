@@ -10,7 +10,7 @@ uniform vec3 lamps[16];
 uniform vec3 lamp_color[16];
 uniform float lamp_reach[16];
 uniform float lamp_size = 0.1;
-uniform int lamp_samples = 8;
+uniform int lamp_samples = 16;
 uniform float shade_up = 0.25;
 
 // The share kept: lit / arch, smooth (1 where the architecture lets nothing through). The levels and
@@ -187,7 +187,7 @@ int clip_z(inout vec3 p[POLY_MAX], int count, float limit, float side) {
 vec3 lamp_light(vec3 o, vec3 n, vec2 px, bool with_actor, out vec3 arch) {
 	vec3 total = vec3(0.0);
 	arch = vec3(0.0);
-	float turn = bayer4(px) * 6.2832;
+	float turn = 0.0; // the same pattern in every pixel (turned per pixel: a 2×2 grain beside A's 1-px dither)
 	for (int i = 0; i < lamp_count; i++) {
 		vec3 bulb = lamps[i];
 		vec3 to = bulb - o;

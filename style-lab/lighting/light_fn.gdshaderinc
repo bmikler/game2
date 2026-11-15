@@ -18,7 +18,7 @@ uniform int sun_on = 0;
 uniform vec3 night_dir = vec3(0.0, -1.0, 1.0);
 uniform int night_on = 0;
 uniform float sun_soft = 0.04; // tan of the sun disc's radius (the night light: the same)
-uniform int sun_samples = 12;
+uniform int sun_samples = 16;
 uniform float facing_full = 0.35; // light through a wall the source only grazes fades out
 uniform float wall_max = 1.5; // a wall facing a low sun gets at most this × the floor's light
 uniform int side_patch = 0; // side windows light no patch (decided, tickets 27 and 31): only ribbons
@@ -32,7 +32,7 @@ uniform float sky_other_k = 0.0;
 uniform vec2 sky_sun = vec2(0.0);
 uniform int door_sash = -1;
 uniform float door_k = 0.5;
-uniform int sky_grid = 3;
+uniform int sky_grid = 4;
 // Side windows' ribbons on the floor (game1-proto's look, ticket 31): a pane column traced back along
 // the sun's horizontal direction, widened along the wall; lit as far as light through the head lands.
 // Their visibility: the real sun rays from the floor point to the wall, past the occluders.
@@ -55,7 +55,7 @@ vec2 far_source(vec3 o, vec3 toward, vec2 px, bool with_actor) {
 	vec3 u;
 	vec3 v;
 	basis(axis, u, v);
-	float turn = bayer4(px) * 6.2832;
+	float turn = 0.0; // the same pattern in every pixel (ticket 14: no 2×2 grain)
 	vec2 al = vec2(0.0);
 	for (int i = 0; i < sun_samples; i++) {
 		vec2 j = vogel(i, sun_samples, turn) * sun_soft;
@@ -314,8 +314,8 @@ float objects_hide(vec3 o, vec3 n, int i, bool with_actor) {
 vec2 sky_light(vec3 o, vec3 n, vec2 px, bool with_actor, bool with_objects) {
 	vec2 al = vec2(0.0);
 	int own = room_index(o.xy);
-	float jx = bayer4(px);
-	float jz = bayer4(px + vec2(2.0, 1.0));
+	float jx = 0.5; // the same samples in every pixel (ticket 14)
+	float jz = 0.5;
 	float cells = float(sky_grid * sky_grid);
 	// Each window (its panes together) one source in the look: per pane, an actor in front of the
 	// mullion hid under half of each pane and a lit wedge showed straight behind it (the human).
@@ -395,7 +395,7 @@ vec2 ribbon_light(vec3 o, vec2 px, bool with_actor) {
 	vec3 u;
 	vec3 v;
 	basis(axis, u, v);
-	float turn = bayer4(px) * 6.2832;
+	float turn = 0.0;
 	for (int i = 0; i < ribbon_count; i++) {
 		float nx = ribbon_wall[i] == 2 ? -1.0 : 1.0;
 		float facing = h.x * nx;
