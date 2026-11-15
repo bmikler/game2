@@ -65,11 +65,11 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 
 ## Not yet specified
 
-- (pusto: pozostała mgła przeszła w tickety „Układ strojenia”, „Krzywe doby i noc”, „Stylizacja rozproszenia w powietrzu”, „Migracja ze starego silnika”)
+- (pusto: pozostała mgła przeszła w tickety; zostały „Migracja ze starego silnika” i „Specyfikacja silnika”)
 
 ## Out of scope
 
-- Strojenie wartości i kolorów światła (ticket 38 mapy grafiki).
+- Strojenie wartości i kolorów światła (ticket 38 mapy grafiki), Wariantami krytyków na zaimplementowanym silniku. Tu też [Krzywe doby i noc](tickets/14-krzywe-doby-i-noc.md) i [Stylizacja rozproszenia w powietrzu](tickets/15-stylizacja-rozproszenia.md): wartości i wygląd to strojenie, wymagania przeniesione do „Specyfikacja silnika” (człowiek, 2026-11-15).
 - Produkcja assetów i Przepisy (mapa grafiki).
 - Płynne przejście ulica → wnętrze bez wczytania (wnętrza to osobne Lokacje).
 - Odczyt poziomu światła przez logikę gry: żadna mechanika nie używa cienia (z „Jeden model światła i cienia dla wszystkich źródeł”).
