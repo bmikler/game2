@@ -285,6 +285,7 @@ Nowe Poligony (Ulica, Dom) są zbudowane wyłącznie z węzłów kontraktu i zaw
   17. Usunięcie starego silnika.
   18. Test końcowy.
   `/to-tickets` może tę listę scalać i dzielić; podany porządek nie jest wymaganiem.
+- **Tickety wykonawcze (2026-11-15, zaakceptowane przez człowieka):** `docs/silnik/tickets/01–27`. Zmiana wobec listy wyżej: najpierw sprawdzian kontraktu assetu (Prowadnice v2 → Sprawdzian assetu w prototypie → Poprawka kontraktu assetu), bo sprite z ComfyUI ma dziś wypalone światło, a silnik zakłada albedo × światło; w silniku Oświetlenie sprite'ów na Bryłach i Mebel z ComfyUI na Ulicy zaraz po niebie. Wynik prototypu może zmienić kontrakt assetu w tej specyfikacji.
 - **Decyzje odłożone do wykonania (techniczne, rozstrzyga Claude):** dokładny kształt stropu z oknem dachowym w kontrakcie; format tekstur danych (RGBAH: odczyt niesprawdzony); liczba próbek nieba i liczba klatek narastania w budżecie 2 s; czy podłoga na różnych wysokościach zostaje (zrezygnować, jeśli droga); przeciąganie myszą w edytorze i podsceny z węzłami `@tool` (niesprawdzone w research 90).
 - **Ściąga wyglądu** (`sciaga-wygladu.md`) idzie do krytyków przy strojeniu; punkty startowe z niej trafiają do domyślnych `.tres` w pierwszych ticketach.
 - Research: 85 (Shadowglass), 86 (nakładanie), 87 (Kotwice), 88 (C++ czy shadery), 89 (testy), 90 (podgląd w edytorze), 84 (stylizacja A′).
