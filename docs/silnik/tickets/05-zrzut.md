@@ -2,7 +2,7 @@
 id: 05
 title: Zrzut z opisem stanu
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [04]
 ---
@@ -31,3 +31,6 @@ Poligon Ulica o 7:30, F12, wklej ścieżkę Claude'owi; Claude odtwarza klatkę 
 - Testy: `node tools/test.mjs` (z `style-lab`): 54 zielone, w tym zapis PNG + opisu, schowek, F12 (akcja), przycisk panelu, zgodność opisu po odtworzeniu w świeżym Poligonie (godzina 19:45, kadr 640×360). Ręcznie: `replay.tscn` z opisem 7:30 / 640×360 dał klatkę 640×360 i opis zgodny z oryginałem.
 - Znane drobiazgi: po odtworzeniu suwak tempa w F1 nie pokazuje zatrzymanego czasu (godzina tak).
 
+### Ocena człowieka
+
+2026-11-15: bez ręcznego sprawdzania („jak przetestowałeś, że screeny działają, to jest git”); wystarcza test Claude’a (zapis, schowek, odtworzenie 7:30 / 640×360).
