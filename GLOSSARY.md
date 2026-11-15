@@ -56,6 +56,10 @@ _Avoid_: szyba (to tylko część okna)
 Wszystko, co w danej chwili zależy od godziny: kierunek słońca, kolory i natężenia Źródeł, zachmurzenie, ekspozycja. Jeden dla całej Lokacji w danej klatce.
 _Avoid_: profil pogody, pora dnia (jako nazwa danych)
 
+**Bufor światła**:
+Obraz światła całej Lokacji, piksel w piksel z obrazem gry, złożony z warstw, które zmieniają się w różnym tempie (niebo, nieruchome Źródła, słońce, ruchome Przesłony). Jeden dla całej Lokacji, wnętrza i pleneru.
+_Avoid_: mapa światła, SunMap, StreetMap
+
 **Smuga**:
 Widoczne w powietrzu światło Źródła na drodze przez Otwór lub między Przesłonami, czasem z drobinkami kurzu. Powstaje z gęstości powietrza Lokacji.
 _Avoid_: wstęga, promień, god ray

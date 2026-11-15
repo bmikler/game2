@@ -14,3 +14,5 @@ Co sprawdzają testy jednostkowe, co bramki buforów, a co ocena człowieka na �
 Z „Jeden model światła i cienia dla wszystkich źródeł”: do trudnych scen dodać plamy i smugi z okien bocznych (zakaz plamy uchylony, wygląd do oceny), słońce skierowane w kamerę (research 85), promienie słońca między budynkami w plenerze.
 
 **Z „Kontrakt danych sceny” (08):** sceny z żaluzjami (paski w pikselach), papierosem przy twarzy, nocą wieś vs miasto przez okno, oknami przedniej (niewidocznej) ściany; ostrzeżenia walidacji w edytorze.
+
+**Z „Bufor i przeliczanie” (10):** bramka wydajności (kadr z 8 postaciami, samochodem i 4 kołyszącymi się drzewami; ≤ 4 ms GPU, ≤ 1 ms CPU na RTX 4060 Laptop; wczytanie ≤ 2 s), scena porównania wiatru A (cień stały) i B (cień z koroną), przewijanie doby (płynne doganianie cieni słońca), niebo bez prążków we wnętrzu.
