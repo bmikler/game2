@@ -58,10 +58,11 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Podgląd światła w edytorze Godota 4.7](tickets/06-podglad-w-edytorze-research.md): wykonalny; węzły kontraktu @tool w grupie + jeden kontroler z SubViewport renderowanym tylko po zmianie; pomocnicze węzły bez owner nie trafiają do .tscn.
 - [Jeden model światła i cienia dla wszystkich źródeł](tickets/07-jeden-model-swiatla.md): suma źródeł w HDR, trzy kształty Źródła (kierunkowe, kopuła, powierzchniowe), niebo zawsze kopułą, jeden półcień z geometrii, Stan doby z godziny, pogoda jako stały schemat dobowy, smugi i kurz jako rozproszenie w powietrzu (poza A′), okna ze wszystkich ścian z geometrii, postać bez reflektora, ekspozycja automatyczna.
 - [Kontrakt danych sceny](tickets/08-kontrakt-danych-sceny.md): Lokacja z węzłów w metrach (Otoczenie Lokacji z profilem nieba miasto/wieś, Ściana z Otworami i wypełnieniem jak żaluzje, Przesłona z Brył, Źródło z mnożnikiem do animacji, ruchome i przyczepione); silnik nie zna pokoi ani rodzajów; asset = sprite + uproszczone Bryły + opcjonalna mapa normalnych.
+- [Nakładanie cieni z kilku źródeł](tickets/09-nakladanie-cieni-prototyp.md): nakładanie z sumy w HDR wygląda dobrze; bufor niesie dwa kanały (naturalny, sztuczny, pole Źródła); stylizacja w dwóch trybach w `.tres` (A′ na sumie albo A′ na każdym kanale), wybór przy strojeniu; tryb „barwa w stopniach” odrzucony.
 
 ## Not yet specified
 
-- **Stylizacja A′ na nowym silniku:** jedna dla wszystkich Lokacji, przy wielu źródłach naraz; warianty szwu w F1; stylizacja rozproszenia w powietrzu (drobinki, dither). Wyklaruje się po prototypie „Nakładanie cieni z kilku źródeł”.
+- **Stylizacja rozproszenia w powietrzu:** drobinki kurzu i ewentualny dither smug (poza A′); warianty szwu w F1. Tryby A′ ustalone w „Nakładanie cieni z kilku źródeł”.
 - **Strojenie:** układ zasobów (`.tres`) i zestawów (wnętrza, plener, warianty krytyka), F1, `--set=`; które parametry są krzywymi doby.
 - **Noc i pora dnia:** krzywe Stanu doby (droga słońca, kolory, włączanie lamp i świecących okien, schemat pogody): które krzywe i jakie punkty kontrolne; zależy od układu zasobów strojenia.
 - **Migracja:** jak przejść z `SunMap`/`StreetMap` bez gubienia ustaleń mapy grafiki; co z bramkami buforów liczonymi na starym silniku.
