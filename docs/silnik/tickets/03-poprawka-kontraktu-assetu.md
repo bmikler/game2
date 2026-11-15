@@ -2,7 +2,7 @@
 id: 03
 title: Poprawka kontraktu assetu
 labels: [ready-for-agent]
-status: do sprawdzenia
+status: closed
 assignee: claude
 blocked_by: [02]
 ---
@@ -34,3 +34,7 @@ Prototyp nie podważył kontraktu (ocena człowieka w tickecie 02: meble wygląd
 - **Zestaw strojenia:** bez nowych pól. Źródło normalnych to dane assetu, siła modelowania to istniejące pole Odbiorników; tryb „pół na pół” z prototypu odpada.
 
 **Decyzja techniczna Claude'a do potwierdzenia w tickecie 10:** normalne dodatków „nadmuchane” z sylwetki to jedna reguła dla każdego dodatku, bez narzędzi zewnętrznych, ale jeszcze nieoglądana w świetle. Jeśli w tickecie 10 wygląda źle, następna droga to estymator normalnych z obrazu generatora (ComfyUI, pytanie przed generacją).
+
+### Ocena człowieka
+
+2026-11-15: „ok” (diff specyfikacji i ticketów zgodny z oceną prototypu).
