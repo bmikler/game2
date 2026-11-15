@@ -17,7 +17,16 @@ Poligon z wnętrzem domu z Poligonu Ulica, do którego gracz wchodzi z ulicy.
 _Avoid_: mapa wewnętrzna
 
 **Mapa**:
-Wyłącznie mapa wayfindera (`docs/wayfinder/map.md`). Na sceny gry mówimy Poligon albo Lokacja.
+Wyłącznie mapa wayfindera: mapa grafiki (`docs/wayfinder/map.md`) albo mapa silnika (`docs/wayfinder-silnik/map.md`). Na sceny gry mówimy Poligon albo Lokacja.
+_Avoid_: mapa pomieszczenia, mapa zewnętrzna (to Lokacje)
+
+**Lokacja**:
+Jedna scena gry wczytywana osobno: wnętrze albo plener. Przejście między Lokacjami odbywa się przez wczytanie.
+_Avoid_: mapa, poziom
+
+**Silnik światła**:
+Jeden moduł, który liczy światło i cienie ze wszystkich źródeł w każdej Lokacji, wnętrzu i plenerze, tym samym kodem i tą samą stylizacją. Lokacje różnią się dla niego tylko danymi.
+_Avoid_: SunMap, StreetMap, system oświetlenia wnętrz/ulicy
 
 **Kotwica stylu**:
 Jedna z najwyżej 3 istniejących gier wybranych przez człowieka jako wzorzec docelowego wyglądu w nazwanej roli (np. Kotwica proporcji, Kotwica światła). Poza swoją rolą nie jest wzorcem.

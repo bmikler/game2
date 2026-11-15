@@ -9,6 +9,7 @@ Finalny styl graficzny i Przepisy produkcji są ustalone i sprawdzone na dwóch 
 
 ## Notes
 
+- **Kolejność (człowiek, 2026-11-15):** najpierw [mapa silnika światła i cieni](../wayfinder-silnik/map.md) (mapa i implementacja), potem pozostałe tickety tej mapy na działającym silniku, na końcu globalne strojenie ([Krytyk strojenia](tickets/38-krytyk-strojenia-swiatla.md)). Do zakończenia mapy silnika nie bierzemy ticketów z frontu tej mapy.
 - Pracujemy **po polsku**. Słownik: `GLOSSARY.md` (Poligon, Kotwica stylu, Przepis, Miesiąc produkcji…). „Mapa” = tylko ta mapa.
 - **Wyjątek od „plan, don't do”:** tickety typu prototype i task mogą budować Poligony (`style-lab/`, Godot 4.7.2: `C:/Users/bartl/Desktop/repo/game1/tools/godot/Godot_v4.7.2-stable_win64.exe`), assety próbne i narzędzia (skrypty generacji, test assetu). Poligony służą wyłącznie do podejmowania decyzji: trzeba zobaczyć, jak coś wygląda. Produkcja assetów całej gry i kod gry są poza mapą (inne sesje).
 - **Poligony:** grywalne (WASD, wejście drzwiami z ulicy do domu i z powrotem), panel debug: suwak godziny i tempo upływu czasu, przełączniki on/off i warianty testowanego elementu, pixel perfect, zrzut do arkusza porównawczego. Pogoda w grze jest stała (zima: śnieg z lekką pluchą, szare błoto pośniegowe i kałuże zamiast wielkich zasp, ticket 15). Zawartość ogólna, nie ze scenariusza. Najpierw bryły i placeholdery rysowane kodem, potem assety z generatorów.
