@@ -186,7 +186,7 @@ func _shoot_hours(hours: String) -> void:
 	_clock.rate = 0.0
 	for hour: String in hours.split(",", false):
 		_on_hour_changed(hour.to_float())
-		for _frame: int in 4:
+		for _frame: int in 12: # ticket 14: the street repaints over StreetMap.BANDS frames
 			await RenderingServer.frame_post_draw
 		await _walk_path()
 		_save_shot()

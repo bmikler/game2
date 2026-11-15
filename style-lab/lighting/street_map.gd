@@ -10,12 +10,16 @@ extends Node2D
 
 const MAP_SHADER: Shader = preload("res://lighting/street_map.gdshader")
 const STRIP: Vector2i = Vector2i(32, 96)
+## A whole repaint (each game minute) spread over this many frames, a band of rows each (one frame took
+## ~110 ms: a stutter every real second).
+const BANDS: int = 8
 const MAX_BOXES: int = 127 ## One more slot is the actor's (the shader's arrays: 128).
 const MAX_WINDOWS: int = 64
 const MAX_LAMPS: int = 16
 const ACTOR_RADIUS_M: float = 0.26
 const LAMP_REACH_M: float = 14.0
-const SKY_REACH_M: float = 3.0 ## Round the actor: its sky shadow (and contact shadow) fades out by here.
+const WINDOW_REACH_M: float = 8.0 ## street_fn: win_reach (6 m) from the pane's nearest point, + its diagonal.
+const SKY_REACH_M: float = 4.0 ## Round the actor: its sky shadow fades out by here (street_fn: object_sky_reach, from its footprint).
 const WINDOW_PAD_PX: float = 8.0
 const BUILDING_SPAN_M: float = 60.0 ## The farthest a sun ray from the actor is followed.
 
@@ -56,12 +60,14 @@ var _whole: ColorRect
 var _window: ColorRect
 var _light: PointLight2D
 var _debug: Sprite2D
-var _dirty: bool = true
+var _band: int = 0 ## The next band of a whole repaint; BANDS: none pending.
 var _last_window: Rect2 = Rect2()
 var _away: Array[Vector3] = [] ## Directions away from the sun (its disc's rim too).
-var _points: Array[Vector3] = [] ## Lamp bulbs and lit windows' corners: the actor's shadow from them.
+var _points: Array[Vector4] = [] ## Lamp bulbs and lit windows' corners (w: how far their light reaches).
 var _actor_middle: Vector2 = Vector2.ZERO
 static var _current: StreetMap
+var _last_key: Rect2 = Rect2()
+var _last_feet: Vector2 = Vector2.INF
 
 
 ## A box and how it takes part: receives (its top shown), architecture (B keeps its sky shadow exact).
@@ -230,7 +236,7 @@ func apply(sun: SunSample) -> void:
 	_set_lamps()
 	_set_windows(sun, exposure)
 	_set_sources(toward if sun_on else Vector3.ZERO)
-	_dirty = true
+	_band = 0
 
 
 static func _rgb(color: Color) -> Vector3:
@@ -252,7 +258,7 @@ func _set_lamps() -> void:
 		var energy: float = Exposure.energy(fixture.def.lux * fixture.last_level, fixture.last_exposure, 1.0) * lamp_k
 		colors.append(_rgb(fixture.def.color) * energy)
 		reaches.append(LAMP_REACH_M)
-		_points.append(bulb)
+		_points.append(Vector4(bulb.x, bulb.y, bulb.z, LAMP_REACH_M))
 	var count: int = bulbs.size()
 	bulbs.resize(MAX_LAMPS)
 	colors.resize(MAX_LAMPS)
@@ -281,7 +287,7 @@ func _set_windows(sun: SunSample, exposure: float) -> void:
 		colors.append(_rgb(window_colors[index]) * energy)
 		var rect: Vector4 = windows[index]
 		for corner: Vector2 in [Vector2(rect.x, rect.z), Vector2(rect.y, rect.z), Vector2(rect.x, rect.w), Vector2(rect.y, rect.w)]:
-			_points.append(Vector3(corner.x, window_ds[index], corner.y))
+			_points.append(Vector4(corner.x, window_ds[index], corner.y, WINDOW_REACH_M))
 	var count: int = rects.size()
 	rects.resize(MAX_WINDOWS)
 	ds.resize(MAX_WINDOWS)
@@ -311,7 +317,10 @@ func _toward_sun(sun: SunSample) -> Vector3:
 
 
 func _process(_delta: float) -> void:
-	if room == null or not enabled:
+	if room == null:
+		return
+	if not enabled:
+		_view.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		return
 	_set_boxes()
 	if not is_instance_valid(actor):
@@ -323,14 +332,28 @@ func _process(_delta: float) -> void:
 	var window: Rect2 = _actor_window()
 	var both: Rect2 = window.merge(_last_window) if _last_window.has_area() else window
 	_last_window = window
-	var whole: bool = _dirty or SunMap.whole_every_frame
-	_dirty = false
+	var whole: bool = _band < BANDS or SunMap.whole_every_frame
+	var rows: float = ceilf(float(_rect.size.y) / BANDS)
+	if SunMap.whole_every_frame:
+		_whole.position = Vector2.ZERO
+		_whole.size = Vector2(_rect.size)
+	elif whole:
+		_whole.position = Vector2(0.0, rows * _band)
+		_whole.size = Vector2(_rect.size.x, minf(rows, _rect.size.y - rows * _band))
+		_band += 1
 	_whole.visible = whole
-	_window.visible = not whole and both.has_area()
+	_window.visible = both.has_area() and not SunMap.whole_every_frame
 	both = both.intersection(Rect2(Vector2.ZERO, Vector2(_rect.size)))
 	both = Rect2(both.position.floor(), both.end.ceil() - both.position.floor())
 	_window.position = both.position
 	_window.size = both.size
+	# Rendered only when something changed (the actor still: nothing to repaint).
+	var key: Rect2 = both if not whole else Rect2(-1.0, -1.0, 0.0, 0.0)
+	var changed: bool = whole or key != _last_key or feet_px != _last_feet or _bench_moving
+	_print_window(both)
+	_last_key = key
+	_last_feet = feet_px
+	_view.render_target_update_mode = SubViewport.UPDATE_ONCE if changed else SubViewport.UPDATE_DISABLED
 
 
 ## The boxes, the test box and the actor (its middle a radius behind the feet).
@@ -387,11 +410,12 @@ func _actor_window() -> Rect2:
 			for z: float in [0.0, h]:
 				corners.append(Vector3(_actor_middle.x + x, _actor_middle.y + y, z))
 	var ends: Array[Vector3] = []
-	var reach: float = SKY_REACH_M
+	var reach: float = SKY_REACH_M + r
+	# Within reach of its middle, up to reach high too (a facade or a snowbank's top behind it).
 	for x: float in [-reach, reach]:
 		for y: float in [-reach, reach]:
-			ends.append(Vector3(_actor_middle.x + x, _actor_middle.y + y, 0.0))
-	ends.append(Vector3(_actor_middle.x, _actor_middle.y, h + 0.3))
+			for z: float in [0.0, reach]:
+				ends.append(Vector3(_actor_middle.x + x, _actor_middle.y + y, z))
 	var walls: Array[AABB] = []
 	for index: int in boxes.size():
 		if box_arch[index] == 1:
@@ -400,11 +424,14 @@ func _actor_window() -> Rect2:
 	for dir: Vector3 in _away:
 		for corner: Vector3 in corners:
 			ends.append(_ray_end(corner, dir, walls))
-	for point: Vector3 in _points:
-		if Vector2(point.x, point.y).distance_to(middle) > LAMP_REACH_M:
+	for point: Vector4 in _points:
+		var source: Vector3 = Vector3(point.x, point.y, point.z)
+		if Vector2(point.x, point.y).distance_to(middle) > point.w + r:
 			continue
 		for corner: Vector3 in corners:
-			ends.append(_ray_end(corner, corner - point, walls))
+			# The shadow lies where the source's light still reaches.
+			var left: float = maxf(point.w - corner.distance_to(source), 0.0)
+			ends.append(_ray_end(corner, corner - source, walls, left))
 	var low: Vector2 = Vector2(INF, INF)
 	var high: Vector2 = -low
 	for end: Vector3 in ends:
@@ -415,13 +442,13 @@ func _actor_window() -> Rect2:
 	return Rect2(low - pad, high - low + pad * 2.0)
 
 
-## Where o + t·dir meets the ground or the first piece of architecture (followed at most BUILDING_SPAN_M).
-func _ray_end(o: Vector3, dir: Vector3, walls: Array[AABB]) -> Vector3:
+## Where o + t·dir meets the ground or the first piece of architecture (followed at most `span` m).
+func _ray_end(o: Vector3, dir: Vector3, walls: Array[AABB], span: float = BUILDING_SPAN_M) -> Vector3:
 	var length: float = dir.length()
 	if length < 1e-6:
 		return o
 	var unit: Vector3 = dir / length
-	var t: float = BUILDING_SPAN_M
+	var t: float = span
 	if unit.z < -1e-6:
 		t = minf(t, o.z / -unit.z)
 	var end: Vector3 = o + unit * t
@@ -437,3 +464,14 @@ func _screen(point: Vector3) -> Vector2:
 	var config: ProjectionConfig = ProjectionConfig.current()
 	var world: Vector2 = Vector2(point.x * config.px_per_m, config.px_per_m * (config.depth_factor * point.y - point.z))
 	return world - Vector2(_rect.position)
+
+
+## PROTOTYPE: `--ruch` (with --bench): the actor's window repainted every frame, as while walking;
+## `--okno`: its size printed.
+static var _bench_moving: bool = OS.get_cmdline_user_args().has("--ruch")
+static var _print_sizes: bool = OS.get_cmdline_user_args().has("--okno")
+
+
+func _print_window(rect: Rect2) -> void:
+	if _print_sizes and Engine.get_process_frames() % 60 == 0:
+		print("POMIAR okno ", rect.size)

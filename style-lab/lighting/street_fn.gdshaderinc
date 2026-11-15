@@ -19,6 +19,9 @@ uniform float wall_max = 1.5;
 uniform int building_shadows = 1; // 0: the architecture casts no sun shadow (variant, ticket 27)
 uniform int sky_on = 1;
 uniform float sky_cull = 0.0015; // an occluder whose (radius / distance)² is under this hides no sky
+// An object's sky shadow (the actor's as any other's) fades out by this far from its footprint (m): the
+// actor's buffer window reaches as far. Architecture keeps its whole sky shadow.
+uniform float object_sky_reach = 4.0;
 // Lit windows: x0, x1, z0, z1 on a facade at d = win_d facing +d; colour × energy per form factor.
 uniform int win_count = 0;
 uniform vec4 win_rect[64];
@@ -188,6 +191,10 @@ vec2 street_sky_light(vec3 o, vec3 n, bool with_actor, bool with_objects) {
 			}
 		}
 		float hide = clamp(f / open, 0.0, 1.0);
+		if (!arch) {
+			float away = distance(o.xy, clamp(o.xy, lo.xy, hi.xy));
+			hide *= 1.0 - smoothstep(object_sky_reach * 0.6, object_sky_reach, away);
+		}
 		if (arch) {
 			keep_arch *= 1.0 - hide;
 		} else {
