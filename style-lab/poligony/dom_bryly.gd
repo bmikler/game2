@@ -463,6 +463,9 @@ func _build_ground_floor() -> void:
 
 	# Hall: the stairs along the back wall, the street door in the bottom wall, a door right to the dining room.
 	var hall: RoomLighting = _column_room(1, 1, FLOOR_HALL, &"korytarz", true)
+	# A gap in its bottom edge at the street door (the edge stopped walking: the house had no way out).
+	hall.box.door_x_m = _room_w / 2.0 - DOOR_W / 2.0
+	hall.box.door_width_m = DOOR_W
 	origin = _column_origin(1)
 	_fade_bottom(hall, 1, _room_w / 2.0)
 	_flight(origin)
