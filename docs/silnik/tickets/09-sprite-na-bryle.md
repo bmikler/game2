@@ -16,7 +16,11 @@ Odbiorniki bryłowe w silniku według kontraktu poprawionego w „Poprawce kontr
 - [ ] Asset jako scena: sprite, Bryły, punkt zaczepienia, opcjonalnie mapa normalnych i przyczepione Źródła.
 - [ ] Wczytanie Brył i punktu zaczepienia z eksportu „Prowadnic v2”.
 - [ ] Bramka: strona Bryły zwrócona do słońca jaśniejsza niż odwrócona; z mapą normalnych i bez.
-- [ ] Parametry Odbiorników w Zestawie, punkty startowe z prototypu.
+- [ ] Bryły assetu niewidoczne (tylko cień i zasłanianie); pozycja piksela z trafienia linii widzenia w Bryły (najbliżej kamery), głębia do zasłaniania z tego trafienia.
+- [ ] Reguła pikseli bez ściany Bryły pod spodem (spec, „Asset”): ponad wierzchem pionowa płaszczyzna w połowie głębokości wierzchu, reszta płaszczyzna przodu obrysu Brył; testy Opisu sceny albo rzutu.
+- [ ] Cienie własne z punktu odsuniętego 2 cm od ściany Bryły wzdłuż normalnej.
+- [ ] Normalne w kodowaniu Prowadnic v2 (128 + 127·(nx, nz, −ny)); ostrzeżenie walidacji, gdy mapa normalnych ma nieprzezroczysty piksel bez normalnej.
+- [ ] Parametry Odbiorników w Zestawie, punkty startowe z prototypu (normalne z mapy, modelowanie w pełnej sile jak w prototypie ticketu 02).
 
 ## Jak sprawdzić
 
