@@ -57,6 +57,7 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [Testy w Godot 4.7 dla Silnika światła](tickets/05-testy-godot-research.md): GUT 9.7.1 (za zgodą), testy shaderów nie w headless, tylko w oknie poza ekranem z GPU; jedna komenda dla /implement.
 - [Podgląd światła w edytorze Godota 4.7](tickets/06-podglad-w-edytorze-research.md): wykonalny; węzły kontraktu @tool w grupie + jeden kontroler z SubViewport renderowanym tylko po zmianie; pomocnicze węzły bez owner nie trafiają do .tscn.
 - [Jeden model światła i cienia dla wszystkich źródeł](tickets/07-jeden-model-swiatla.md): suma źródeł w HDR, trzy kształty Źródła (kierunkowe, kopuła, powierzchniowe), niebo zawsze kopułą, jeden półcień z geometrii, Stan doby z godziny, pogoda jako stały schemat dobowy, smugi i kurz jako rozproszenie w powietrzu (poza A′), okna ze wszystkich ścian z geometrii, postać bez reflektora, ekspozycja automatyczna.
+- [Kontrakt danych sceny](tickets/08-kontrakt-danych-sceny.md): Lokacja z węzłów w metrach (Otoczenie Lokacji z profilem nieba miasto/wieś, Ściana z Otworami i wypełnieniem jak żaluzje, Przesłona z Brył, Źródło z mnożnikiem do animacji, ruchome i przyczepione); silnik nie zna pokoi ani rodzajów; asset = sprite + uproszczone Bryły + opcjonalna mapa normalnych.
 
 ## Not yet specified
 

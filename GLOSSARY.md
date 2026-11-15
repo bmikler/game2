@@ -33,11 +33,23 @@ Wszystko, co oświetla Lokację: słońce, niebo, lampa, latarnia, świecące ok
 _Avoid_: lampa (jako nazwa ogólna), światło okna
 
 **Przesłona**:
-Bryła sceny, która zatrzymuje światło każdego Źródła i rzuca cień: ściana, dach, mebel, postać, budynek. Wnętrze to Lokacja przykryta dachem.
+Obiekt sceny złożony z Brył, który zatrzymuje światło każdego Źródła i rzuca cień: ściana, dach, mebel, postać, budynek, samochód. Może być nieruchoma albo ruchoma. Wnętrze to Lokacja przykryta dachem.
 _Avoid_: blocker, okluder
 
+**Bryła**:
+Niewidoczna, uproszczona bryła w metrach (pudełko, pudełko z dachem, walec, uniesione pudełko), z której Silnik światła liczy cień i na której leży oświetlany sprite. Nie musi odpowiadać obrazowi 1:1. Przesłona składa się z jednej lub kilku Brył.
+_Avoid_: proxy, hitbox, kolizja
+
+**Odbiornik**:
+Każda powierzchnia Bryły widoczna w rzucie gry (podłoga, wierzch, przód, spadek dachu, fasada), która przyjmuje światło. Wynika z geometrii, nie z oznaczenia.
+_Avoid_: receiver, receives
+
+**Otoczenie Lokacji**:
+Dane Lokacji wspólne dla całej sceny: zestaw strojenia (wnętrza albo plener), gęstość powietrza, jasność odniesienia ekspozycji.
+_Avoid_: ustawienia sceny, profil pokoju
+
 **Otwór**:
-Miejsce w Przesłonie, przez które przechodzi światło: okno, drzwi, przerwa w murze.
+Miejsce w Przesłonie, przez które przechodzi światło: okno, drzwi, przejście, przerwa w murze. Okno to Otwór z szybą i szprosami; kierunek wynika ze Ściany, w której jest.
 _Avoid_: szyba (to tylko część okna)
 
 **Stan doby**:
