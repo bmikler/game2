@@ -22,10 +22,45 @@ script = ExtResource("2")
 script = ExtResource("5")
 
 [node name="Slab" type="Node2D" parent="Ground"]
-position = Vector2(0, 196)
+position = Vector2(0, 388)
 script = ExtResource("6")
-position_m = Vector3(0, 8, -0.1)
-size_m = Vector3(80, 32, 0.1)
+position_m = Vector3(0, 16, -0.1)
+size_m = Vector3(100, 56, 0.1)
+
+[node name="Court" type="Node2D" parent="."]
+position = Vector2(720, -504)
+script = ExtResource("5")
+position_m = Vector3(18, -21, 0)
+
+[node name="Plinth" type="Node2D" parent="Court"]
+script = ExtResource("6")
+position_m = Vector3(0, 0, 0)
+size_m = Vector3(16, 13, 0.9)
+
+[node name="StepLow" type="Node2D" parent="Court"]
+position = Vector2(0, 28.8)
+script = ExtResource("6")
+position_m = Vector3(0, 1.2, 0)
+size_m = Vector3(4, 1.2, 0.3)
+
+[node name="StepHigh" type="Node2D" parent="Court"]
+position = Vector2(0, 14.4)
+script = ExtResource("6")
+position_m = Vector3(0, 0.6, 0)
+size_m = Vector3(4, 0.6, 0.6)
+
+[node name="Outbuilding" type="Node2D" parent="Court"]
+position = Vector2(0, -84)
+script = ExtResource("6")
+position_m = Vector3(0, -2, 0.9)
+size_m = Vector3(12, 10, 8)
+shape = 2
+eave_m = 5.6
+
+[node name="CourtFacades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
+script = ExtResource("7")
+occluder = NodePath("../Court")
+front_colors = PackedColorArray(0.56, 0.54, 0.52, 1, 0.64, 0.62, 0.58, 1, 0.64, 0.62, 0.58, 1, 0.71, 0.6, 0.43, 1)
 
 [node name="Alley" type="Node2D" parent="."]
 position = Vector2(0, -240)
@@ -36,21 +71,92 @@ position_m = Vector3(0, -10, 0)
 position = Vector2(-580, 0)
 script = ExtResource("6")
 position_m = Vector3(-14.5, 0, 0)
-size_m = Vector3(27, 8, 5.6)
+size_m = Vector3(27, 8, 8.1)
+shape = 2
+eave_m = 5.6
 
 [node name="HouseMiddle" type="Node2D" parent="Alley"]
 position = Vector2(320, 0)
 script = ExtResource("6")
 position_m = Vector3(8, 0, 0)
-size_m = Vector3(14, 8, 8.3)
+size_m = Vector3(14, 8, 10.8)
+shape = 2
+eave_m = 8.3
 
 [node name="HouseEast" type="Node2D" parent="Alley"]
-position = Vector2(900, 0)
+position = Vector2(1140, 0)
 script = ExtResource("6")
-position_m = Vector3(22.5, 0, 0)
-size_m = Vector3(15, 8, 5.6)
+position_m = Vector3(28.5, 0, 0)
+size_m = Vector3(15, 8, 9)
+shape = 1
+eave_m = 5.6
 
 [node name="Facades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
 script = ExtResource("7")
 occluder = NodePath("../Alley")
 front_colors = PackedColorArray(0.66, 0.47, 0.42, 1, 0.78, 0.7, 0.55, 1, 0.55, 0.6, 0.66, 1)
+
+[node name="PosterColumn" type="Node2D" parent="."]
+position = Vector2(-1600, 72)
+script = ExtResource("5")
+position_m = Vector3(-40, 3, 0)
+
+[node name="Column" type="Node2D" parent="PosterColumn"]
+position = Vector2(0, 14.4)
+script = ExtResource("6")
+position_m = Vector3(0, 0.6, 0)
+size_m = Vector3(1.2, 1.2, 3.2)
+shape = 3
+
+[node name="Cap" type="Node2D" parent="PosterColumn"]
+position = Vector2(0, -111.2)
+script = ExtResource("6")
+position_m = Vector3(0, 0.7, 3.2)
+size_m = Vector3(1.4, 1.4, 0.25)
+shape = 3
+
+[node name="PosterColumnFacades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
+script = ExtResource("7")
+occluder = NodePath("../PosterColumn")
+front_colors = PackedColorArray(0.44, 0.54, 0.42, 1, 0.31, 0.37, 0.3, 1)
+
+[node name="Awning" type="Node2D" parent="."]
+position = Vector2(1800, 120)
+script = ExtResource("5")
+position_m = Vector3(45, 5, 0)
+
+[node name="Canopy" type="Node2D" parent="Awning"]
+script = ExtResource("6")
+position_m = Vector3(0, 0, 0)
+size_m = Vector3(4, 3, 2.5)
+shape = 4
+clearance_m = 2.3
+
+[node name="PostFrontLeft" type="Node2D" parent="Awning"]
+position = Vector2(-76, 0)
+script = ExtResource("6")
+position_m = Vector3(-1.9, 0, 0)
+size_m = Vector3(0.1, 0.1, 2.3)
+
+[node name="PostFrontRight" type="Node2D" parent="Awning"]
+position = Vector2(76, 0)
+script = ExtResource("6")
+position_m = Vector3(1.9, 0, 0)
+size_m = Vector3(0.1, 0.1, 2.3)
+
+[node name="PostBackLeft" type="Node2D" parent="Awning"]
+position = Vector2(-76, -69.6)
+script = ExtResource("6")
+position_m = Vector3(-1.9, -2.9, 0)
+size_m = Vector3(0.1, 0.1, 2.3)
+
+[node name="PostBackRight" type="Node2D" parent="Awning"]
+position = Vector2(76, -69.6)
+script = ExtResource("6")
+position_m = Vector3(1.9, -2.9, 0)
+size_m = Vector3(0.1, 0.1, 2.3)
+
+[node name="AwningFacades" type="Node2D" parent="." node_paths=PackedStringArray("occluder")]
+script = ExtResource("7")
+occluder = NodePath("../Awning")
+front_colors = PackedColorArray(0.66, 0.26, 0.23, 1, 0.23, 0.23, 0.23, 1)

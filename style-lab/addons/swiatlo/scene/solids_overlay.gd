@@ -4,9 +4,9 @@ extends Node2D
 
 const COLOR: Color = Color(1.0, 0.2, 0.9)
 
-var boxes: Array[AABB] = []:
+var shapes: Array[SolidShape] = []:
 	set(value):
-		boxes = value
+		shapes = value
 		queue_redraw()
 
 
@@ -15,5 +15,5 @@ func _init() -> void:
 
 
 func _draw() -> void:
-	for box: AABB in boxes:
-		SolidWireframe.draw(self, box, COLOR)
+	for shape: SolidShape in shapes:
+		SolidWireframe.draw(self, shape, COLOR)

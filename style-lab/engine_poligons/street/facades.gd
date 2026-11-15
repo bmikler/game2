@@ -28,11 +28,11 @@ func _ready() -> void:
 func _draw() -> void:
 	if occluder == null or front_colors.is_empty():
 		return
-	var receivers: Array[Receiver] = SceneDescription.from_boxes(occluder.world_boxes(), PROJECTION).receivers
+	var receivers: Array[Receiver] = SceneDescription.from_shapes(occluder.world_shapes(), PROJECTION).receivers
 	receivers.sort_custom(func(a: Receiver, b: Receiver) -> bool: return _nearness(a) < _nearness(b))
 	for receiver: Receiver in receivers:
 		var points: PackedVector2Array = PackedVector2Array()
-		for corner: Vector3 in receiver.corners():
+		for corner: Vector3 in receiver.outline():
 			points.append(PROJECTION.to_screen(corner) - position)
 		var color: Color = top_color if receiver.normal.z > 0.5 else front_colors[receiver.solid % front_colors.size()]
 		draw_colored_polygon(points, color)
@@ -40,7 +40,7 @@ func _draw() -> void:
 
 ## How near the camera a face's middle is.
 static func _nearness(receiver: Receiver) -> float:
-	return (receiver.origin + (receiver.edge_u + receiver.edge_v) * 0.5).dot(PROJECTION.toward_camera())
+	return receiver.middle().dot(PROJECTION.toward_camera())
 
 
 func _follow() -> void:

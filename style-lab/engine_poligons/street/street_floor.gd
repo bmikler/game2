@@ -8,17 +8,17 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 
 ## Strips along x: d from, d to (metres, d grows towards the camera), with their albedo below.
 const STRIPS_D: Array[Vector2] = [
-	Vector2(-24.0, -8.0), # south pavement, under snow (and under the houses)
+	Vector2(-40.0, -8.0), # south pavement and the court, under snow (and under the houses)
 	Vector2(-8.0, -7.8), # kerb
 	Vector2(-7.8, 0.0), # roadway
 	Vector2(0.0, 0.2), # kerb
-	Vector2(0.2, 8.0), # camera-side pavement
+	Vector2(0.2, 16.0), # camera-side pavement, wide
 ]
 const STRIPS_COLOR: PackedColorArray = [
 	Color("#c3c8d1"), Color("#8e939c"), Color("#7c818b"), Color("#8e939c"), Color("#c3c8d1"),
 ]
-const FROM_X: float = -40.0
-const TO_X: float = 40.0
+const FROM_X: float = -50.0
+const TO_X: float = 50.0
 ## Dashed centre line, so the scale shows.
 const LINE_D: float = -3.9
 const LINE_DASH_M: float = 2.0

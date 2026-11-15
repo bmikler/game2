@@ -74,12 +74,11 @@ func test_engine_panel_shot_button_takes_a_shot() -> void:
 
 
 func test_the_alley_has_a_two_metre_gap_between_tenement_houses() -> void:
-	var engine: LightEngine = _poligon().get_node("%Engine") as LightEngine
+	var alley: Occluder = _poligon().get_node("Frame/Street/Alley") as Occluder
 	var gaps: Array[float] = []
 	var houses: Array[AABB] = []
-	for box: AABB in engine.scene_description().solids:
-		if box.size.z > 1.0:
-			houses.append(box)
+	for shape: SolidShape in alley.world_shapes():
+		houses.append(shape.box)
 	houses.sort_custom(func(a: AABB, b: AABB) -> bool: return a.position.x < b.position.x)
 	for index: int in range(1, houses.size()):
 		gaps.append(houses[index].position.x - houses[index - 1].end.x)

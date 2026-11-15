@@ -63,7 +63,7 @@ func refresh_environment() -> void:
 func rebuild_scene() -> void:
 	_description = SceneDescription.from_tree(get_tree(), PROJECTION)
 	_buffer.set_scene(_description, PROJECTION)
-	_solids_overlay.boxes = _description.solids
+	_solids_overlay.shapes = _description.solids
 	_recompute()
 
 

@@ -22,13 +22,11 @@ func _enter_tree() -> void:
 	add_to_group(GROUP)
 
 
-## The boxes of this Occluder's Solid children in the Location's metres.
-func world_boxes() -> Array[AABB]:
-	var boxes: Array[AABB] = []
+## The shapes of this Occluder's Solid children in the Location's metres.
+func world_shapes() -> Array[SolidShape]:
+	var shapes: Array[SolidShape] = []
 	for child: Node in get_children():
 		var solid: Solid = child as Solid
 		if solid != null:
-			var box: AABB = solid.local_box()
-			box.position += position_m + solid.position_m
-			boxes.append(box)
-	return boxes
+			shapes.append(solid.local_shape().moved(position_m + solid.position_m))
+	return shapes
