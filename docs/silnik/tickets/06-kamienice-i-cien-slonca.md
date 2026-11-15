@@ -2,7 +2,7 @@
 id: 06
 title: Kamienice i cień słońca
 labels: [ready-for-agent]
-status: do sprawdzenia
+status: closed
 assignee:
 blocked_by: [04]
 ---
@@ -50,3 +50,7 @@ Uliczka, 8:00 → 16:00: cień kamienic sunie po ulicy z lewej na prawą, w prze
 3. „Widok debug” → „Bryły”: różowe krawędzie leżą na kamienicach i podłożu.
 4. „Widok debug” → „Odbiorniki”: przody kamienic pomarańczowe, podłoże i wierzchy niebieskie.
 5. „Góra mapy” → „północ”, 10:00 i 14:00: słońce od strony kamery (kompas: N u góry, rano słońce po prawej), fasady w słońcu, cień w prześwicie pada w głąb ekranu.
+
+### Ocena człowieka
+
+2026-11-15: „wygląda ok” (Uliczka przy 30°, ruch kamery, przełącznik góry mapy).
