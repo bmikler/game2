@@ -23,6 +23,7 @@ script = ExtResource("3")
 hour = 7.5
 
 [node name="Camera" type="Camera2D" parent="Frame"]
+unique_name_in_owner = true
 position = Vector2(0, -200)
 
 [node name="Shot" type="Node" parent="." node_paths=PackedStringArray("frame", "engine")]

@@ -1,10 +1,13 @@
 extends Node
 ## The new street Poligon (light engine): a Location built from contract nodes, rendered at the game
 ## frame and scaled to the window, with an F1 holding the engine panel and the frame switch. Shots
-## (F12 or the panel's button) record the frame switch too.
+## (F12 or the panel's button) record the frame switch too. Until the character comes, the move
+## actions pan the camera over the street.
 
 ## 960×540 as in game2 (×2 on 1080p), or 640×360 as in the engine map's prototypes.
 const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
+## Camera panning speed, screen pixels per second (8 m/s along x).
+const PAN_SPEED_PX: float = 320.0
 
 @onready var _frame: SubViewport = %Frame
 @onready var _picture: TextureRect = %Picture
@@ -13,9 +16,14 @@ const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
 @onready var _engine_panel: EnginePanel = %EnginePanel
 @onready var _frame_choice: OptionButton = %FrameChoice
 @onready var _shot: EngineShot = %Shot
+@onready var _camera: Camera2D = %Camera
+
+## The camera's position before snapping to whole pixels.
+var _camera_at: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
+	_camera_at = _camera.position
 	_picture.texture = _frame.get_texture()
 	_engine_panel.hour_set.connect(_engine.set_hour)
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
@@ -34,6 +42,14 @@ func _ready() -> void:
 	_shot.taken.connect(_engine_panel.show_shot)
 	_shot.add_switch("kadr", _frame_name, _select_frame)
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
+	_shot.add_switch("kamera", _camera_name, _place_camera)
+
+
+func _process(delta: float) -> void:
+	var direction: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	if direction != Vector2.ZERO:
+		_camera_at += direction * PAN_SPEED_PX * delta
+		_camera.position = _camera_at.round()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -59,6 +75,19 @@ func _select_frame(frame_name: String) -> void:
 			_set_frame(index)
 			return
 	push_warning("Unknown frame in the shot: %s" % frame_name)
+
+
+func _camera_name() -> String:
+	return "%d;%d" % [roundi(_camera.position.x), roundi(_camera.position.y)]
+
+
+func _place_camera(camera_name: String) -> void:
+	var parts: PackedStringArray = camera_name.split(";")
+	if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
+		push_warning("Unknown camera in the shot: %s" % camera_name)
+		return
+	_camera_at = Vector2(parts[0].to_int(), parts[1].to_int())
+	_camera.position = _camera_at
 
 
 func _debug_view_name() -> String:

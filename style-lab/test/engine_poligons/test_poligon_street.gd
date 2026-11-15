@@ -42,7 +42,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	var description: ShotDescription = shot.describe()
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
-	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak"})
+	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -97,3 +97,22 @@ func test_debug_view_from_f1_reaches_the_engine_and_the_shot() -> void:
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_eq((replay.get_node("%Engine") as LightEngine).debug_view(), LightEngine.DebugView.SOLIDS)
+
+
+func test_move_actions_pan_the_camera_and_the_shot_keeps_it() -> void:
+	var poligon: Node = _poligon()
+	var camera: Camera2D = (poligon.get_node("%Frame") as SubViewport).get_camera_2d()
+	var start: Vector2 = camera.position
+	Input.action_press(&"move_right")
+	Input.action_press(&"move_up")
+	for frame: int in 5:
+		await get_tree().process_frame
+	Input.action_release(&"move_right")
+	Input.action_release(&"move_up")
+	assert_gt(camera.position.x, start.x, "right")
+	assert_lt(camera.position.y, start.y, "up")
+	assert_eq(camera.position, camera.position.round(), "whole pixels")
+	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%Frame") as SubViewport).get_camera_2d().position, camera.position)
