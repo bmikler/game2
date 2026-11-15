@@ -57,3 +57,7 @@ Otwarte:
 - **błąd:** auto jest jednym pudłem 1,65 m, a narysowane jest niższe nadwozie (1,05 m) z cofniętą kabiną (0,6 m) — piksele nad maską biorą światło dachu pudła (jasne miejsce nad autem, człowiek). Poprawka: dwa pudła zgodnie z `_car()` w `ulica_bryly.gd`;
 - w domu cień skrzynki (komoda pod oknem w prawym górnym pokoju parteru) na ścianie obok: to cień nieba z okna w prawej ścianie (geometria zgodna ze wzorcem z ticketu 36), wygląda jak „pływający” prostokąt; plus dither A — do oceny razem z researchem 39;
 - decyzja człowieka w tym tickecie (zestaw technik na ulicy) po prototypie z researchu 39.
+
+## Wstrzymane do mapy silnika (2026-11-15)
+
+Commit `135ec42`: wydajność (dom przelicza bufor tylko przy zmianie; odrzucanie przesłon testem wiązki `bundle_hits`, bufory bajt w bajt), F1 „Ziarno i poświata” (wspólne, domyślnie wyłączone), bufor domu we własnym świecie. Kolejne poprawki psuły drugą kopię silnika (dom ↔ ulica), więc stop: najpierw jeden silnik światła na osobnej mapie `docs/wayfinder-silnik/map.md`. Ten ticket wraca po jej zakończeniu (techniki światła ulicy na nowym silniku + stylizacja A′ z ticketu 39). Obserwacje człowieka do nowego silnika: przy szybkim przewijaniu czasu okno wokół postaci ma inną godzinę niż reszta bufora; ściany budynków w kratkę (A, ticket 39).

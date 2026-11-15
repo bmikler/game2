@@ -2,7 +2,7 @@
 id: 39
 title: Stylizacja światła i cieni w plenerze w pixel arcie
 labels: [wayfinder:research]
-status: open
+status: closed
 assignee: claude
 blocked_by: []
 ---
@@ -18,3 +18,12 @@ Do sprawdzenia (źródła pierwotne: devlogi, GDC, posty autorów; gry pixel art
 - czy jeden algorytm dla wnętrza i pleneru jest możliwy, czy wnętrze i ulica powinny mieć osobne parametry.
 
 Wynik: rekomendacja 1–2 wariantów do prototypu w Poligonie Ulica (i sprawdzenia w Domu) z kosztem.
+
+## Resolution
+
+2026-11-15. Research: `docs/research/84-stylizacja-swiatla-plener-opus.md` (Opus, wiodący); `docs/research/83-stylizacja-swiatla-plener.md` (Sonnet, tylko tropy; jego akapit o dwóch zestawach stałych nie pochodzi od człowieka i jest odrzucony).
+
+- **Przyczyna siatki:** pas ditheru w A ma stałą szerokość w EV (30% kroku 0,5 EV), nie w pikselach; na łagodnym przejściu nieba (ściany i ulica w cieniu budynków) rozlewa się na dziesiątki px.
+- **Rekomendacja A′, jedna dla domu i ulicy** (wymaganie człowieka: jedna stylizacja, bez osobnych stałych): poziomy `s = log2(Y/Y_ref)/level_stops + 0.5`, szew ditheru o stałej szerokości w px ekranu `W = clamp(seam_px·|∇s|, 0, 1)`, kotwica `Y_ref` (jasność otwartego nieba przy ekspozycji przestrzeni). Płaska ściana w równym cieniu = jeden ton, łagodne przejście = płaskie pasma z wąskim szwem, dither tylko na stromych przejściach. Warianty: szew Bayer 4×4 3 px, szachownica 50%, `seam_px = 0`.
+- B/C (próg na źródło) i bufor ×2 tylko na ulicy odpadają.
+- **Wdrożenie:** dopiero na jednym silniku światła, nowa mapa `docs/wayfinder-silnik/map.md` (dom i ulica to dziś dwie kopie silnika; poprawki w jednej omijały drugą).
