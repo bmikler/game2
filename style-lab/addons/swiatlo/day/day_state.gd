@@ -9,6 +9,9 @@ const DAY_H: float = 24.0
 const MIN_BRIGHTNESS: float = 0.001
 
 var hour: float = 0.0
+## The map's top is north (comparison with the default south at the top): the sun's direction turns
+## 180° about the vertical, nothing else changes.
+var north_at_top: bool = false
 ## Degrees above the horizon.
 var sun_elevation: float = 0.0
 ## Compass degrees (90 east, 180 south, 270 west).
@@ -29,15 +32,16 @@ var cloud_cover: float = 0.0
 var exposure: float = 1.0
 
 
-static func from_hour(curves: DayCurves, sky: SkyProfile, at_hour: float) -> DayState:
+static func from_hour(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false) -> DayState:
 	var state: DayState = DayState.new()
-	state.compute(curves, sky, at_hour)
+	state.compute(curves, sky, at_hour, north_up)
 	return state
 
 
 ## Recomputes this state for an hour (any value; wrapped into 0–24).
-func compute(curves: DayCurves, sky: SkyProfile, at_hour: float) -> void:
+func compute(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false) -> void:
 	hour = fposmod(at_hour, DAY_H)
+	north_at_top = north_up
 	var day: float = hour / DAY_H
 	sun_elevation = curves.sun_elevation.sample(hour)
 	sun_azimuth = curves.sun_azimuth.sample(hour)
@@ -45,6 +49,8 @@ func compute(curves: DayCurves, sky: SkyProfile, at_hour: float) -> void:
 	var azimuth: float = deg_to_rad(sun_azimuth)
 	# North is +d (towards the camera), east is −x (screen left).
 	sun_direction = Vector3(-sin(azimuth) * cos(elevation), cos(azimuth) * cos(elevation), sin(elevation))
+	if north_at_top:
+		sun_direction = Vector3(-sun_direction.x, -sun_direction.y, sun_direction.z)
 	cloud_cover = clampf(curves.cloud_cover.sample(hour), 0.0, 1.0)
 
 	sun_color = curves.sun_color.sample(day)

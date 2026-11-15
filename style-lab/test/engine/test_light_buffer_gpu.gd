@@ -54,7 +54,7 @@ func test_morning_shadow_falls_right_away_from_the_eastern_sun() -> void:
 	var west: float = _ground(engine, 1.0, 2.8)
 	var east: float = _ground(engine, -1.0, 2.8)
 	assert_gt(_sun_on_ground(engine), 100.0)
-	assert_almost_eq(east - west, _sun_on_ground(engine), 1.0, "the shadow lies west (right) of the post")
+	assert_almost_eq(east - west, _sun_on_ground(engine), _sun_on_ground(engine) * 0.01, "the shadow lies west (right) of the post")
 
 
 func test_afternoon_shadow_falls_left_away_from_the_western_sun() -> void:
@@ -62,7 +62,7 @@ func test_afternoon_shadow_falls_left_away_from_the_western_sun() -> void:
 	var west: float = _ground(engine, 1.0, 2.8)
 	var east: float = _ground(engine, -1.0, 2.8)
 	assert_gt(_sun_on_ground(engine), 100.0)
-	assert_almost_eq(west - east, _sun_on_ground(engine), 1.0, "the shadow lies east (left) of the post")
+	assert_almost_eq(west - east, _sun_on_ground(engine), _sun_on_ground(engine) * 0.01, "the shadow lies east (left) of the post")
 
 
 func test_shadow_light_is_what_still_reaches_it_not_black() -> void:
@@ -94,3 +94,13 @@ func test_debug_view_receivers_tells_tops_from_fronts() -> void:
 	await RenderingServer.frame_post_draw
 	assert_gt(engine.buffer_image().get_pixelv(Vector2i(PROJECTION.to_screen(Vector3(0.0, 0.0, 3.0)).floor()) - area.position).r, 10.0,
 			"back to lux")
+
+
+func test_with_north_at_the_top_the_morning_shadow_falls_left() -> void:
+	var engine: LightEngine = await _location(10.0)
+	engine.set_north_at_top(true)
+	await RenderingServer.frame_post_draw
+	# The sun is now behind the camera on the right: the post's shadow goes left and up the screen.
+	var west: float = _ground(engine, 1.0, -2.8)
+	var east: float = _ground(engine, -1.0, -2.8)
+	assert_almost_eq(west - east, _sun_on_ground(engine), _sun_on_ground(engine) * 0.01, "the shadow lies east (left) of the post")

@@ -20,6 +20,7 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 @export var rate: float = 1.0
 
 var _state: DayState = DayState.new()
+var _north_at_top: bool = false
 var _environment: LocationEnvironment
 var _fallback_sky: SkyProfile = SkyProfile.new()
 var _description: SceneDescription = SceneDescription.new()
@@ -88,6 +89,12 @@ func advance(seconds: float) -> void:
 	_recompute()
 
 
+## Compares the map with north at the top (the default is south): only the sun's direction turns.
+func set_north_at_top(north: bool) -> void:
+	_north_at_top = north
+	_recompute()
+
+
 func set_debug_view(view: DebugView) -> void:
 	_debug_view = view
 	_solids_overlay.visible = view == DebugView.SOLIDS
@@ -123,7 +130,7 @@ func sky() -> SkyProfile:
 
 
 func _recompute() -> void:
-	_state.compute(curves, sky(), hour)
+	_state.compute(curves, sky(), hour, _north_at_top)
 	if is_instance_valid(_buffer):
 		_buffer.set_state(_state)
 	state_changed.emit(_state)

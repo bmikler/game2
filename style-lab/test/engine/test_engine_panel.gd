@@ -70,3 +70,20 @@ func test_debug_view_choice_reports_none_solids_receivers() -> void:
 	choice.select(2)
 	choice.item_selected.emit(2)
 	assert_signal_emitted_with_parameters(panel, "debug_view_set", [LightEngine.DebugView.RECEIVERS])
+
+
+func test_map_top_choice_reports_north() -> void:
+	var panel: EnginePanel = _panel()
+	watch_signals(panel)
+	var choice: OptionButton = panel.map_top_choice()
+	assert_eq(choice.get_item_text(0), "południe")
+	assert_eq(choice.get_item_text(1), "północ")
+	choice.select(1)
+	choice.item_selected.emit(1)
+	assert_signal_emitted_with_parameters(panel, "north_at_top_set", [true])
+
+
+func test_with_north_at_the_top_the_morning_readout_shows_the_sun_on_the_right() -> void:
+	var panel: EnginePanel = _panel()
+	panel.show_state(DayState.from_hour(load(DayCurves.DEFAULT_PATH) as DayCurves, SkyProfile.new(), 9.0, true))
+	assert_string_contains(_text(panel), "prawo, wschód")

@@ -134,3 +134,22 @@ func test_state_recomputes_in_place() -> void:
 	state.compute(_curves, _sky, 17.0)
 	assert_lt(morning_x, 0.0)
 	assert_gt(state.sun_direction.x, 0.0)
+
+
+func test_with_north_at_the_top_the_morning_sun_is_on_the_right() -> void:
+	var state: DayState = DayState.from_hour(_curves, _sky, 9.0, true)
+	assert_gt(state.sun_direction.x, 0.2)
+
+
+func test_with_north_at_the_top_the_noon_sun_shines_from_the_camera_side() -> void:
+	var state: DayState = DayState.from_hour(_curves, _sky, 12.5, true)
+	assert_gt(state.sun_direction.y, 0.5)
+
+
+func test_north_at_the_top_changes_only_where_the_sun_is() -> void:
+	var south: DayState = DayState.from_hour(_curves, _sky, 10.0)
+	var north: DayState = DayState.from_hour(_curves, _sky, 10.0, true)
+	assert_almost_eq(north.sun_direction.z, south.sun_direction.z, 1e-6)
+	assert_almost_eq(north.sun_elevation, south.sun_elevation, 1e-6)
+	assert_eq(north.sun_color, south.sun_color)
+	assert_almost_eq(north.exposure, south.exposure, 1e-6)

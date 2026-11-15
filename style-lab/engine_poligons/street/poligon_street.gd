@@ -28,6 +28,7 @@ func _ready() -> void:
 	_engine_panel.hour_set.connect(_engine.set_hour)
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
 	_engine_panel.debug_view_set.connect(_engine.set_debug_view)
+	_engine_panel.north_at_top_set.connect(_engine.set_north_at_top)
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
 	_engine_panel.show_state(_engine.state())
@@ -43,6 +44,7 @@ func _ready() -> void:
 	_shot.add_switch("kadr", _frame_name, _select_frame)
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("kamera", _camera_name, _place_camera)
+	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 
 
 func _process(delta: float) -> void:
@@ -88,6 +90,19 @@ func _place_camera(camera_name: String) -> void:
 		return
 	_camera_at = Vector2(parts[0].to_int(), parts[1].to_int())
 	_camera.position = _camera_at
+
+
+func _map_top_name() -> String:
+	return EnginePanel.MAP_TOPS[1 if _engine.state().north_at_top else 0]
+
+
+func _select_map_top(top_name: String) -> void:
+	var index: int = EnginePanel.MAP_TOPS.find(top_name)
+	if index < 0:
+		push_warning("Unknown map top in the shot: %s" % top_name)
+		return
+	_engine_panel.map_top_choice().select(index)
+	_engine.set_north_at_top(index == 1)
 
 
 func _debug_view_name() -> String:
