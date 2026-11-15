@@ -2,8 +2,8 @@
 id: 01
 title: Prowadnice v2
 labels: [ready-for-agent]
-status: open
-assignee:
+status: closed
+assignee: claude
 blocked_by: []
 ---
 
