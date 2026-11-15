@@ -28,8 +28,9 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
   - **oprawa artystyczna ponad realizm:** logika cieni sztywna (cień zawsze od źródła, spójny kierunek, poprawne nakładanie), ale wszystko, co jest nastrojem, to dane artystyczne, nie fizyka: droga słońca w czasie (krzywa godzina → wysokość i azymut, np. długi wschód i zachód), kolory i jasności źródeł w ciągu doby (gradienty), długość cieni, szerokość półcienia, siła nieba. Fizyka daje punkt startu, krzywe w `.tres` mogą ją wygiąć.
 - **Granice:** silnik powstaje jako samodzielny katalog w projekcie `style-lab/` (np. `style-lab/addons/swiatlo/`), bez zależności od reszty `style-lab` (`config/`, `world/`, debug); do gry przenoszony przez skopiowanie katalogu. Nowy silnik obok starego; Poligony przechodzą na nowy; stary `lighting/` (`SunMap`, `StreetMap` itd.) usuwany na końcu wykonania (zostaje w historii gita).
 - **Poligony jako sceny edytora:** Poligon Dom i Poligon Ulica przebudowane jako sceny układane w edytorze z węzłów kontraktu sceny; nie muszą być 1:1 jak dziś, ważne, żeby była Lokacja w plenerze i Lokacja wnętrza. Wnętrza to osobne Lokacje z wczytaniem; płynnego przejścia ulica → dom bez przeskoku nie przewidujemy.
-- **Smugi z górnych okien są obowiązkowe (człowiek, 2026-11-15):** we wnętrzach smuga światła z górnych okien, plama światła z okna na podłodze i drobinki kurzu w smudze (dziś: `sun_beam.gdshader`, `sun_dust.gdshader`, plama w `SunMap`) muszą być w nowym silniku, z geometrii okna i słońca, nie jako dekoracja pod scenę. Okna boczne nadal tylko wstęgi, bez plamy (27, 31).
+- **Smugi z górnych okien są obowiązkowe (człowiek, 2026-11-15):** we wnętrzach smuga światła z górnych okien, plama światła z okna na podłodze i drobinki kurzu w smudze (dziś: `sun_beam.gdshader`, `sun_dust.gdshader`, plama w `SunMap`) muszą być w nowym silniku, z geometrii okna i słońca, nie jako dekoracja pod scenę. Okna ze wszystkich ścian: smuga i plama tam, gdzie wyliczy je silnik (zmiana w „Jeden model światła i cienia dla wszystkich źródeł”).
 - **Wszystkie źródła od razu:** słońce, niebo, lampy, latarnie, świecące okna, w kontrakcie i w implementacji; chcemy widzieć, jak cienie z różnych źródeł wyglądają i się nakładają. Pełna doba (24 h) ze zmianą na żywo; godzina jest jednym wejściem silnika dla całego bufora.
+- **Kto decyduje (człowiek, 2026-11-15):** człowiek jest inżynierem aplikacji biznesowych, nie grafikiem; ocenia wygląd na żywo w grze, a szczegóły techniczne rozstrzyga Claude (trudniejsze z subagentem na Opusie). Pytania do człowieka tylko o wygląd i zakres.
 - **Ocena wyglądu:** prototypy (HITL) w tej mapie tylko tam, gdzie decyzja dotyczy wyglądu, oceniane na żywo w Poligonie (pamięć: judge-in-game-not-screenshots); reszta na końcu wykonania w scenach testowych. Strojenie: dobra praktyka ze `style-lab` to agent krytyk proponujący 3 warianty strojenia, więc silnik musi wczytywać zestawy wartości na żywo, żeby warianty dało się przeklikać w grze.
 - **Już ustalone w mapie grafiki (wejście, nie do ponownego otwierania bez powodu):**
   - jedna funkcja światła i jeden bufor, postać i meble jedną funkcją cienia, cień nieba z okien dokładny (36);
@@ -55,12 +56,13 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - [C++ (GDExtension) czy shadery i GDScript dla Silnika światła](tickets/04-cpp-czy-shadery-research.md): koszt prawie cały na GPU (źródła × próbki × pudła na piksel); C++ nie teraz, 60 fps algorytmem: światło statyczne osobno od ruchomych przesłon, przycinanie per kafel, ewentualnie compute.
 - [Testy w Godot 4.7 dla Silnika światła](tickets/05-testy-godot-research.md): GUT 9.7.1 (za zgodą), testy shaderów nie w headless, tylko w oknie poza ekranem z GPU; jedna komenda dla /implement.
 - [Podgląd światła w edytorze Godota 4.7](tickets/06-podglad-w-edytorze-research.md): wykonalny; węzły kontraktu @tool w grupie + jeden kontroler z SubViewport renderowanym tylko po zmianie; pomocnicze węzły bez owner nie trafiają do .tscn.
+- [Jeden model światła i cienia dla wszystkich źródeł](tickets/07-jeden-model-swiatla.md): suma źródeł w HDR, trzy kształty Źródła (kierunkowe, kopuła, powierzchniowe), niebo zawsze kopułą, jeden półcień z geometrii, Stan doby z godziny, pogoda jako stały schemat dobowy, smugi i kurz jako rozproszenie w powietrzu (poza A′), okna ze wszystkich ścian z geometrii, postać bez reflektora, ekspozycja automatyczna.
 
 ## Not yet specified
 
-- **Stylizacja A′ na nowym silniku:** jedna dla wszystkich Lokacji, przy wielu źródłach naraz; warianty szwu w F1. Wyklaruje się po „Jeden model światła i cienia” i prototypie nakładania.
+- **Stylizacja A′ na nowym silniku:** jedna dla wszystkich Lokacji, przy wielu źródłach naraz; warianty szwu w F1; stylizacja rozproszenia w powietrzu (drobinki, dither). Wyklaruje się po prototypie „Nakładanie cieni z kilku źródeł”.
 - **Strojenie:** układ zasobów (`.tres`) i zestawów (wnętrza, plener, warianty krytyka), F1, `--set=`; które parametry są krzywymi doby.
-- **Noc i pora dnia:** szczegóły przejść (zmierzch, włączanie lamp, świecące okna) po ustaleniu modelu źródeł.
+- **Noc i pora dnia:** krzywe Stanu doby (droga słońca, kolory, włączanie lamp i świecących okien, schemat pogody): które krzywe i jakie punkty kontrolne; zależy od układu zasobów strojenia.
 - **Migracja:** jak przejść z `SunMap`/`StreetMap` bez gubienia ustaleń mapy grafiki; co z bramkami buforów liczonymi na starym silniku.
 
 ## Out of scope
@@ -68,3 +70,5 @@ Kryterium „gotowe” dla wykonania (sprawdzane w ostatnim tickecie wykonawczym
 - Strojenie wartości i kolorów światła (ticket 38 mapy grafiki).
 - Produkcja assetów i Przepisy (mapa grafiki).
 - Płynne przejście ulica → wnętrze bez wczytania (wnętrza to osobne Lokacje).
+- Odczyt poziomu światła przez logikę gry: żadna mechanika nie używa cienia (z „Jeden model światła i cienia dla wszystkich źródeł”).
+- Pogoda zmienna między dniami: jeden stały schemat dobowy wystarczy (tamże).

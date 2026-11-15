@@ -28,6 +28,30 @@ _Avoid_: mapa, poziom
 Jeden moduł, który liczy światło i cienie ze wszystkich źródeł w każdej Lokacji, wnętrzu i plenerze, tym samym kodem i tą samą stylizacją. Lokacje różnią się dla niego tylko danymi.
 _Avoid_: SunMap, StreetMap, system oświetlenia wnętrz/ulicy
 
+**Źródło światła**:
+Wszystko, co oświetla Lokację: słońce, niebo, lampa, latarnia, świecące okno. Ma jeden z trzech kształtów (kierunkowe, kopuła, powierzchniowe); rodzaj źródła to tylko jego dane.
+_Avoid_: lampa (jako nazwa ogólna), światło okna
+
+**Przesłona**:
+Bryła sceny, która zatrzymuje światło każdego Źródła i rzuca cień: ściana, dach, mebel, postać, budynek. Wnętrze to Lokacja przykryta dachem.
+_Avoid_: blocker, okluder
+
+**Otwór**:
+Miejsce w Przesłonie, przez które przechodzi światło: okno, drzwi, przerwa w murze.
+_Avoid_: szyba (to tylko część okna)
+
+**Stan doby**:
+Wszystko, co w danej chwili zależy od godziny: kierunek słońca, kolory i natężenia Źródeł, zachmurzenie, ekspozycja. Jeden dla całej Lokacji w danej klatce.
+_Avoid_: profil pogody, pora dnia (jako nazwa danych)
+
+**Smuga**:
+Widoczne w powietrzu światło Źródła na drodze przez Otwór lub między Przesłonami, czasem z drobinkami kurzu. Powstaje z gęstości powietrza Lokacji.
+_Avoid_: wstęga, promień, god ray
+
+**Plama okna**:
+Jasny ślad bezpośredniego słońca na podłodze lub ścianie, w kształcie Otworu, przez który wpadło.
+_Avoid_: rzut okna
+
 **Kotwica stylu**:
 Jedna z najwyżej 3 istniejących gier wybranych przez człowieka jako wzorzec docelowego wyglądu w nazwanej roli (np. Kotwica proporcji, Kotwica światła). Poza swoją rolą nie jest wzorcem.
 _Avoid_: referencja (za ogólne)
