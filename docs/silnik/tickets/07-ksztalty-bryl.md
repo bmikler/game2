@@ -2,7 +2,7 @@
 id: 07
 title: Pozostałe kształty Brył i podłoga na wysokościach
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [06]
 ---
@@ -40,3 +40,7 @@ Uliczka o 9:00 i 15:00: skośny cień dachu zgodny ze spadem, okrągły cień s�
 3. **15:00**, kamera w prawo i w dół do markizy (x ≈ 45 m): cień daszka przesunięty w lewo w dół, pod markizą jasno (słońce wpada z boku), cienkie cienie słupków.
 4. Kamera w górę nad przejście między środkową a wschodnią kamienicą: oficyna na podwyższeniu, dwa stopnie, cień kamienic na podeście.
 5. „Widok debug” → „Bryły”: różowe krawędzie dachów, walców (elipsy) i markizy leżą na kształtach.
+
+### Ocena człowieka
+
+2026-11-15: „ok” (dachy, walec, markiza, przejście w głąb do oficyny na podwyższeniu).
