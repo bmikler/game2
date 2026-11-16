@@ -1,8 +1,8 @@
 class_name DayState
 extends RefCounted
 ## The day state: everything that depends on the hour at a given moment. A pure function of
-## (day curves, sky profile, hour); the engine computes it once per frame for the whole Location
-## (`compute` reuses this object).
+## (day curves, sky profile, hour, the Location's exposure reference); the engine computes it once
+## per frame for the whole Location (`compute` reuses this object).
 
 const DAY_H: float = 24.0
 ## Lowest scene brightness for exposure (lux), so log2 stays finite.
@@ -28,18 +28,26 @@ var sky_intensity: float = 0.0
 var ambient_color: Color = Color.WHITE
 var ambient_intensity: float = 0.0
 var cloud_cover: float = 0.0
-## Light multiplier before stylisation (automatic exposure).
+## The Location's exposure reference: the share of open-ground light its surfaces typically get.
+var exposure_reference: float = 1.0
+## Light multiplier before stylisation (automatic exposure from open-ground light × reference).
 var exposure: float = 1.0
+## `Y_ref`, the A′ level grid's anchor in lux before exposure: open sky and ambient on flat ground
+## (no sun, so sky shadow boundaries stand still while the sun moves) × the exposure reference.
+var level_anchor: float = 1.0
 
 
-static func from_hour(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false) -> DayState:
+static func from_hour(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false,
+		reference: float = 1.0) -> DayState:
 	var state: DayState = DayState.new()
-	state.compute(curves, sky, at_hour, north_up)
+	state.compute(curves, sky, at_hour, north_up, reference)
 	return state
 
 
-## Recomputes this state for an hour (any value; wrapped into 0–24).
-func compute(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false) -> void:
+## Recomputes this state for an hour (any value; wrapped into 0–24). `reference` is the Location's
+## exposure reference (1 outdoors).
+func compute(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool = false,
+		reference: float = 1.0) -> void:
 	hour = fposmod(at_hour, DAY_H)
 	north_at_top = north_up
 	var day: float = hour / DAY_H
@@ -66,8 +74,11 @@ func compute(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool 
 	ambient_color = curves.ambient_color.sample(day)
 	ambient_intensity = maxf(curves.ambient_intensity.sample(hour), 0.0)
 
-	var brightness: float = maxf(_open_ground_lux().get_luminance(), MIN_BRIGHTNESS)
+	exposure_reference = maxf(reference, MIN_BRIGHTNESS)
+	var brightness: float = maxf(_open_ground_lux().get_luminance() * exposure_reference, MIN_BRIGHTNESS)
 	exposure = pow(2.0, -curves.exposure.sample(log(brightness) / log(2.0)))
+	var open_sky: Color = sky_color * sky_intensity + ambient_color * ambient_intensity
+	level_anchor = maxf(open_sky.get_luminance() * exposure_reference, MIN_BRIGHTNESS)
 
 
 ## Light on flat open ground without shadows (sun, sky, ambient) after exposure; multiplies the

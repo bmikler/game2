@@ -49,3 +49,27 @@ func test_hour_and_rate_move_time_on() -> void:
 	engine.advance(30.0)
 	assert_almost_eq(engine.hour, 10.5, 0.0001)
 	assert_almost_eq(engine.state().hour, 10.5, 0.0001)
+
+
+func test_engine_takes_the_exposure_reference_from_the_environment() -> void:
+	var environment: LocationEnvironment = LocationEnvironment.new()
+	add_child_autofree(environment)
+	var engine: LightEngine = LightEngine.new()
+	add_child_autofree(engine)
+	engine.set_hour(12.5)
+	var outside: float = engine.state().exposure
+	environment.exposure_reference = 0.1
+	assert_gt(engine.state().exposure, outside)
+
+
+func test_style_mode_comes_from_the_tuning_set_until_switched() -> void:
+	var environment: LocationEnvironment = LocationEnvironment.new()
+	environment.tuning_set = TuningSet.new()
+	environment.tuning_set.style_mode = TuningSet.StyleMode.PER_CHANNEL
+	add_child_autofree(environment)
+	var engine: LightEngine = LightEngine.new()
+	add_child_autofree(engine)
+	assert_eq(engine.style_mode(), TuningSet.StyleMode.PER_CHANNEL)
+	engine.set_style_mode(TuningSet.StyleMode.SUM)
+	assert_eq(engine.style_mode(), TuningSet.StyleMode.SUM)
+	assert_eq(environment.tuning_set.style_mode, TuningSet.StyleMode.PER_CHANNEL, "the set itself stays")

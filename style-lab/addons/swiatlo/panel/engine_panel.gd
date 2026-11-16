@@ -10,6 +10,7 @@ signal rate_set(minutes_per_second: float)
 signal shot_requested
 signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
+signal style_mode_set(mode: TuningSet.StyleMode)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -21,6 +22,10 @@ const DEBUG_HINTS: PackedStringArray = ["", "", "",
 		"czerwony: słońce (kąt × widoczność), niebieski: udział nieba (1 = całe niebo), zielony: kanał sztuczny"]
 ## Map top names: index 1 is north at the top.
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
+## A′ mode names in TuningSet.StyleMode order.
+const STYLE_MODES: PackedStringArray = ["na sumie", "na kanałach"]
+## Until the artificial channel exists (lamps, engine ticket 13) both modes give the same picture.
+const STYLE_MODE_HINT: String = "Kanał sztuczny (lampy) dojdzie w tickecie 13; do tego czasu oba tryby dają ten sam obraz."
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -35,6 +40,7 @@ var _shot_label: Label
 var _debug_view: OptionButton
 var _debug_hint: Label
 var _map_top: OptionButton
+var _style_mode: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -99,6 +105,13 @@ func _ready() -> void:
 
 	_map_top = _choice("Góra mapy", MAP_TOPS)
 	_map_top.item_selected.connect(func(index: int) -> void: north_at_top_set.emit(index == 1))
+	_style_mode = _choice("Tryb A′", STYLE_MODES)
+	_style_mode.item_selected.connect(func(index: int) -> void: style_mode_set.emit(index as TuningSet.StyleMode))
+	var style_hint: Label = Label.new()
+	style_hint.text = STYLE_MODE_HINT
+	style_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	style_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
+	add_child(style_hint)
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -119,6 +132,11 @@ func set_rate(minutes_per_second: float) -> void:
 ## The map top choice (the embedder may set it without a signal, e.g. after a replayed shot).
 func map_top_choice() -> OptionButton:
 	return _map_top
+
+
+## The A′ mode choice (the embedder may set it without a signal, e.g. from the tuning set).
+func style_mode_choice() -> OptionButton:
+	return _style_mode
 
 
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).
@@ -151,9 +169,9 @@ func show_state(state: DayState) -> void:
 	_show_swatch("ground", ground, "%.2f %.2f %.2f" % [ground.r, ground.g, ground.b])
 
 	_readout.text = _decimal_comma(
-			"Słońce: wys. %.1f°, azymut %.0f° (%s)\nTarcza %.1f°, zachmurzenie %.0f %%\nEkspozycja ×%.5f" % [
+			"Słońce: wys. %.1f°, azymut %.0f° (%s)\nTarcza %.1f°, zachmurzenie %.0f %%\nEkspozycja ×%.5f, kotwica A′ %.1f lx" % [
 			state.sun_elevation, state.sun_azimuth, _sun_side(state), state.sun_disc,
-			state.cloud_cover * 100.0, state.exposure])
+			state.cloud_cover * 100.0, state.exposure, state.level_anchor])
 
 
 ## Shows where the last shot went (its path is also on the clipboard).

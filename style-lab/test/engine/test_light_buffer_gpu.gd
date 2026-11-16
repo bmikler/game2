@@ -325,3 +325,25 @@ func test_debug_view_channels_shows_sun_in_red_and_sky_in_blue() -> void:
 	assert_almost_eq(open.r, engine.state().sun_direction.z, 0.001, "red: the sun's cosine on open ground")
 	assert_gt(open.b, 0.9, "blue: the sky share")
 	assert_eq(open.g, 0.0, "green: no artificial channel yet")
+
+
+## Luma the A′ pass gives a flat, evenly lit pixel: the middle of its level, after exposure.
+func _level_of(engine: LightEngine, lux: Color) -> float:
+	var state: DayState = engine.state()
+	var stops: float = engine.tuning_set().level_stops
+	var steps: float = log(lux.get_luminance() / state.level_anchor) / log(2.0) / stops + 0.5
+	return state.exposure * state.level_anchor * pow(2.0, floorf(steps) * stops)
+
+
+func test_the_picture_gets_open_ground_light_styled_into_levels() -> void:
+	var engine: LightEngine = await _location(10.0)
+	engine.set_debug_view(LightEngine.DebugView.NONE)
+	for hour: float in [10.0, 21.0]:
+		engine.set_hour(hour)
+		await RenderingServer.frame_post_draw
+		var pixel: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(-6.0, 6.0, 0.0)).floor()) - engine.buffer_area().position
+		var lux: Color = engine.buffer_image().get_pixelv(pixel)
+		var styled: Color = engine.styled_image().get_pixelv(pixel)
+		assert_almost_eq(styled.get_luminance(), _level_of(engine, lux), _level_of(engine, lux) * 0.01,
+				"open ground at %s h" % hour)
+		assert_almost_eq(styled.b / styled.r, lux.b / lux.r, 0.01, "the colour stays")

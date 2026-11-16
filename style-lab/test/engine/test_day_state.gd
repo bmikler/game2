@@ -153,3 +153,22 @@ func test_north_at_the_top_changes_only_where_the_sun_is() -> void:
 	assert_almost_eq(north.sun_elevation, south.sun_elevation, 1e-6)
 	assert_eq(north.sun_color, south.sun_color)
 	assert_almost_eq(north.exposure, south.exposure, 1e-6)
+
+
+func test_a_darker_location_opens_the_exposure() -> void:
+	var street: DayState = DayState.from_hour(_curves, _sky, 12.5, false, 1.0)
+	var room: DayState = DayState.from_hour(_curves, _sky, 12.5, false, 0.1)
+	assert_gt(room.exposure, street.exposure, "a tenth of the light outside: brighter exposure")
+
+
+func test_level_anchor_is_open_sky_and_ambient_times_the_reference() -> void:
+	for hour: float in [0.0, 7.0, 12.5, 18.5]:
+		var state: DayState = DayState.from_hour(_curves, _sky, hour, false, 0.5)
+		var open_sky: float = (state.sky_color * state.sky_intensity + state.ambient_color * state.ambient_intensity).get_luminance()
+		assert_almost_eq(state.level_anchor, open_sky * 0.5, open_sky * 1e-4, "at %s h" % hour)
+
+
+func test_the_anchor_does_not_follow_the_sun() -> void:
+	var state: DayState = DayState.from_hour(_curves, _sky, 12.5)
+	var open_ground: float = state.floor_light().get_luminance() / state.exposure
+	assert_lt(state.level_anchor, open_ground * 0.9, "the sun is not in it")

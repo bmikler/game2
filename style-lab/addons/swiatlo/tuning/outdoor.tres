@@ -5,3 +5,5 @@
 [resource]
 script = ExtResource("1_cn0u3")
 label = "outdoor"
+penumbra_max_px = 8.0
+dust_density = 0.0

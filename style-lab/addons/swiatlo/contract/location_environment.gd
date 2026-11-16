@@ -23,8 +23,10 @@ const GROUP: StringName = &"swiatlo_location_environment"
 	set(value):
 		air_density = value
 		changed.emit()
-## Exposure reference brightness (`Y_ref`) in lux.
-@export var exposure_reference: float = 1000.0:
+## Exposure reference brightness: the share of open-ground light (sun, sky, ambient) the
+## Location's surfaces typically get, 1 outdoors, less inside (light only through openings).
+## Automatic exposure and the A′ anchor (`Y_ref`) follow it; there is no manual exposure.
+@export_range(0.001, 1.0, 0.001) var exposure_reference: float = 1.0:
 	set(value):
 		exposure_reference = value
 		changed.emit()

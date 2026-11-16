@@ -2,8 +2,9 @@ class_name LightBuffer
 extends Node
 ## The light buffer: the Location's light, one pixel per game pixel over the buffer area, in HDR
 ## (natural channel: sun, sky, ambient). Rendered in its own viewport when the scene or the day
-## state changes (and while the sky layer is being built), and shown over the Location's picture (albedo × light × exposure). A helper of the
-## LightEngine; it has no owner, so it is never saved into a scene.
+## state changes (and while the sky layer is being built), styled by the A′ pass (with exposure)
+## and shown over the Location's picture: albedo × styled light. A helper of the LightEngine; it
+## has no owner, so it is never saved into a scene.
 
 enum View { LIGHT, RECEIVERS, CHANNELS }
 
@@ -21,6 +22,7 @@ var _display_material: ShaderMaterial
 var _debug_material: ShaderMaterial
 var _area: Rect2i = Rect2i()
 var _sky: SkyLayer
+var _style: LightStyle
 var _assets: AssetLayer
 var _modelling: float = -1.0
 
@@ -40,6 +42,9 @@ func _init() -> void:
 	_canvas = ColorRect.new()
 	_canvas.material = _material
 	_view.add_child(_canvas)
+	# After the buffer's viewport: it reads it.
+	_style = LightStyle.new()
+	add_child(_style)
 
 	_sky = SkyLayer.new()
 	add_child(_sky)
@@ -55,7 +60,7 @@ func _init() -> void:
 	_display.centered = false
 	_display.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_display.z_index = RenderingServer.CANVAS_ITEM_Z_MAX
-	_display.texture = _view.get_texture()
+	_display.texture = _style.texture()
 	_display.material = _display_material
 	add_child(_display)
 
@@ -67,6 +72,7 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 	_view.size = _area.size if _area.has_area() else Vector2i.ONE
 	_canvas.size = Vector2(_view.size)
 	_display.position = Vector2(_area.position)
+	_style.set_input(_view.get_texture(), null, _view.size, _area.position)
 	var solids: ImageTexture = ImageTexture.create_from_image(description.solid_data())
 	var receivers: ImageTexture = ImageTexture.create_from_image(description.receiver_data())
 	_material.set_shader_parameter(&"solids", solids)
@@ -91,12 +97,13 @@ func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"sun_light", _rgb(state.sun_color) * state.sun_intensity)
 	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
-	_display_material.set_shader_parameter(&"exposure", state.exposure)
+	_style.set_exposure(state.exposure, state.level_anchor)
 	_redraw()
 
 
-## Takes the receivers' constants of the Location's tuning set; a new modelling rebuilds the sky.
-func set_tuning(tuning: TuningSet) -> void:
+## Takes the Location's tuning set (receivers, A′ in `mode`); a new modelling rebuilds the sky.
+func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode) -> void:
+	_style.set_tuning(tuning, mode)
 	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
 	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
 	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
@@ -110,6 +117,7 @@ func set_tuning(tuning: TuningSet) -> void:
 func set_view(view: View) -> void:
 	_material.set_shader_parameter(&"debug_view", SHADER_VIEWS[view])
 	_display.material = _display_material if view == View.LIGHT else _debug_material
+	_display.texture = _style.texture() if view == View.LIGHT else _view.get_texture()
 	_redraw()
 
 
@@ -121,6 +129,11 @@ func area() -> Rect2i:
 ## The buffer as last rendered (lux per pixel, HDR).
 func image() -> Image:
 	return _view.get_texture().get_image()
+
+
+## The styled light as last rendered (after A′ and exposure, HDR).
+func styled_image() -> Image:
+	return _style.image()
 
 
 ## Whether the sky layer of the current scene is complete (it takes a few frames after `set_scene`).
@@ -135,6 +148,7 @@ func _on_sky_pass(_passes_done: int) -> void:
 
 func _redraw() -> void:
 	_view.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_style.redraw()
 
 
 static func _rgb(color: Color) -> Vector3:
