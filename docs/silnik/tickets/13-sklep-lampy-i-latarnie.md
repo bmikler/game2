@@ -18,6 +18,7 @@ blocked_by: [08]
 - [ ] Ta sama funkcja widoczności i półcienia co dla słońca.
 - [ ] Bramka: dwa Źródła razem = suma osobno.
 - [ ] Włączanie o godzinach z profilu bez przeliczania warstwy.
+- [ ] Przełącznik trybu A′ (na sumie / na kanałach) z powrotem w F1, gdy jest kanał sztuczny (przeniesione z ticketu 11; pole `style_mode` w Zestawie już jest).
 
 ## Jak sprawdzić
 
