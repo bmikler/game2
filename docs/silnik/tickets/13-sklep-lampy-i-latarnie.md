@@ -77,6 +77,40 @@ płyta. Teraz okna włączają się i gaszą nagle (5:45, 7:45, 17:15, 23:15), 6
 **Środkowa latarnia** ma jasną plamkę pod sobą, boczne nie: szczyt 38,8 lx (światło obu sąsiadek) wobec 38,0 lx przy
 granicy poziomu ok. 38 lx. Fizyka poprawna, A′ zamienia 2 % różnicy w cały poziom; zostaje do strojenia (`anchor_ev`).
 
+## Handoff dla nowej sesji (2026-11-16): okna od strony ulicy
+
+**Stan:** gałąź `silnik-13-sklep` (od `silnik-11-styl`), wszystko zacommitowane, `node tools/test.mjs` (z
+`style-lab`) 184 zielone. Niezacommitowane zmiany człowieka (GLOSSARY.md, docs/wayfinder/map.md, style-lab/project.godot,
+ticket 40 mapy grafiki, reference/nastroj/) nie należą do ticketu: nie commitować.
+
+**Gdzie co jest:**
+- Silnik: `style-lab/addons/swiatlo/`: `contract/light_source.gd` (węzeł Źródła), `tuning/source_profile.gd` i
+  `tuning/sources/*.tres` (profile), `scene/scene_description.gd` (grupy), `buffer/source_layer.gdshader` (warstwa
+  grupy, próbki powierzchni, świecenie samego Źródła), `buffer/source_light.gd` (składanie kanałów),
+  `buffer/light_style.gdshader` (A′; przy niebie B/C siatka słońca i lamp na stałych luksach, `hard_anchor`).
+- Profile startowe generuje `style-lab/tools/light_engine/start_values.gd` (nadpisuje też `day_curves.tres`, nieba
+  i Zestawy): zmieniać generator, potem uruchomić go headless (komenda w nagłówku pliku), nie edytować `.tres` ręcznie.
+- Poligon: `engine_poligons/street/street.tscn`, węzły `Shop/*` (witryna, okna, kinkiet, głowice latarń),
+  `ShopGlass` (`source_glass.gd`, zastępczy kolor szyb), `ShopDoor` (`facade_panes.gd`), `StreetLamp1–3`.
+- Obecne okno = prostokąt Źródła świecący w stronę kamery, 1 cm przed fasadą; profil `lit_window.tres`: #ffb870, 60 lx
+  1 m przed szybą i na szybie, zasięg 6 m, nagle 5:45/7:45/17:15/23:15. Szyba świeci, bo piksele, przez które widać
+  prostokąt, dostają zanik w 0 × natężenie. Okno nie ma ramy, szprosów ani poświaty wokół.
+
+**Jak sprawdzać bez zgadywania (sprawdzone w tej sesji):**
+- Zrzut o danej godzinie: plik JSON `{"scene":"res://engine_poligons/street/poligon_street.tscn","hour":22.0,"rate":0,
+  "variant":"","character":null,"switches":{"kamera":"300;-250"}}`, potem Godot (ścieżka w `tools/test.mjs`, wersja bez
+  `_console` też działa) `--path . --resolution 960x540 res://engine_poligons/street/poligon_street.tscn --
+  --z-zrzutu=<json> --wyjdz` zapisuje `<json>__odtworzenie.png`. Kamera „300;-250” pokazuje sklep i dwie latarnie.
+- Liczby zamiast oka: tymczasowy `test/engine/test_zz_probe.gd` (GutTest), który wczytuje Poligon, czeka na
+  `engine.is_complete()`, ustawia godziny i drukuje `artificial_image()`, `styled_image()`, `state().exposure` w punktach
+  z `PROJECTION.to_screen()`; uruchomić `node tools/test.mjs -gselect=test_zz_probe` i usunąć plik. Uwaga: w GDScript
+  wartość z `Dictionary.get` przypisać do typowanej zmiennej (inaczej błąd parsowania i pusty wynik).
+- Kilka scen w jednym teście widzi nawzajem swoje Źródła (Opis sceny zbiera całe drzewo): zwalniać poprzednią.
+
+**Pułapki znalezione w tej sesji:** każda rampa natężenia Źródła przesuwa pasy A′ (fale), więc przełączać nagle;
+zastępcza szyba szara pod ciepłym światłem = brązowa płyta; kinkiet 20 cm od muru daje dużą plamę na ścianie; środkowa
+latarnia ma o jeden poziom więcej (granica przy 38 lx), do strojenia.
+
 ## Do zrobienia w nowej sesji (człowiek, 2026-11-16)
 
 - **Okna z ulicy do poprawy:** „okna były o wiele lepsze w game2” (stary Poligon Ulica: `style-lab/ulica.bat`,
