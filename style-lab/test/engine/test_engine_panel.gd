@@ -91,3 +91,9 @@ func test_with_north_at_the_top_the_morning_readout_shows_the_sun_on_the_right()
 	var panel: EnginePanel = _panel()
 	panel.show_state(DayState.from_hour(load(DayCurves.DEFAULT_PATH) as DayCurves, SkyProfile.new(), 9.0, true))
 	assert_string_contains(_text(panel), "prawo, wschód")
+
+
+func test_the_panel_shows_frames_per_second() -> void:
+	var panel: EnginePanel = _panel()
+	await get_tree().process_frame
+	assert_string_contains(_text(panel), "FPS: %d" % roundi(Engine.get_frames_per_second()))

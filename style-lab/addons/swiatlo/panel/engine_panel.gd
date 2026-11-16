@@ -1,6 +1,7 @@
 class_name EnginePanel
 extends VBoxContainer
-## The engine panel for a Location's F1: hour, time rate, the day state readout and the shot button.
+## The engine panel for a Location's F1: frames per second, hour, time rate, the day state readout
+## and the shot button.
 ## It only reports changes through signals; whoever embeds it wires them to the LightEngine and the
 ## EngineShot and calls `show_state` and `show_shot`.
 ## UI text is Polish (for the human).
@@ -37,6 +38,7 @@ var _hour: HSlider
 var _rate_label: Label
 var _rate: HSlider
 var _readout: Label
+var _fps_label: Label
 var _shot_label: Label
 var _debug_view: OptionButton
 var _debug_hint: Label
@@ -46,6 +48,8 @@ var _sky_style: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
+## Frames per second last shown (−1: none yet).
+var _fps_shown: int = -1
 ## The sun's direction on the map (x right, d down) and whether it is up, for the compass.
 var _sun_on_map: Vector2 = Vector2.ZERO
 var _sun_up: bool = false
@@ -58,6 +62,9 @@ func _ready() -> void:
 	var title: Label = Label.new()
 	title.text = "Silnik światła"
 	add_child(title)
+	_fps_label = Label.new()
+	add_child(_fps_label)
+	_show_fps()
 
 	_hour_label = Label.new()
 	add_child(_hour_label)
@@ -120,6 +127,10 @@ func _ready() -> void:
 	_debug_view.item_selected.connect(func(index: int) -> void:
 		show_debug_hint(index)
 		debug_view_set.emit(index as LightEngine.DebugView))
+
+
+func _process(_delta: float) -> void:
+	_show_fps()
 
 
 ## Sets the rate slider without reporting a change (the engine's starting value).
@@ -230,6 +241,14 @@ func _draw_compass() -> void:
 	color.a = 1.0
 	_compass.draw_line(centre, tip, color, 2.0)
 	_compass.draw_circle(tip, 4.0 if _sun_up else 2.0, color)
+
+
+## Frames per second, the text rebuilt only when the number changes.
+func _show_fps() -> void:
+	var fps: int = roundi(Engine.get_frames_per_second())
+	if fps != _fps_shown:
+		_fps_shown = fps
+		_fps_label.text = "FPS: %d" % fps
 
 
 func _show_rate(minutes_per_second: float) -> void:
