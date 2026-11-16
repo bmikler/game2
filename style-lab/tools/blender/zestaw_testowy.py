@@ -144,7 +144,30 @@ def fotel():
         pudelko(f"podlokietnik_{x}", (0.14, 0.58, 0.64), (x, 0.05, 0), b)
 
 
-MEBLE = {"lada": lada, "stol": stol, "fotel": fotel}
+def crate():
+    # A plank crate for the street (engine ticket 09: a sprite on one solid, no normal map in the engine).
+    model, solids = kolekcja(MODEL), kolekcja(BRYLY)
+    pudelko("body", (0.8, 0.6, 0.6), (0, 0, 0), model, faza=0.01, segmenty=2)
+    pudelko("crate", (0.8, 0.6, 0.6), (0, 0, 0), solids)
+
+
+def bench():
+    # A bench with a backrest (engine ticket 09: raised seat, backrest, two side legs; with a normal map).
+    model, solids = kolekcja(MODEL), kolekcja(BRYLY)
+    for i in range(3):
+        pudelko(f"seat_slat_{i}", (1.6, 0.13, 0.05), (0, 0.02 + i * 0.15, 0.4), model, faza=0.02, segmenty=3)
+    for i in range(2):
+        pudelko(f"back_slat_{i}", (1.6, 0.04, 0.16), (0, 0.4, 0.52 + i * 0.2), model, faza=0.015, segmenty=3)
+    for x in (-0.7, 0.7):
+        pudelko(f"side_{x}", (0.06, 0.44, 0.4), (x, 0.02, 0), model, faza=0.01, segmenty=2)
+        pudelko(f"back_post_{x}", (0.06, 0.05, 0.48), (x, 0.4, 0.4), model, faza=0.01, segmenty=2)
+    pudelko("seat", (1.6, 0.45, 0.05), (0, 0.02, 0.4), solids)
+    pudelko("backrest", (1.6, 0.05, 0.48), (0, 0.4, 0.4), solids)
+    for x in (-0.7, 0.7):
+        pudelko(f"leg_{x}", (0.06, 0.44, 0.4), (x, 0.02, 0), solids)
+
+
+MEBLE = {"lada": lada, "stol": stol, "fotel": fotel, "crate": crate, "bench": bench}
 
 
 # --- rzut i układ płótna (czysta logika) ------------------------------------------------------------------

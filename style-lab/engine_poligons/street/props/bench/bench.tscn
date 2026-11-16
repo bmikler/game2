@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://addons/swiatlo/contract/occluder.gd" id="1_5thfk"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/solid.gd" id="2_6j7yj"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/bench/sprite.png" id="3_qtj8u"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/asset_sprite.gd" id="4_xmiyh"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/bench/normals.png" id="5_i5ult"]
+
+[node name="Bench" type="Node2D" unique_id=798918536]
+script = ExtResource("1_5thfk")
+
+[node name="seat" type="Node2D" parent="." unique_id=1654499059]
+script = ExtResource("2_6j7yj")
+size_m = Vector3(1.6, 0.45, 0.45)
+shape = 4
+clearance_m = 0.4
+
+[node name="backrest" type="Node2D" parent="." unique_id=1569346557]
+position = Vector2(0, -9.12)
+script = ExtResource("2_6j7yj")
+position_m = Vector3(0, -0.38, 0)
+size_m = Vector3(1.6, 0.050000012, 0.88)
+shape = 4
+clearance_m = 0.4
+
+[node name="leg_-0_7" type="Node2D" parent="." unique_id=1949787553]
+position = Vector2(-28.000002, 0)
+script = ExtResource("2_6j7yj")
+position_m = Vector3(-0.70000005, 0, 0)
+size_m = Vector3(0.060000002, 0.44, 0.4)
+
+[node name="leg_0_7" type="Node2D" parent="." unique_id=288377758]
+position = Vector2(28.000002, 0)
+script = ExtResource("2_6j7yj")
+position_m = Vector3(0.70000005, 0, 0)
+size_m = Vector3(0.060000002, 0.44, 0.4)
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=897047232]
+texture = ExtResource("3_qtj8u")
+centered = false
+offset = Vector2(-48, -71)
+script = ExtResource("4_xmiyh")
+normal_map = ExtResource("5_i5ult")
+anchor_px = Vector2i(48, 71)

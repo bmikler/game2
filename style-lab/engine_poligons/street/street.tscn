@@ -7,6 +7,8 @@
 [ext_resource type="Script" path="res://addons/swiatlo/contract/occluder.gd" id="5"]
 [ext_resource type="Script" path="res://addons/swiatlo/contract/solid.gd" id="6"]
 [ext_resource type="Script" path="res://engine_poligons/street/facades.gd" id="7"]
+[ext_resource type="PackedScene" path="res://engine_poligons/street/props/crate/crate.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://engine_poligons/street/props/bench/bench.tscn" id="9"]
 
 [node name="Street" type="Node2D"]
 
@@ -176,3 +178,11 @@ size_m = Vector3(0.1, 0.1, 2.3)
 script = ExtResource("7")
 occluder = NodePath("../Awning")
 front_colors = PackedColorArray(0.66, 0.26, 0.23, 1, 0.23, 0.23, 0.23, 1)
+
+[node name="Crate" parent="." instance=ExtResource("8")]
+position = Vector2(-80, 84)
+position_m = Vector3(-2, 3.5, 0)
+
+[node name="Bench" parent="." instance=ExtResource("9")]
+position = Vector2(-280, 84)
+position_m = Vector3(-7, 3.5, 0)

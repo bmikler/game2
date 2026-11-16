@@ -3,7 +3,8 @@ class_name Occluder
 extends Node2D
 ## Scene contract node: something that casts shadow and hides the sky (a building, a lamp post, a
 ## piece of furniture). Made of one or more Solid children. Its position is in metres; the screen
-## position follows from the projection.
+## position follows from the projection. With an AssetSprite child it is an asset: its solids are
+## invisible and the sprite gives the colour.
 
 signal changed
 
@@ -15,11 +16,16 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 	set(value):
 		position_m = value
 		position = PROJECTION.to_screen(value)
+		_snap_sprite()
 		changed.emit()
 
 
 func _enter_tree() -> void:
 	add_to_group(GROUP)
+
+
+func _ready() -> void:
+	_snap_sprite()
 
 
 ## The shapes of this Occluder's Solid children in the Location's metres.
@@ -30,3 +36,17 @@ func world_shapes() -> Array[SolidShape]:
 		if solid != null:
 			shapes.append(solid.local_shape().moved(position_m + solid.position_m))
 	return shapes
+
+
+## The asset's sprite (null: not an asset).
+func asset_sprite() -> AssetSprite:
+	for child: Node in get_children():
+		if child is AssetSprite:
+			return child as AssetSprite
+	return null
+
+
+func _snap_sprite() -> void:
+	var sprite: AssetSprite = asset_sprite()
+	if sprite != null:
+		sprite.snap_to(PROJECTION.to_screen(position_m))

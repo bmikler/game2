@@ -1,0 +1,42 @@
+{
+  "mebel": "crate",
+  "jednostki": "m",
+  "osie": "x w prawo, y w głąb (od kamery), z w górę; początek = punkt zaczepienia (środek przedniej dolnej krawędzi obrysu Brył)",
+  "kat": 0.6,
+  "ppm_gra": 40,
+  "k": 10,
+  "plotno_gra": [
+    96,
+    96
+  ],
+  "zaczepienie_gra": [
+    48,
+    67
+  ],
+  "plotno_prowadnic": [
+    960,
+    960
+  ],
+  "zaczepienie_prowadnic": [
+    480,
+    670
+  ],
+  "normalne": "kolor = 128 + 127·(nx, nz, −ny): R w prawo, G w górę, B do kamery",
+  "zgodnosc_bryl": 1.0,
+  "bryly": [
+    {
+      "nazwa": "crate",
+      "typ": "pudelko",
+      "min": [
+        -0.4,
+        0.0,
+        0.0
+      ],
+      "max": [
+        0.4,
+        0.6,
+        0.6
+      ]
+    }
+  ]
+}

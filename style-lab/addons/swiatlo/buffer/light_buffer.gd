@@ -21,9 +21,14 @@ var _display_material: ShaderMaterial
 var _debug_material: ShaderMaterial
 var _area: Rect2i = Rect2i()
 var _sky: SkyLayer
+var _assets: AssetLayer
+var _modelling: float = -1.0
 
 
 func _init() -> void:
+	# The asset layer first: the layers that read it are drawn after it.
+	_assets = AssetLayer.new()
+	add_child(_assets)
 	_view = SubViewport.new()
 	_view.use_hdr_2d = true
 	_view.disable_3d = true
@@ -40,6 +45,7 @@ func _init() -> void:
 	add_child(_sky)
 	_sky.pass_rendered.connect(_on_sky_pass)
 	_material.set_shader_parameter(&"sky_share", _sky.texture())
+	_material.set_shader_parameter(&"asset_layer", _assets.texture())
 
 	_display_material = ShaderMaterial.new()
 	_display_material.shader = DISPLAY_SHADER
@@ -70,7 +76,11 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 	_material.set_shader_parameter(&"area_origin_px", Vector2(_area.position))
 	_material.set_shader_parameter(&"px_per_m", projection.px_per_m)
 	_material.set_shader_parameter(&"depth_factor", projection.depth_factor)
-	_sky.build(_area, solids, description.solids.size(), receivers, description.receivers.size(), projection)
+	var assets: ImageTexture = ImageTexture.create_from_image(description.asset_data())
+	_material.set_shader_parameter(&"assets", assets)
+	_assets.build(description)
+	_sky.build(_area, solids, description.solids.size(), receivers, description.receivers.size(), _assets.texture(),
+			assets, projection)
 	_material.set_shader_parameter(&"sky_share_scale", _sky.share_scale())
 	_redraw()
 
@@ -82,6 +92,18 @@ func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_display_material.set_shader_parameter(&"exposure", state.exposure)
+	_redraw()
+
+
+## Takes the receivers' constants of the Location's tuning set; a new modelling rebuilds the sky.
+func set_tuning(tuning: TuningSet) -> void:
+	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
+	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
+	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
+	if tuning.receiver_modelling != _modelling:
+		_modelling = tuning.receiver_modelling
+		_sky.set_modelling(_modelling)
+		_sky.restart()
 	_redraw()
 
 

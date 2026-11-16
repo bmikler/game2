@@ -21,6 +21,8 @@ var _canvas: ColorRect
 ## Passes whose result is in the texture, and the pass sent to render (−1: none).
 var _passes_done: int = PASS_COUNT
 var _pass_sent: int = -1
+## A build waits one frame before its first pass, so the asset layer it reads is drawn.
+var _start_pending: bool = false
 ## Frames drawn when the pass was sent: it is in the texture once a later frame has been drawn.
 var _sent_after_frame: int = 0
 
@@ -53,7 +55,7 @@ func _exit_tree() -> void:
 
 ## Starts building the layer for a scene description (the same data and area as the buffer's).
 func build(area: Rect2i, solids: Texture2D, solid_count: int, receivers: Texture2D, receiver_count: int,
-		projection: LightProjection) -> void:
+		asset_layer: Texture2D, assets: Texture2D, projection: LightProjection) -> void:
 	_view.size = area.size if area.has_area() else Vector2i.ONE
 	_canvas.size = Vector2(_view.size)
 	_material.set_shader_parameter(&"solids", solids)
@@ -63,10 +65,21 @@ func build(area: Rect2i, solids: Texture2D, solid_count: int, receivers: Texture
 	_material.set_shader_parameter(&"area_origin_px", Vector2(area.position))
 	_material.set_shader_parameter(&"px_per_m", projection.px_per_m)
 	_material.set_shader_parameter(&"depth_factor", projection.depth_factor)
+	_material.set_shader_parameter(&"asset_layer", asset_layer)
+	_material.set_shader_parameter(&"assets", assets)
+	restart()
+
+
+## Builds the layer again from the start (the receivers' modelling changed the normals).
+func restart() -> void:
 	_passes_done = 0
 	_pass_sent = -1
-	_view.render_target_clear_mode = SubViewport.CLEAR_MODE_ONCE
-	_send_pass(0)
+	_start_pending = true
+
+
+## The receivers' modelling (tuning set): sprite pixels see the dome around the normal it gives.
+func set_modelling(value: float) -> void:
+	_material.set_shader_parameter(&"modelling", value)
 
 
 ## The layer: counts of open directions in red + green + blue (see `share_scale`).
@@ -94,6 +107,11 @@ func _send_pass(index: int) -> void:
 
 ## Counts the pass sent before this frame was drawn and sends the next one.
 func _on_frame_drawn() -> void:
+	if _start_pending:
+		_start_pending = false
+		_view.render_target_clear_mode = SubViewport.CLEAR_MODE_ONCE
+		_send_pass(0)
+		return
 	if _pass_sent < 0 or Engine.get_frames_drawn() <= _sent_after_frame:
 		return
 	_passes_done = _pass_sent + 1

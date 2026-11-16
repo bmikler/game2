@@ -24,6 +24,7 @@ var _state: DayState = DayState.new()
 var _north_at_top: bool = false
 var _environment: LocationEnvironment
 var _fallback_sky: SkyProfile = SkyProfile.new()
+var _fallback_tuning: TuningSet = TuningSet.new()
 var _description: SceneDescription = SceneDescription.new()
 var _debug_view: DebugView = DebugView.NONE
 # Helper nodes without an owner: never saved into the scene.
@@ -68,9 +69,15 @@ func rebuild_scene() -> void:
 	_recompute()
 
 
-## Scene errors the author should see (no LocationEnvironment, or several).
+## Scene errors the author should see (no LocationEnvironment, or several; assets' data).
 func warnings() -> PackedStringArray:
 	var result: PackedStringArray = PackedStringArray()
+	if is_inside_tree():
+		for node: Node in get_tree().get_nodes_in_group(Occluder.GROUP):
+			var sprite: AssetSprite = (node as Occluder).asset_sprite()
+			if sprite != null:
+				for warning: String in sprite.warnings():
+					result.append("%s: %s" % [node.name, warning])
 	var count: int = get_tree().get_nodes_in_group(LocationEnvironment.GROUP).size() if is_inside_tree() else 0
 	if count == 0:
 		result.append("no LocationEnvironment (fallback sky)")
@@ -142,8 +149,16 @@ func sky() -> SkyProfile:
 	return _fallback_sky
 
 
+## The Location's tuning set (a default one without a LocationEnvironment).
+func tuning_set() -> TuningSet:
+	if is_instance_valid(_environment) and _environment.tuning_set != null:
+		return _environment.tuning_set
+	return _fallback_tuning
+
+
 func _recompute() -> void:
 	_state.compute(curves, sky(), hour, _north_at_top)
 	if is_instance_valid(_buffer):
+		_buffer.set_tuning(tuning_set())
 		_buffer.set_state(_state)
 	state_changed.emit(_state)

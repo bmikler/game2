@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://addons/swiatlo/contract/occluder.gd" id="1_tr73j"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/solid.gd" id="2_eqwwn"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/crate/sprite.png" id="3_jmmiy"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/asset_sprite.gd" id="4_c7u1h"]
+
+[node name="Crate" type="Node2D" unique_id=407777275]
+script = ExtResource("1_tr73j")
+
+[node name="crate" type="Node2D" parent="." unique_id=498038391]
+script = ExtResource("2_eqwwn")
+size_m = Vector3(0.8, 0.6, 0.6)
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1377337379]
+texture = ExtResource("3_jmmiy")
+centered = false
+offset = Vector2(-48, -67)
+script = ExtResource("4_c7u1h")
+anchor_px = Vector2i(48, 67)

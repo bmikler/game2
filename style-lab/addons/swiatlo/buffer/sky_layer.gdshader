@@ -1,4 +1,4 @@
-// The sky layer: how much of the sky dome each buffer pixel's receiver sees, weighted by the cosine
+// The sky layer: how much of the sky dome each buffer pixel's surface sees, weighted by the cosine
 // to its normal (1: open ground under the whole sky, ½: an open wall). Geometry only, no colour.
 // Built once per scene, a pass per frame: each pass adds its share of a fixed set of directions
 // (spherical Fibonacci, cosine-weighted about the normal) into a target that is never cleared in
@@ -12,6 +12,7 @@ render_mode unshaded, blend_add;
 
 #include "res://addons/swiatlo/buffer/receivers.gdshaderinc"
 #include "res://addons/swiatlo/buffer/visibility.gdshaderinc"
+#include "res://addons/swiatlo/buffer/surfaces.gdshaderinc"
 
 const float GOLDEN_ANGLE = 2.39996323;
 
@@ -29,13 +30,14 @@ void vertex() {
 void fragment() {
 	vec3 point;
 	vec3 normal;
+	vec3 face_normal;
 	float seen = 0.0;
 	int sample_count = samples_per_pass * pass_count;
-	if (find_receiver(local_px, point, normal) >= 0) {
+	if (find_surface(local_px, point, normal, face_normal) >= 0) {
 		vec3 helper = abs(normal.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 		vec3 tangent = normalize(cross(helper, normal));
 		vec3 bitangent = cross(normal, tangent);
-		vec3 start = point + normal * RAY_OFFSET_M;
+		vec3 start = point + face_normal * RAY_OFFSET_M;
 		for (int k = 0; k < samples_per_pass; k++) {
 			// Passes interleave, so each one spreads over the whole dome (a usable picture early).
 			int i = k * pass_count + pass_index;
