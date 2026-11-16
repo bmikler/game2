@@ -40,6 +40,10 @@ krawędź w kształcie linii równego udziału nieba. `full_dither_px` tego nie 
   `node tools/test.mjs`: 164 zielone. Sprawdzone odtworzeniem zrzutów człowieka: w B i C plamy znikają.
 - Czarne prostokąty na zrzutach to obszar poza Lokacją (brak ziemi za d = −40 m), nie błąd światła.
 
+- Sprzątanie F1 (człowiek: panel za długi, przełącznik nieba był pod krawędzią okna): usunięty „Tryb A′” (bez kanału
+  sztucznego oba tryby dają ten sam obraz; przełącznik wraca w tickecie 13, pole `style_mode` w Zestawie zostaje) i
+  długie opisy pod przełącznikami. Kryterium „Przełącznik trybu A′ w F1” przechodzi więc do ticketu 13.
+
 **Do oceny w grze:** te same miejsca, F1 „Światło nieba” A / B / C. Ryzyko B: gładki cień jak „HD” (t37). Ryzyko C:
 drobny dither na całym cieniu jak faktura. Wybrany wariant wpiszę jako domyślny w `outdoor.tres`.
 

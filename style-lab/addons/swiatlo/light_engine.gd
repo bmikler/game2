@@ -27,8 +27,6 @@ var _fallback_sky: SkyProfile = SkyProfile.new()
 var _fallback_tuning: TuningSet = TuningSet.new()
 var _description: SceneDescription = SceneDescription.new()
 var _debug_view: DebugView = DebugView.NONE
-## The A′ mode switched in F1 (−1: the tuning set's own).
-var _style_mode_override: int = -1
 ## The short-step dither length picked in F1 (negative: the tuning set's own).
 var _full_dither_override: float = -1.0
 ## The sky style picked in F1 (−1: the tuning set's own).
@@ -174,16 +172,9 @@ func exposure_reference() -> float:
 	return 1.0
 
 
-## Compares the A′ modes live (F1) without changing the tuning set.
-func set_style_mode(mode: TuningSet.StyleMode) -> void:
-	_style_mode_override = mode
-	_recompute()
-
-
-## The A′ mode in use: the F1 switch's, or else the tuning set's.
+## The A′ mode in use, the tuning set's (no F1 switch until the artificial channel, engine ticket 13:
+## without it both modes give the same picture).
 func style_mode() -> TuningSet.StyleMode:
-	if _style_mode_override >= 0:
-		return _style_mode_override as TuningSet.StyleMode
 	return tuning_set().style_mode
 
 

@@ -62,19 +62,6 @@ func test_engine_takes_the_exposure_reference_from_the_environment() -> void:
 	assert_gt(engine.state().exposure, outside)
 
 
-func test_style_mode_comes_from_the_tuning_set_until_switched() -> void:
-	var environment: LocationEnvironment = LocationEnvironment.new()
-	environment.tuning_set = TuningSet.new()
-	environment.tuning_set.style_mode = TuningSet.StyleMode.PER_CHANNEL
-	add_child_autofree(environment)
-	var engine: LightEngine = LightEngine.new()
-	add_child_autofree(engine)
-	assert_eq(engine.style_mode(), TuningSet.StyleMode.PER_CHANNEL)
-	engine.set_style_mode(TuningSet.StyleMode.SUM)
-	assert_eq(engine.style_mode(), TuningSet.StyleMode.SUM)
-	assert_eq(environment.tuning_set.style_mode, TuningSet.StyleMode.PER_CHANNEL, "the set itself stays")
-
-
 func test_short_step_dither_comes_from_the_tuning_set_until_a_variant_is_picked() -> void:
 	var environment: LocationEnvironment = LocationEnvironment.new()
 	environment.tuning_set = TuningSet.new()

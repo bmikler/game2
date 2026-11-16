@@ -44,7 +44,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
 	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
-			"tryb A′": "na sumie", "dither krótkich kroków": "24 px", "światło nieba": "A: poziomy", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
+			"dither krótkich kroków": "24 px", "światło nieba": "A: poziomy", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -162,21 +162,6 @@ func test_replayed_shot_keeps_the_stall_look() -> void:
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_eq((replay.get_node("%LookChoice") as OptionButton).selected, 2)
-
-
-func test_style_mode_from_f1_reaches_the_engine_and_the_shot() -> void:
-	var poligon: Node = _poligon()
-	var choice: OptionButton = (poligon.get_node("%EnginePanel") as EnginePanel).style_mode_choice()
-	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
-	assert_eq(choice.selected, engine.tuning_set().style_mode, "F1 starts at the tuning set's mode")
-	choice.select(1)
-	choice.item_selected.emit(1)
-	assert_eq(engine.style_mode(), TuningSet.StyleMode.PER_CHANNEL)
-	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
-	assert_eq(description.switches["tryb A′"], "na kanałach")
-	var replay: Node = _poligon()
-	(replay.get_node("%Shot") as EngineShot).apply(description)
-	assert_eq((replay.get_node("%Engine") as LightEngine).style_mode(), TuningSet.StyleMode.PER_CHANNEL)
 
 
 func test_short_step_dither_variant_from_f1_reaches_the_engine_and_the_shot() -> void:
