@@ -11,7 +11,8 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 	set(value):
 		sources = value
 		queue_redraw()
-@export var glass_color: Color = Color("#8d949c"):
+## Light, so a lit pane reads as light (grey glass under warm light looked like brown boards).
+@export var glass_color: Color = Color("#d8d4cc"):
 	set(value):
 		glass_color = value
 		queue_redraw()

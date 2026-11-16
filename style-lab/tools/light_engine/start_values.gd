@@ -181,12 +181,12 @@ func _wall_lamp() -> SourceProfile:
 	return _source_profile(Color("#ffa357"), _hours(100.0, []), _inverse_square(2.5, 4.0, 8.0))
 
 
-## Cheat sheet 4.4, a lit window seen from the street: warm, reaching 6 m; lit in the evening and
-## early morning, dark after half past eleven. 40 lx 1 m in front of it and on its glass (brighter
-## glass burnt out flat at night).
+## Cheat sheet 4.4, a lit window seen from the street: warm, reaching 6 m; switched on at 5:45 and
+## off at 7:45, on at 17:15 and off at 23:15, each within a game minute (a ramp swept the A′ bands
+## over the pavement, human 2026-11-16). 60 lx 1 m in front of it and on its glass.
 func _lit_window() -> SourceProfile:
 	return _source_profile(Color("#ffb870"),
-			_hours(40.0, [Vector2(5.5, 6.0), Vector2(7.5, 8.0), Vector2(16.8, 17.6), Vector2(23.0, 23.5)], false),
+			_hours(60.0, [Vector2(5.74, 5.76), Vector2(7.74, 7.76), Vector2(17.24, 17.26), Vector2(23.24, 23.26)], false),
 			_inverse_square(1.0, 1.0, 6.0))
 
 

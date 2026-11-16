@@ -70,3 +70,9 @@ dzienna krzywa nieba ma w nocy 0 i rusza łagodnie godzinę przed wschodem; prof
 (nocą to całe niebo, w dzień ginie). Pola `night_from_elevation` i `night_full_at` usunięte. Nowy test
 (`test_day_state.gd`): ekspozycja tylko maleje do najjaśniejszej minuty i tylko rośnie po niej, dla miasta i wsi.
 Tego błędu nie łapał żaden test: sprawdzały tylko brak skoków między minutami, nie kierunek zmian.
+
+**Okna (2026-11-16):** człowiek: fale na ścianie 5:30–6:00, „okna w ogóle nie świecą”. Okna zapalały się stopniowo
+pół godziny (pasy A′ przesuwały się po chodniku), a szara zastępcza szyba pod ciepłym światłem wyglądała jak brązowa
+płyta. Teraz okna włączają się i gaszą nagle (5:45, 7:45, 17:15, 23:15), 60 lx, szyba jasna (`source_glass.gd`).
+**Środkowa latarnia** ma jasną plamkę pod sobą, boczne nie: szczyt 38,8 lx (światło obu sąsiadek) wobec 38,0 lx przy
+granicy poziomu ok. 38 lx. Fizyka poprawna, A′ zamienia 2 % różnicy w cały poziom; zostaje do strojenia (`anchor_ev`).
