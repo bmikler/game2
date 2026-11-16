@@ -67,11 +67,16 @@ func compute(curves: DayCurves, sky: SkyProfile, at_hour: float, north_up: bool 
 	sun_intensity = maxf(curves.sun_intensity.sample(hour), 0.0) * (1.0 - cloud_cover)
 	sun_disc = curves.sun_disc.sample(hour) * lerpf(1.0, curves.overcast_disc_gain, cloud_cover)
 
-	var night: float = sky.night_share(sun_elevation)
-	sky_color = curves.sky_color.sample(day).lerp(sky.night_color, night)
-	sky_color = sky_color.lerp(curves.overcast_sky_color, cloud_cover)
-	sky_intensity = lerpf(maxf(curves.sky_intensity.sample(hour), 0.0), sky.night_intensity, night)
-	sky_intensity *= lerpf(1.0, curves.overcast_sky_gain, cloud_cover)
+	# The daytime sky (whiter and brighter under cloud) plus the night sky's own light, always: their
+	# colours mixed by their light.
+	var daylight: float = maxf(curves.sky_intensity.sample(hour), 0.0) * lerpf(1.0, curves.overcast_sky_gain, cloud_cover)
+	var daylight_color: Color = curves.sky_color.sample(day).lerp(curves.overcast_sky_color, cloud_cover)
+	var glow: float = maxf(sky.night_intensity, 0.0)
+	sky_intensity = daylight + glow
+	sky_color = sky.night_color
+	if sky_intensity > 0.0:
+		sky_color = (daylight_color * daylight + sky.night_color * glow) / sky_intensity
+	sky_color.a = 1.0
 
 	ambient_color = curves.ambient_color.sample(day)
 	ambient_intensity = maxf(curves.ambient_intensity.sample(hour), 0.0)

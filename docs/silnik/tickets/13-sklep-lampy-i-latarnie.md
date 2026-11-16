@@ -61,3 +61,12 @@ słońca i lamp stoi teraz na stałych luksach (1 lx × 2^`anchor_ev`): pasy pla
 wieczór (bramka w `test_light_style_gpu.gd`). Zostaje płynne rozjaśnianie z ekspozycją automatyczną 18:00–18:50 i
 lekkie zblednięcie (ok. 9 %) do 19:15: dzienna krzywa nieba schodzi do 6 lx, noc miasta ma 20 lx (strojenie krzywych).
 Człowiek: piksele (poziomy) na świetle lamp „nawet spoko”; niebo zostaje gładkie (B).
+
+**Błąd modelu nieba (2026-11-16):** człowiek: lampa nad drzwiami od 5 rano „dziwnie falowo się rozjaśnia”. Pomiar:
+lampa stała, a ekspozycja najpierw rosła (5:50–6:12, niebo spadało z 20 do 16 lx), potem spadała 11× w 45 min.
+Przyczyna: noc opisana dwa razy (krzywa dziennego nieba 6 lx w nocy i profil nieba miasta 20 lx), przejście między nimi
+według wysokości słońca dawało dołek o świcie i garb o zmierzchu (to też te 9 % zblednięcia lamp o 19:00). Teraz:
+dzienna krzywa nieba ma w nocy 0 i rusza łagodnie godzinę przed wschodem; profil nieba dodaje swoje światło zawsze
+(nocą to całe niebo, w dzień ginie). Pola `night_from_elevation` i `night_full_at` usunięte. Nowy test
+(`test_day_state.gd`): ekspozycja tylko maleje do najjaśniejszej minuty i tylko rośnie po niej, dla miasta i wsi.
+Tego błędu nie łapał żaden test: sprawdzały tylko brak skoków między minutami, nie kierunek zmian.

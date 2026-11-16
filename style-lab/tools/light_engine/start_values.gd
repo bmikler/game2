@@ -76,10 +76,16 @@ func _day_curves() -> DayCurves:
 			7.8: Color("#d9cce0"), 10.5: Color("#cce0ff"), 12.5: Color("#cce0ff"),
 			14.5: Color("#d9d9f2"), 17.1: Color("#e69e9e"), 18.1: Color("#8073cc"),
 			19.1: Color("#4a5cbd"), 24.0: Color("#475cbd")})
-	curves.sky_intensity = _curve(PackedVector2Array([
-			Vector2(0.0, 6.0), Vector2(SUNRISE_H - 0.7, 6.0), Vector2(SUNRISE_H, 300.0),
-			Vector2(8.5, 1000.0), Vector2(noon, 1200.0), Vector2(16.5, 1000.0),
-			Vector2(SUNSET_H, 300.0), Vector2(SUNSET_H + 0.7, 6.0), Vector2(24.0, 6.0)]), 0.0, 100000.0)
+	# The daytime sky only: 0 at night (the sky profile adds the night's own light at every hour), and
+	# easing out of the night an hour before sunrise (no kink where it starts, ticket 13).
+	var sky_points: PackedVector2Array = PackedVector2Array([Vector2(0.0, 0.0)])
+	for step: int in 11:
+		sky_points.append(Vector2(SUNRISE_H - 1.0 + step * 0.1, 300.0 * pow(step / 10.0, 2.0)))
+	sky_points.append_array([Vector2(8.5, 1000.0), Vector2(noon, 1200.0), Vector2(16.5, 1000.0)])
+	for step: int in 11:
+		sky_points.append(Vector2(SUNSET_H + step * 0.1, 300.0 * pow(1.0 - step / 10.0, 2.0)))
+	sky_points.append(Vector2(24.0, 0.0))
+	curves.sky_intensity = _curve(sky_points, 0.0, 100000.0)
 
 	curves.ambient_color = _gradient({
 			0.0: Color("#3d426b"), 6.9: Color("#6b5766"), 7.8: Color("#a89494"),

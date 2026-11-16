@@ -119,7 +119,31 @@ func test_cloud_cover_brightens_and_whitens_the_sky_and_widens_the_disc() -> voi
 func test_sky_profile_changes_the_night_not_the_day() -> void:
 	var village: SkyProfile = load(VILLAGE) as SkyProfile
 	assert_gt(_state(0.0).sky_intensity, _state(0.0, _curves, village).sky_intensity, "the city glows")
-	assert_almost_eq(_state(12.5).sky_intensity, _state(12.5, _curves, village).sky_intensity, 0.001)
+	var noon: float = _state(12.5).sky_intensity
+	assert_almost_eq(_state(12.5, _curves, village).sky_intensity, noon, noon * 0.02, "by day the glow is lost in the sky")
+
+
+func test_the_day_brightens_and_darkens_without_dips_or_bumps() -> void:
+	# Ticket 13: at dawn the city glow faded before the day sky rose, so the exposure opened a little
+	# and then shut fast: a constant lamp seemed to brighten, then fade, in a wave. Open-ground light
+	# must only grow from night to noon and only fall from noon to night, with any sky profile.
+	for sky_path: String in [CITY, VILLAGE]:
+		var sky: SkyProfile = load(sky_path) as SkyProfile
+		var exposures: Array[float] = []
+		for minute: int in range(2 * 60, 23 * 60):
+			exposures.append(_state(minute / 60.0, _curves, sky).exposure)
+		# The brightest minute (the least exposure): light only grows before it and only falls after.
+		var brightest: int = exposures.find(exposures.min())
+		assert_almost_eq(2.0 + brightest / 60.0, 12.5, 0.5, "the brightest minute is about noon")
+		var previous: float = exposures[0]
+		for index: int in range(1, exposures.size()):
+			var exposure: float = exposures[index]
+			var minute: int = 2 * 60 + index
+			if index <= brightest:
+				assert_lte(exposure, previous * 1.0001, "%s %02d:%02d brightening" % [sky_path.get_file(), minute / 60, minute % 60])
+			else:
+				assert_gte(exposure, previous * 0.9999, "%s %02d:%02d darkening" % [sky_path.get_file(), minute / 60, minute % 60])
+			previous = exposure
 
 
 func test_exposure_is_positive_and_higher_at_night() -> void:
