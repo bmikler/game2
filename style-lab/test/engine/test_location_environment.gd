@@ -73,3 +73,31 @@ func test_style_mode_comes_from_the_tuning_set_until_switched() -> void:
 	engine.set_style_mode(TuningSet.StyleMode.SUM)
 	assert_eq(engine.style_mode(), TuningSet.StyleMode.SUM)
 	assert_eq(environment.tuning_set.style_mode, TuningSet.StyleMode.PER_CHANNEL, "the set itself stays")
+
+
+func test_short_step_dither_comes_from_the_tuning_set_until_a_variant_is_picked() -> void:
+	var environment: LocationEnvironment = LocationEnvironment.new()
+	environment.tuning_set = TuningSet.new()
+	environment.tuning_set.full_dither_px = 16.0
+	add_child_autofree(environment)
+	var engine: LightEngine = LightEngine.new()
+	add_child_autofree(engine)
+	assert_eq(engine.full_dither_px(), 16.0)
+	engine.set_full_dither_px(0.0)
+	assert_eq(engine.full_dither_px(), 0.0, "0 is a variant too (A′ without it)")
+	assert_eq(environment.tuning_set.full_dither_px, 16.0, "the set itself stays")
+
+
+func test_a_short_step_dither_under_twice_the_seam_is_a_warning() -> void:
+	var tuning: TuningSet = TuningSet.new()
+	assert_true(tuning.warnings().is_empty(), "the defaults are sound")
+	tuning.full_dither_px = 0.0
+	assert_true(tuning.warnings().is_empty(), "0 turns it off")
+	tuning.full_dither_px = 5.0
+	assert_eq(tuning.warnings().size(), 1)
+	var environment: LocationEnvironment = LocationEnvironment.new()
+	environment.tuning_set = tuning
+	add_child_autofree(environment)
+	var engine: LightEngine = LightEngine.new()
+	add_child_autofree(engine)
+	assert_true(engine.warnings()[0].begins_with("tuning set: "), str(engine.warnings()))

@@ -32,6 +32,14 @@ enum ScatterStyle { SMOOTH, DITHER }
 	set(value):
 		seam_px = value
 		emit_changed()
+## A step between two levels shorter than this (game pixels) is dithered over its whole length, one
+## longer than twice this keeps a flat field with the narrow seam, smoothly in between (research 92):
+## the soft halo around a thing stays a gradient, not a flat ring. 0: always the narrow seam. Keep it
+## at least twice `seam_px`; above about 48 px long slopes along facades turn into a grid (research 84).
+@export_range(0.0, 48.0, 1.0) var full_dither_px: float = 24.0:
+	set(value):
+		full_dither_px = value
+		emit_changed()
 @export var seam_pattern: SeamPattern = SeamPattern.BAYER:
 	set(value):
 		seam_pattern = value
@@ -111,3 +119,11 @@ enum ScatterStyle { SMOOTH, DITHER }
 	set(value):
 		dust_motion = value
 		emit_changed()
+
+
+## What is wrong with the values (empty: nothing), for the engine's warnings.
+func warnings() -> PackedStringArray:
+	var found: PackedStringArray = PackedStringArray()
+	if full_dither_px > 0.0 and full_dither_px < 2.0 * seam_px:
+		found.append("full_dither_px %s is under twice seam_px %s: short steps never get their dither." % [full_dither_px, seam_px])
+	return found

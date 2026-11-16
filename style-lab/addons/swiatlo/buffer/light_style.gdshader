@@ -1,6 +1,7 @@
 // A′ stylisation: light in lux per pixel (natural, and artificial when there is any) → styled light
 // after exposure, which multiplies the albedo. Levels in EV anchored to `anchor` (open sky); at
-// each level boundary a dither seam `seam_px` pixels wide whatever the slope (research 84, §6).
+// each level boundary a dither seam `seam_px` pixels wide whatever the slope (research 84, §6); a
+// short step (a thing's soft halo) is dithered over its whole length instead (research 92, §4b).
 // The slope comes from the gentler one-sided difference per axis, so a jump between two surfaces
 // (a sprite's edge, a hard shadow edge) is not a slope and spreads no seam.
 shader_type canvas_item;
@@ -24,6 +25,8 @@ uniform vec2 origin_px = vec2(0.0);
 uniform int mode = 0;
 uniform float level_stops = 0.5;
 uniform float seam_px = 3.0;
+// A step between levels shorter than this (pixels) is dithered over its whole length; 0: never.
+uniform float full_dither_px = 24.0;
 uniform int seam_pattern = 0;
 uniform float exposure = 1.0;
 // `Y_ref` in lux before exposure.
@@ -88,7 +91,12 @@ vec3 levels(int which, ivec2 px, float threshold) {
 	}
 	float s = steps_of(y);
 	float g = length(vec2(slope(which, px, ivec2(1, 0), s), slope(which, px, ivec2(0, 1), s)));
+	// A step shorter than `full_dither_px` (1/g pixels) is dithered all along, one longer than twice
+	// that keeps the narrow seam (research 92 §4b).
 	float w = clamp(seam_px * g, 0.0, 1.0);
+	if (full_dither_px > 0.0) {
+		w = mix(w, 1.0, smoothstep(0.5 / full_dither_px, 1.0 / full_dither_px, g));
+	}
 	float k = floor(s + w * (threshold - 0.5));
 	return light * (anchor * exposure * exp2(k * level_stops)) / y;
 }

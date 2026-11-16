@@ -347,3 +347,91 @@ func test_the_picture_gets_open_ground_light_styled_into_levels() -> void:
 		assert_almost_eq(styled.get_luminance(), _level_of(engine, lux), _level_of(engine, lux) * 0.01,
 				"open ground at %s h" % hour)
 		assert_almost_eq(styled.b / styled.r, lux.b / lux.r, 0.01, "the colour stays")
+
+
+# Sky oracle (research 92 §5a): the sky share of ground points beside boxes, computed on the CPU
+# with plain ray–box tests over a cosine-weighted dome, against the buffer's sky layer. The gates
+# check the sky layer, the projection and how solids stand, not the tuning.
+
+## Directions of the oracle's dome (a finer set than the sky layer's 2048).
+const ORACLE_DIRECTIONS: int = 8192
+const GOLDEN_ANGLE: float = 2.39996323
+
+
+## The cosine-weighted share of the sky an upward-facing ground point sees past the boxes
+## (each an AABB: position, size), from just above the ground as the sky layer starts its rays.
+func _oracle_sky(point: Vector3, boxes: Array[AABB]) -> float:
+	var start: Vector3 = point + Vector3(0.0, 0.0, 0.02)
+	var seen: int = 0
+	for i: int in ORACLE_DIRECTIONS:
+		var r: float = sqrt((i + 0.5) / ORACLE_DIRECTIONS)
+		var angle: float = i * GOLDEN_ANGLE
+		var direction: Vector3 = Vector3(r * cos(angle), r * sin(angle), sqrt(maxf(1.0 - r * r, 0.0)))
+		var open: bool = true
+		for box: AABB in boxes:
+			if box.intersects_ray(start, direction) != null:
+				open = false
+				break
+		if open:
+			seen += 1
+	return float(seen) / ORACLE_DIRECTIONS
+
+
+## A solid's box in world metres (`position_m` is the front-bottom centre).
+func _box_of(solid: Solid) -> AABB:
+	return AABB(solid.position_m - Vector3(solid.size_m.x * 0.5, solid.size_m.y, 0.0), solid.size_m)
+
+
+## The ground point at the centre of the buffer pixel showing the ground at (x, d).
+func _ground_at_pixel(engine: LightEngine, x: float, d: float) -> Vector3:
+	var pixel: Vector2 = PROJECTION.to_screen(Vector3(x, d, 0.0)).floor() + Vector2(0.5, 0.5)
+	return Vector3(pixel.x / PROJECTION.px_per_m, pixel.y / (PROJECTION.px_per_m * PROJECTION.depth_factor), 0.0)
+
+
+func _ev(ratio: float) -> float:
+	return log(ratio) / log(2.0)
+
+
+func test_gate_sky_oracle_around_a_crate_on_open_ground() -> void:
+	# A crate 0.6 m under the whole sky; ground in front of it (d) and beside it (x). Research 92 §1c:
+	# about −0.67 / −0.30 / −0.11 EV at 10 / 30 / 60 cm.
+	var crate: Solid = _solid(Vector3(0.0, 0.3, 0.0), Vector3(0.6, 0.6, 0.6))
+	var engine: LightEngine = await _scene(12.0, [crate])
+	var boxes: Array[AABB] = [_box_of(crate)]
+	for away: float in [0.02, 0.1, 0.3, 0.6]:
+		for along_x: bool in [false, true]:
+			var at: Vector3 = Vector3(0.3 + away, 0.0, 0.0) if along_x else Vector3(0.0, 0.3 + away, 0.0)
+			var ground: Vector3 = _ground_at_pixel(engine, at.x, at.y)
+			var buffer_ev: float = _ev(_sky(engine, at))
+			var oracle_ev: float = _ev(_oracle_sky(ground, boxes))
+			assert_almost_eq(buffer_ev, oracle_ev, 0.1, "%s cm %s the crate" % [away * 100.0, "beside" if along_x else "in front of"])
+	var ten_cm: float = _ev(_oracle_sky(Vector3(0.0, 0.4, 0.0), boxes))
+	assert_almost_eq(ten_cm, -0.67, 0.05, "the oracle agrees with research 92 (10 cm)")
+
+
+## Walls 15 m high on both sides of a street 12 m wide (faces at x −1.3 and 10.7).
+func _street_walls() -> Array[Solid]:
+	return [_solid(Vector3(-1.8, 20.0, 0.0), Vector3(1.0, 40.0, 15.0)), _solid(Vector3(11.2, 20.0, 0.0), Vector3(1.0, 40.0, 15.0))]
+
+
+func test_gate_a_crate_by_a_wall_takes_no_sky_the_wall_took() -> void:
+	# A crate 1 m off the left wall. Occluders overlap, they do not add up (research 91 §3): on the
+	# street side the crate adds next to no darkening, in the gap by the wall it takes much of what
+	# the wall left.
+	var street_side: Vector3 = Vector3(0.6, 0.0, 0.0) # 30 cm off the crate
+	var gap: Vector3 = Vector3(-0.4, 0.0, 0.0) # 10 cm off the crate
+	var bare: LightEngine = await _scene(12.0, _street_walls())
+	var bare_street_side: float = _sky(bare, street_side)
+	var bare_gap: float = _sky(bare, gap)
+	bare.get_parent().free()
+	var solids: Array[Solid] = _street_walls()
+	solids.append(_solid(Vector3(0.0, 0.3, 0.0), Vector3(0.6, 0.6, 0.6)))
+	var engine: LightEngine = await _scene(12.0, solids)
+	assert_gt(_ev(_sky(engine, street_side) / bare_street_side), -0.05, "30 cm on the street side")
+	assert_lt(_ev(_sky(engine, gap) / bare_gap), -0.8, "10 cm in the gap by the wall")
+	var boxes: Array[AABB] = []
+	for solid: Solid in solids:
+		boxes.append(_box_of(solid))
+	for at: Vector3 in [street_side, gap]:
+		var oracle_ev: float = _ev(_oracle_sky(_ground_at_pixel(engine, at.x, at.y), boxes))
+		assert_almost_eq(_ev(_sky(engine, at)), oracle_ev, 0.1, "the oracle at x %s" % at.x)

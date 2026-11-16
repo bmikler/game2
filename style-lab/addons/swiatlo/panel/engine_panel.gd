@@ -11,6 +11,7 @@ signal shot_requested
 signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
 signal style_mode_set(mode: TuningSet.StyleMode)
+signal full_dither_set(px: float)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -26,6 +27,10 @@ const MAP_TOPS: PackedStringArray = ["południe", "północ"]
 const STYLE_MODES: PackedStringArray = ["na sumie", "na kanałach"]
 ## Until the artificial channel exists (lamps, engine ticket 13) both modes give the same picture.
 const STYLE_MODE_HINT: String = "Kanał sztuczny (lampy) dojdzie w tickecie 13; do tego czasu oba tryby dają ten sam obraz."
+## Variants of the short-step dither length (research 92) compared in F1; 0 is the A′ before it.
+const FULL_DITHER_VARIANTS_PX: PackedFloat32Array = [0.0, 16.0, 24.0, 40.0]
+## What the short-step dither does, under its choice.
+const FULL_DITHER_HINT: String = "Krótki spadek światła (np. przy meblu) cały w ditherze zamiast płaskiej plamy; 0 px = A′ bez tego."
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -41,6 +46,7 @@ var _debug_view: OptionButton
 var _debug_hint: Label
 var _map_top: OptionButton
 var _style_mode: OptionButton
+var _full_dither: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -112,6 +118,13 @@ func _ready() -> void:
 	style_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	style_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
 	add_child(style_hint)
+	_full_dither = _choice("Dither krótkich kroków", full_dither_names())
+	_full_dither.item_selected.connect(func(index: int) -> void: full_dither_set.emit(FULL_DITHER_VARIANTS_PX[index]))
+	var full_dither_hint: Label = Label.new()
+	full_dither_hint.text = FULL_DITHER_HINT
+	full_dither_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	full_dither_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
+	add_child(full_dither_hint)
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -137,6 +150,20 @@ func map_top_choice() -> OptionButton:
 ## The A′ mode choice (the embedder may set it without a signal, e.g. from the tuning set).
 func style_mode_choice() -> OptionButton:
 	return _style_mode
+
+
+## The short-step dither choice, in FULL_DITHER_VARIANTS_PX order (the embedder may set it without a
+## signal, e.g. from the tuning set).
+func full_dither_choice() -> OptionButton:
+	return _full_dither
+
+
+## Names of the short-step dither variants, in FULL_DITHER_VARIANTS_PX order.
+static func full_dither_names() -> PackedStringArray:
+	var names: PackedStringArray = PackedStringArray()
+	for px: float in FULL_DITHER_VARIANTS_PX:
+		names.append("%d px" % roundi(px))
+	return names
 
 
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).

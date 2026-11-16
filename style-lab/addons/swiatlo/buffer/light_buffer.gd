@@ -101,9 +101,10 @@ func set_state(state: DayState) -> void:
 	_redraw()
 
 
-## Takes the Location's tuning set (receivers, A′ in `mode`); a new modelling rebuilds the sky.
-func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode) -> void:
-	_style.set_tuning(tuning, mode)
+## Takes the Location's tuning set (receivers, A′ in `mode` with `full_dither_px`); a new modelling
+## rebuilds the sky.
+func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float) -> void:
+	_style.set_tuning(tuning, mode, full_dither_px)
 	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
 	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
 	_material.set_shader_parameter(&"fill", tuning.receiver_fill)

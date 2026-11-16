@@ -46,6 +46,25 @@ func asset_sprite() -> AssetSprite:
 	return null
 
 
+## Problems with the asset's data the author should see (empty: none, or not an asset): the
+## sprite's own, and solids reaching beyond the sprite (they would darken ground beside the thing).
+func asset_warnings() -> PackedStringArray:
+	var sprite: AssetSprite = asset_sprite()
+	if sprite == null:
+		return PackedStringArray()
+	var found: PackedStringArray = sprite.warnings()
+	if sprite.texture != null:
+		var shapes: Array[SolidShape] = []
+		for child: Node in get_children():
+			var solid: Solid = child as Solid
+			if solid != null:
+				shapes.append(solid.local_shape().moved(solid.position_m))
+		var outside: int = AssetSprite.solid_pixels_outside(sprite.texture.get_image(), sprite.anchor_px, shapes)
+		if outside > 0:
+			found.append("%d screen pixels of the solids lie over 1 px outside the sprite's silhouette." % outside)
+	return found
+
+
 func _snap_sprite() -> void:
 	var sprite: AssetSprite = asset_sprite()
 	if sprite != null:

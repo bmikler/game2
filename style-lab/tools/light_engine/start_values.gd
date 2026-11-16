@@ -130,7 +130,8 @@ func _sky(color: Color, intensity: float) -> SkyProfile:
 	return sky
 
 
-## Cheat sheet 4.2 and 4.3: one A′ for both (half-stop levels, a 3 px Bayer seam, research 84);
+## Cheat sheet 4.2 and 4.3: one A′ for both (half-stop levels, a 3 px Bayer seam, research 84; short
+## steps dithered all along up to 24 px, research 92);
 ## interiors with half-bright window patches (t31) and dust, outdoors without dust.
 func _tuning_set(label: String) -> TuningSet:
 	var tuning_set: TuningSet = TuningSet.new()
@@ -138,6 +139,7 @@ func _tuning_set(label: String) -> TuningSet:
 	tuning_set.style_mode = TuningSet.StyleMode.SUM
 	tuning_set.level_stops = 0.5
 	tuning_set.seam_px = 3.0
+	tuning_set.full_dither_px = 24.0
 	tuning_set.seam_pattern = TuningSet.SeamPattern.BAYER
 	tuning_set.anchor_ev = 0.0
 	tuning_set.penumbra_gain = 1.0

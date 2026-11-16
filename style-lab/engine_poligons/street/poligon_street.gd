@@ -38,6 +38,8 @@ func _ready() -> void:
 	_engine_panel.north_at_top_set.connect(_engine.set_north_at_top)
 	_engine_panel.style_mode_set.connect(_engine.set_style_mode)
 	_engine_panel.style_mode_choice().select(_engine.style_mode())
+	_engine_panel.full_dither_set.connect(_engine.set_full_dither_px)
+	_engine_panel.full_dither_choice().select(EnginePanel.FULL_DITHER_VARIANTS_PX.find(_engine.full_dither_px()))
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
 	_engine_panel.show_state(_engine.state())
@@ -61,6 +63,7 @@ func _ready() -> void:
 	_shot.add_switch("kamera", _camera_name, _place_camera)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
+	_shot.add_switch("dither krótkich kroków", _full_dither_name, _select_full_dither)
 	if not asset_looks.is_empty():
 		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
@@ -155,6 +158,19 @@ func _select_style_mode(mode_name: String) -> void:
 		return
 	_engine_panel.style_mode_choice().select(index)
 	_engine.set_style_mode(index as TuningSet.StyleMode)
+
+
+func _full_dither_name() -> String:
+	return "%d px" % roundi(_engine.full_dither_px())
+
+
+func _select_full_dither(variant_name: String) -> void:
+	var index: int = EnginePanel.full_dither_names().find(variant_name)
+	if index < 0:
+		push_warning("Unknown short-step dither in the shot: %s" % variant_name)
+		return
+	_engine_panel.full_dither_choice().select(index)
+	_engine.set_full_dither_px(EnginePanel.FULL_DITHER_VARIANTS_PX[index])
 
 
 func _debug_view_name() -> String:

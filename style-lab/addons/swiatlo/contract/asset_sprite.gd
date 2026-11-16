@@ -86,6 +86,41 @@ static func missing_normals(sprite: Image, normals: Image) -> int:
 	return count
 
 
+## How many screen pixels the solids (relative to the anchor) cover more than 1 px away from any
+## opaque pixel of the sprite. Solids are convex: each covers the hull of its projected edges.
+static func solid_pixels_outside(sprite: Image, anchor_px: Vector2i, shapes: Array[SolidShape]) -> int:
+	var projection: LightProjection = load(LightProjection.DEFAULT_PATH) as LightProjection
+	var count: int = 0
+	var covered: Dictionary[Vector2i, bool] = {}
+	for shape: SolidShape in shapes:
+		var points: PackedVector2Array = PackedVector2Array()
+		for point: Vector3 in shape.edges():
+			points.append(projection.to_screen(point))
+		var hull: PackedVector2Array = Geometry2D.convex_hull(points)
+		var bounds: Rect2 = Rect2(hull[0], Vector2.ZERO)
+		for point: Vector2 in hull:
+			bounds = bounds.expand(point)
+		for y: int in range(floori(bounds.position.y), ceili(bounds.end.y)):
+			for x: int in range(floori(bounds.position.x), ceili(bounds.end.x)):
+				var pixel: Vector2i = Vector2i(x, y) + anchor_px
+				if not covered.has(pixel) and Geometry2D.is_point_in_polygon(Vector2(x + 0.5, y + 0.5), hull):
+					covered[pixel] = true
+	for pixel: Vector2i in covered:
+		if not _opaque_near(sprite, pixel):
+			count += 1
+	return count
+
+
+## Whether the sprite has an opaque pixel at `pixel` or next to it (8 neighbours).
+static func _opaque_near(sprite: Image, pixel: Vector2i) -> bool:
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			var at: Vector2i = pixel + Vector2i(dx, dy)
+			if at.x >= 0 and at.y >= 0 and at.x < sprite.get_width() and at.y < sprite.get_height() and sprite.get_pixelv(at).a >= 0.5:
+				return true
+	return false
+
+
 func _changed() -> void:
 	update_configuration_warnings()
 	changed.emit()

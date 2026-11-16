@@ -200,7 +200,8 @@ func test_the_engine_reports_an_assets_normal_map_warning() -> void:
 	sprite.fill(Color.WHITE)
 	var normals: Image = Image.create_empty(4, 4, false, Image.FORMAT_RGBA8)
 	normals.fill(Color8(128, 128, 128))
-	var asset: Occluder = _asset(Vector3.ZERO, [_box(Vector3.ZERO, Vector3.ONE)], ImageTexture.create_from_image(sprite), Vector2i(2, 3))
+	# A solid as small as the 4 px sprite: no silhouette warning, only the normal map's.
+	var asset: Occluder = _asset(Vector3.ZERO, [_box(Vector3.ZERO, Vector3(0.05, 0.05, 0.05))], ImageTexture.create_from_image(sprite), Vector2i(2, 3))
 	asset.asset_sprite().normal_map = ImageTexture.create_from_image(normals)
 	var root: Node = Node.new()
 	root.add_child(LocationEnvironment.new())
@@ -210,3 +211,38 @@ func test_the_engine_reports_an_assets_normal_map_warning() -> void:
 	add_child_autofree(root)
 	assert_eq(engine.warnings().size(), 1)
 	assert_string_contains(engine.warnings()[0], "no normal")
+
+
+func test_solids_must_lie_in_the_sprites_silhouette() -> void:
+	# A box 1 × 1 × 1 m covers screen x −20…20, y −64…0 around the anchor (research 92 §5b: a solid
+	# beyond the thing darkens ground where nothing stands). One pixel off is allowed.
+	var box: Solid = autofree(_box(Vector3.ZERO, Vector3.ONE))
+	var shapes: Array[SolidShape] = [box.local_shape()]
+	var anchor: Vector2i = Vector2i(30, 70)
+	var fits: Image = _sprite(Vector2i(60, 80), Rect2i(10, 6, 40, 64)).get_image()
+	assert_eq(AssetSprite.solid_pixels_outside(fits, anchor, shapes), 0)
+	var a_pixel_short: Image = _sprite(Vector2i(60, 80), Rect2i(10, 6, 39, 64)).get_image()
+	assert_eq(AssetSprite.solid_pixels_outside(a_pixel_short, anchor, shapes), 0, "1 px tolerance")
+	var narrow: Image = _sprite(Vector2i(60, 80), Rect2i(10, 6, 36, 64)).get_image()
+	assert_eq(AssetSprite.solid_pixels_outside(narrow, anchor, shapes), 3 * 64, "4 px short: 3 columns out")
+
+
+func test_the_engine_reports_solids_outside_the_sprite() -> void:
+	var asset: Occluder = _asset(Vector3.ZERO, [_box(Vector3.ZERO, Vector3.ONE)],
+			_sprite(Vector2i(60, 80), Rect2i(10, 6, 20, 64)), Vector2i(30, 70))
+	var root: Node = Node.new()
+	root.add_child(LocationEnvironment.new())
+	root.add_child(asset)
+	var engine: LightEngine = LightEngine.new()
+	root.add_child(engine)
+	add_child_autofree(root)
+	assert_eq(engine.warnings().size(), 1)
+	assert_string_contains(engine.warnings()[0], "silhouette")
+
+
+func test_gate_the_street_assets_solids_lie_in_their_sprites() -> void:
+	for path: String in ["res://engine_poligons/street/props/bench/bench.tscn",
+			"res://engine_poligons/street/props/stall/stall.tscn", "res://engine_poligons/street/props/crate/crate.tscn"]:
+		var asset: Occluder = (load(path) as PackedScene).instantiate() as Occluder
+		add_child_autofree(asset)
+		assert_eq(asset.asset_warnings(), PackedStringArray(), path)

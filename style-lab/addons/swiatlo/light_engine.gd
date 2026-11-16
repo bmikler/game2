@@ -29,6 +29,8 @@ var _description: SceneDescription = SceneDescription.new()
 var _debug_view: DebugView = DebugView.NONE
 ## The A′ mode switched in F1 (−1: the tuning set's own).
 var _style_mode_override: int = -1
+## The short-step dither length picked in F1 (negative: the tuning set's own).
+var _full_dither_override: float = -1.0
 # Helper nodes without an owner: never saved into the scene.
 var _buffer: LightBuffer
 var _solids_overlay: SolidsOverlay
@@ -76,10 +78,10 @@ func warnings() -> PackedStringArray:
 	var result: PackedStringArray = PackedStringArray()
 	if is_inside_tree():
 		for node: Node in get_tree().get_nodes_in_group(Occluder.GROUP):
-			var sprite: AssetSprite = (node as Occluder).asset_sprite()
-			if sprite != null:
-				for warning: String in sprite.warnings():
-					result.append("%s: %s" % [node.name, warning])
+			for warning: String in (node as Occluder).asset_warnings():
+				result.append("%s: %s" % [node.name, warning])
+	for warning: String in tuning_set().warnings():
+		result.append("tuning set: %s" % warning)
 	var count: int = get_tree().get_nodes_in_group(LocationEnvironment.GROUP).size() if is_inside_tree() else 0
 	if count == 0:
 		result.append("no LocationEnvironment (fallback sky)")
@@ -183,9 +185,22 @@ func style_mode() -> TuningSet.StyleMode:
 	return tuning_set().style_mode
 
 
+## Compares short-step dither lengths live (F1 variants) without changing the tuning set.
+func set_full_dither_px(px: float) -> void:
+	_full_dither_override = px
+	_recompute()
+
+
+## The short-step dither length in use: the F1 variant's, or else the tuning set's.
+func full_dither_px() -> float:
+	if _full_dither_override >= 0.0:
+		return _full_dither_override
+	return tuning_set().full_dither_px
+
+
 func _recompute() -> void:
 	_state.compute(curves, sky(), hour, _north_at_top, exposure_reference())
 	if is_instance_valid(_buffer):
-		_buffer.set_tuning(tuning_set(), style_mode())
+		_buffer.set_tuning(tuning_set(), style_mode(), full_dither_px())
 		_buffer.set_state(_state)
 	state_changed.emit(_state)

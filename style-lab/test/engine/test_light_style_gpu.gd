@@ -24,23 +24,26 @@ func _uniform(light: Color) -> Image:
 	return image
 
 
-func _tuning(level_stops: float, seam_px: float, mode: TuningSet.StyleMode = TuningSet.StyleMode.SUM) -> TuningSet:
+## `full_dither_px` 0 (no short-step dither) unless given: most gates are about the narrow seam.
+func _tuning(level_stops: float, seam_px: float, mode: TuningSet.StyleMode = TuningSet.StyleMode.SUM,
+		full_dither_px: float = 0.0) -> TuningSet:
 	var tuning: TuningSet = TuningSet.new()
 	tuning.level_stops = level_stops
 	tuning.seam_px = seam_px
+	tuning.full_dither_px = full_dither_px
 	tuning.style_mode = mode
 	return tuning
 
 
 ## Runs the pass once: anchor 1 lux, exposure 1 unless given.
 func _styled(natural: Image, tuning: TuningSet, artificial: Image = null, origin: Vector2i = Vector2i.ZERO,
-		exposure: float = 1.0) -> Image:
+		exposure: float = 1.0, anchor_lux: float = 1.0) -> Image:
 	var style: LightStyle = LightStyle.new()
 	add_child_autofree(style)
 	var artificial_texture: Texture2D = ImageTexture.create_from_image(artificial) if artificial != null else null
 	style.set_input(ImageTexture.create_from_image(natural), artificial_texture, natural.get_size(), origin)
-	style.set_tuning(tuning, tuning.style_mode)
-	style.set_exposure(exposure, 1.0)
+	style.set_tuning(tuning, tuning.style_mode, tuning.full_dither_px)
+	style.set_exposure(exposure, anchor_lux)
 	await RenderingServer.frame_post_draw
 	return style.image()
 
@@ -159,3 +162,139 @@ func test_without_artificial_light_both_modes_agree() -> void:
 	var on_sum: Image = await _styled(ramp, _tuning(0.5, 3.0))
 	var apart: Image = await _styled(ramp, _tuning(0.5, 3.0, TuningSet.StyleMode.PER_CHANNEL))
 	assert_eq(on_sum.get_data(), apart.get_data())
+
+
+# Gates from research 92 §5c, run for every F1 variant of `full_dither_px` (the critic may change the
+# look, not bring back edges from gradients or the grid on the street). Light is given in level
+# steps (`s`, the anchor in the middle of level 0 at s = 0.5, level centres at n + 0.5).
+
+## Light whose level coordinate is `s`, with half-stop levels and the anchor at 1 lux.
+func _ev_of_steps(s: float) -> float:
+	return (s - 0.5) * 0.5
+
+
+## A ramp from `from` to `to` (level steps) over `length_px` from column `start`, flat around it.
+func _steps_ramp(from: float, to: float, start: int, length_px: float) -> Callable:
+	return func(x: int) -> float:
+		return lerpf(from, to, clampf((x + 0.5 - start) / length_px, 0.0, 1.0))
+
+
+## Level coordinate of a styled pixel (half-stop levels, anchor 1 lux): its level's centre.
+func _steps_of_pixel(light: float) -> float:
+	return log(light) / log(2.0) / 0.5 + 0.5
+
+
+## Worst error of the 4 px mean (4×4 cells, whole pattern periods) of the styled light against the
+## input's, and the worst jump between neighbouring cells beyond the input's own jump, in steps.
+func _tracking(steps: Callable, styled: Image) -> Vector2:
+	var cells_in: PackedFloat32Array = PackedFloat32Array()
+	var cells_out: PackedFloat32Array = PackedFloat32Array()
+	for cell: int in WIDTH / 4:
+		var sum_in: float = 0.0
+		var sum_out: float = 0.0
+		for x: int in range(cell * 4, cell * 4 + 4):
+			var s: float = steps.call(x)
+			sum_in += s * HEIGHT
+			for row: int in HEIGHT:
+				sum_out += _steps_of_pixel(styled.get_pixel(x, row).r)
+		cells_in.append(sum_in / (4 * HEIGHT))
+		cells_out.append(sum_out / (4 * HEIGHT))
+	var worst: Vector2 = Vector2.ZERO
+	for cell: int in cells_in.size():
+		worst.x = maxf(worst.x, absf(cells_out[cell] - cells_in[cell]))
+		if cell > 0:
+			var jump_out: float = absf(cells_out[cell] - cells_out[cell - 1])
+			var jump_in: float = absf(cells_in[cell] - cells_in[cell - 1])
+			worst.y = maxf(worst.y, jump_out - jump_in)
+	return worst
+
+
+func _styled_steps(steps: Callable, tuning: TuningSet) -> Image:
+	return await _styled(_gradient(func(x: int) -> float:
+		var s: float = steps.call(x)
+		return _ev_of_steps(s)), tuning)
+
+
+func test_gate_short_steps_leave_no_edge() -> void:
+	# A thing's halo: 1–2 levels down over a step 8 px … `full_dither_px` long. Between two level
+	# centres, so the flat light around it is a level of its own.
+	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+		if full <= 0.0:
+			continue # today's A′, kept in F1 for comparison: it makes the edges (the next test)
+		for step_px: float in [8.0, full * 0.5, full]:
+			for amplitude: float in [0.5, 1.0, 2.0]:
+				# Half a level runs from a quarter below a boundary to a quarter above it.
+				var from: float = 0.75 if amplitude < 1.0 else 0.5
+				var steps: Callable = _steps_ramp(from, from + amplitude, 64, amplitude * step_px)
+				var worst: Vector2 = _tracking(steps, await _styled_steps(steps, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full)))
+				var where: String = "full dither %s px, a step %s px, %s levels" % [full, step_px, amplitude]
+				assert_lt(worst.x, 0.35, "the mean follows the light: %s" % where)
+				assert_lt(worst.y, 0.35, "no jump of its own: %s" % where)
+
+
+func test_gate_short_steps_catch_the_old_flat_rings() -> void:
+	# The gate above is not empty: without the short-step dither a halo turns into flat rings.
+	var steps: Callable = _steps_ramp(0.5, 1.5, 64, 16.0)
+	var worst: Vector2 = _tracking(steps, await _styled_steps(steps, _tuning(0.5, 3.0)))
+	assert_gt(worst.y, 0.35)
+
+
+func test_gate_a_sharp_edge_stays_sharp() -> void:
+	# 2 EV (4 levels) over 1 or 2 px, between two level centres: the edge is at most a seam wide.
+	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+		for edge_px: float in [1.0, 2.0]:
+			var steps: Callable = _steps_ramp(0.5, -3.5, 128, edge_px)
+			var styled: Image = await _styled_steps(steps, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full))
+			var lit: float = styled.get_pixel(0, 0).r
+			var dark: float = styled.get_pixel(WIDTH - 1, 0).r
+			var between: int = 0
+			for x: int in WIDTH:
+				var all_lit: bool = true
+				var all_dark: bool = true
+				for row: int in HEIGHT:
+					var light: float = styled.get_pixel(x, row).r
+					all_lit = all_lit and is_equal_approx(light, lit)
+					all_dark = all_dark and is_equal_approx(light, dark)
+				if not all_lit and not all_dark:
+					between += 1
+			assert_lte(between, 4, "full dither %s px, an edge %s px: at most the 3 px seam + 1" % [full, edge_px])
+
+
+func test_gate_the_street_keeps_flat_fields_with_a_narrow_seam() -> void:
+	# The slope along a facade: a step 85–285 px long. Away from each boundary the light is the
+	# plain posterisation; dithered pixels lie within half the seam (+ a pixel) of a boundary.
+	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+		for step_px: float in [85.0, 285.0]:
+			# Starts 0.3 steps below a boundary, so each ramp crosses at least one.
+			var steps: Callable = func(x: int) -> float: return 0.7 + x / step_px
+			var seam: Image = await _styled_steps(steps, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full))
+			var plain: Image = await _styled_steps(steps, _tuning(0.5, 0.0))
+			var farthest: float = 0.0
+			for x: int in WIDTH:
+				for row: int in HEIGHT:
+					if not is_equal_approx(seam.get_pixel(x, row).r, plain.get_pixel(x, row).r):
+						var s: float = steps.call(x)
+						farthest = maxf(farthest, absf(s - roundf(s)) * step_px)
+			assert_lte(farthest, 2.5, "full dither %s px, a step %s px" % [full, step_px])
+
+
+func test_gate_brighter_sky_moves_no_level_boundary() -> void:
+	# Lit by the sky alone, the light and the anchor scale together: the levels stay where they were,
+	# only brighter by the same factor (research 84, 92 §5c.10).
+	var ramp: Image = _gradient(func(x: int) -> float: return -1.1 + 0.02 * x)
+	var brighter: Image = ramp.duplicate() as Image
+	for x: int in WIDTH:
+		for row: int in HEIGHT:
+			brighter.set_pixel(x, row, ramp.get_pixel(x, row) * 3.0)
+	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+		var tuning: TuningSet = _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full)
+		var styled: Image = await _styled(ramp, tuning)
+		var scaled: Image = await _styled(brighter, tuning, null, Vector2i.ZERO, 1.0, 3.0)
+		var moved: int = 0
+		for x: int in WIDTH:
+			for row: int in HEIGHT:
+				# The level relative to its anchor (the buffer holds half floats: compare levels, not lux).
+				var level_scaled: float = _steps_of_pixel(scaled.get_pixel(x, row).r / 3.0)
+				if absf(level_scaled - _steps_of_pixel(styled.get_pixel(x, row).r)) > 0.1:
+					moved += 1
+		assert_eq(moved, 0, "full dither %s px" % full)

@@ -23,7 +23,31 @@ A′ (poziomy EV, szew ditheru o stałej szerokości w px, kotwica `Y_ref`) kwan
 
 Uliczka, przewiń dobę: wyraźne poziomy z wąskim szwem ditheru, noc ciemna, ale czytelna; mebel z ComfyUI nie gryzie się z ditherem.
 
-## Stan (2026-11-16, Claude) — w toku, nie do sprawdzenia
+## Stan (2026-11-16, Claude, druga sesja) — do sprawdzenia przez człowieka
+
+Plan z research 92 zrobiony (pkt 1–4 niżej):
+- **A′:** krok krótszy niż `full_dither_px` cały w ditherze, dłuższy niż 2× zostaje polem z wąskim szwem, między nimi
+  `smoothstep` (`light_style.gdshader`). Nowe pole Zestawu `full_dither_px` (start 24, zakres 0–48; ostrzeżenie silnika,
+  gdy > 0 i < 2 × `seam_px`).
+- **F1:** „Dither krótkich kroków” 0 / 16 / 24 / 40 px (0 = A′ sprzed zmiany), także w zrzutach. Start z Zestawu.
+- **Bramki stylizacji** (`test_light_style_gpu.gd`, dla każdego Wariantu z F1): brak krawędzi z krótkiego kroku (rampa
+  1-D zamiast promienistej, amplituda 0,5–2 kroków, krok 8 px…`full_dither_px`; średnia 4 px śledzi wejście ±0,35 kroku,
+  bez własnego skoku; Wariant 0 = stare A′ pominięty z założenia, osobny test pokazuje, że go oblewa), ostra krawędź ≤ szew
+  + 1 px, ulica (krok 85–285 px) z płaskimi polami i szwem, kotwica (jaśniejsze niebo nie przesuwa granic poziomów).
+- **Bramki fizyki** (`test_light_buffer_gpu.gd`): wyrocznia CPU nieba przy skrzyni 0,6 m (2/10/30/60 cm, przód i bok,
+  ±0,1 EV) i skrzynia 1 m od ściany 15 m (strona ulicy 30 cm > −0,05 EV, szczelina 10 cm < −0,8 EV). Przechodzą: warstwa
+  nieba liczy dobrze.
+- **Kontrakt assetu:** silnik ostrzega, gdy Bryła wychodzi > 1 px poza sylwetkę sprite'a (`AssetSprite.solid_pixels_outside`,
+  `Occluder.asset_warnings`). Ławka, stragan i skrzynia przechodzą; prześwity pod siedziskiem i blatem są puste
+  (`RAISED_BOX` + osobne nogi; sprawdzone w danych `.tscn`, reguła 92 §5b.6 bez testu automatycznego, widok
+  debug „Bryły” w F1 już jest). Plama przy meblach nie pochodzi więc z danych, tylko z A′, którą naprawia pkt 1.
+- `node tools/test.mjs`: 158 zielonych.
+
+**Do oceny w grze:** Poligon Ulica o 9:00 (skrzynia, ławka, stragan w cieniu kamienic), F1 „Dither krótkich kroków”
+0 / 16 / 24 / 40. Pytanie: czy aureola przy meblach jest miękka bez pierścienia i czy pełny dither nie czyta się jak
+faktura (92 §8). Do tego reszta „Jak sprawdzić” (przewinięcie doby, noc).
+
+## Stan (2026-11-16, Claude, pierwsza sesja)
 
 **Zrobione (commit na gałęzi `silnik-11-styl`):**
 - Zestaw strojenia ze wszystkimi polami ze specyfikacji (`tuning_set.gd`; pola jeszcze nieużywane opisują numer ticketu, który ich użyje). `outdoor.tres` / `interior.tres` z generatora `tools/light_engine/start_values.gd` (poziom 0,5 EV, szew 3 px Bayer, kotwica 0).

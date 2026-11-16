@@ -41,9 +41,11 @@ func set_input(natural: Texture2D, artificial: Texture2D, size: Vector2i, origin
 	redraw()
 
 
-## The A′ constants of the tuning set; `mode` may differ from the set's (the F1 switch).
-func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode) -> void:
+## The A′ constants of the tuning set; `mode` and `full_dither_px` may differ from the set's (the
+## F1 switches).
+func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float) -> void:
 	_material.set_shader_parameter(&"mode", mode)
+	_material.set_shader_parameter(&"full_dither_px", full_dither_px)
 	_material.set_shader_parameter(&"level_stops", tuning.level_stops)
 	_material.set_shader_parameter(&"seam_px", tuning.seam_px)
 	_material.set_shader_parameter(&"seam_pattern", tuning.seam_pattern)
