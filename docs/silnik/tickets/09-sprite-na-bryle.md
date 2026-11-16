@@ -2,7 +2,7 @@
 id: 09
 title: Oświetlenie sprite'ów na Bryłach
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [07, 08]
 ---
@@ -51,3 +51,6 @@ O 9:00 i 15:00 (słońce w południe 30°, ustalone po napisaniu ticketu) kamien
 3. **9:00 i 15:00**: oba meble w cieniu kamienic, oświetlone niebem, z ciemniejszą obwódką na chodniku tuż przy nich (zasłaniają niebo).
 4. „Widok debug” → „Odbiorniki”: piksele ławki w kolorach jej normalnych, skrzynia jednolicie (normalne ścian).
 
+### Ocena człowieka
+
+2026-11-16: „ok” (ławka i skrzynia dobrze oświetlone, cienie zgodne z obrazem).
