@@ -197,6 +197,43 @@ func test_a_rectangle_shines_from_its_face_only() -> void:
 	assert_almost_eq(_artificial(engine, image, Vector3(2.5, -4.0, 0.0)), 0.0, 0.001, "behind it (beside it on screen)")
 
 
+func test_a_lit_panes_glass_takes_no_diffuse_light_from_other_sources() -> void:
+	# A pane on a wall (front face at d = −2) and a lamp of another profile 0.3 m before the wall,
+	# beside the pane: the wall round the pane takes the lamp's light, the glass only its own glow.
+	var pane: SourceProfile = _profile()
+	var lamp: SourceProfile = _profile(8.0)
+	var glass: Vector3 = Vector3(0.45, -1.99, 2.0)
+	var beside: Vector3 = Vector3(0.0, -2.0, 3.2)
+	var alone: Array[float] = await _measure([_pane(pane)], _wall(), [glass])
+	var with_lamp: Array[float] = await _measure([_pane(pane), _sphere(Vector3(1.2, -1.7, 2.0), 0.2, lamp)],
+			_wall(), [glass, beside])
+	assert_almost_eq(alone[0], LUX, LUX * 0.02, "the glass glows with its own light")
+	assert_almost_eq(with_lamp[0], alone[0], LUX * 0.02, "the lamp's light does not land on the glass")
+	assert_gt(with_lamp[1], 1.0, "the wall above the pane takes the lamp's light")
+
+
+func test_a_lamp_before_another_groups_pane_keeps_its_glow() -> void:
+	var lamp_at: Vector3 = Vector3(0.0, -1.4, 2.0)
+	var values: Array[float] = await _measure([_pane(_profile()), _sphere(lamp_at, 0.4, _profile(8.0))], _wall(),
+			[lamp_at])
+	assert_gt(values[0], LUX * 1.9, "the lamp's glow adds to the pane's behind it")
+
+
+## A 1.2 × 1.6 m pane facing the camera, 1 cm before the wall of _wall().
+func _pane(profile: SourceProfile) -> LightSource:
+	var pane: LightSource = LightSource.new()
+	pane.shape = LightSource.Shape.RECTANGLE
+	pane.size_m = Vector2(1.2, 1.6)
+	pane.position_m = Vector3(0.0, -1.99, 2.0)
+	pane.profile = profile
+	return pane
+
+
+## A wall 4 m tall whose front face stands at d = −2.
+func _wall() -> Array[Solid]:
+	return [_solid(Vector3(0.0, -2.0, 0.0), Vector3(10.0, 1.0, 4.0))]
+
+
 func test_the_a_prime_mode_switch_changes_the_picture_where_sun_and_lamp_meet() -> void:
 	var engine: LightEngine = await _scene(16.0, [_sphere(Vector3(0.0, 0.0, 3.0), 0.3, _profile(12.0,
 			PackedVector2Array([Vector2(0.0, 3000.0), Vector2(24.0, 3000.0)])))])

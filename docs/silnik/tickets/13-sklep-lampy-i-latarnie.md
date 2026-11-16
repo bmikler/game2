@@ -111,6 +111,30 @@ ticket 40 mapy grafiki, reference/nastroj/) nie należą do ticketu: nie commito
 zastępcza szyba szara pod ciepłym światłem = brązowa płyta; kinkiet 20 cm od muru daje dużą plamę na ścianie; środkowa
 latarnia ma o jeden poziom więcej (granica przy 38 lx), do strojenia.
 
+## Okna od strony ulicy (2026-11-16, druga sesja) — do oceny przez człowieka
+
+Porównanie ze starym Poligonem Ulica o 22:00 (zrzuty tej samej pory; ekspozycja nowego 1/62 lx):
+1. Stare okno ma ramę #cfc8b8, słupek (dwa skrzydła) i śnieg na parapecie; nowe było płaską kartą.
+2. Jasność szyby ta sama (ok. 65 lx ≈ 1,0 po ekspozycji), ale szyba była ciemniejsza i bardziej ruda:
+   stara (248,200,136), nowa (216,160,112): albedo zastępczej szyby 0,85 i kolor #ffb870.
+3. Szyby obok drzwi żółto-zielone: kinkiet oświetlał szybę jak matową ścianę i kanały się przycinały.
+
+Zmiany:
+- **Model (silnik):** piksele prostokąta Źródła (szyba) nie biorą rozproszonego światła innych grup
+  (`source_layer.gdshader`): szkło odbija cudze światło lustrzanie, a jego własny blask je przyćmiewa.
+  Własny blask innego Źródła (lampa przed szybą) zostaje. Bramki GPU
+  `test_a_lit_panes_glass_takes_no_diffuse_light_from_other_sources`, `test_a_lamp_before_another_groups_pane_keeps_its_glow`.
+- **Dane:** kolor świecącego okna #ffc780 (stary `LIT_WINDOW`), w generatorze.
+- **Poligon:** `source_glass.gd` rysuje ramę i parapet ze śniegiem wokół prostokątów; każde okno (i witryna)
+  to dwa skrzydła 8 cm od siebie, więc słupek nie świeci. Drugie piętro ma cztery okna nad czterema (człowiek).
+- **Część okien ciemna, jak w starym** (człowiek): wzór starego `(n·7+3) % 10 < 7`, ciemne okna 2, 5 i 8 (3 z 8).
+  Ciemne okno to ten sam prostokąt Źródła bez profilu: silnik go pomija, `ShopGlass` rysuje szybę, ramę i parapet.
+- `node tools/test.mjs`: 186 zielone.
+
+**Znane ograniczenia:** szyba nie bierze światła innych grup także wtedy, gdy jej okno jest zgaszone (szkło jak lustro,
+niezależnie od godziny); przy dwóch nachodzących na siebie szybach różnych grup nie wygrywa bliższa. Rama zewnętrzna ma
+4 cm (stara 8 cm); słupek 8 cm. Poświata na śniegu: stara była mocniejsza w innej skali jednostek; nie porównana liczbowo.
+
 ## Do zrobienia w nowej sesji (człowiek, 2026-11-16)
 
 - **Okna z ulicy do poprawy:** „okna były o wiele lepsze w game2” (stary Poligon Ulica: `style-lab/ulica.bat`,

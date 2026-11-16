@@ -2,7 +2,9 @@
 // colour: falloff × the cosine at the receiver × visibility, averaged over each source's area (a
 // rectangle also × its own cosine), summed over the group's sources. The same visibility function
 // as the sun and the sky; the penumbra follows from the sources' size. Pixels that show a source
-// itself (its sphere or its rectangle before the surface) glow with the falloff at 0.
+// itself (its sphere or its rectangle before the surface) glow with the falloff at 0. A rectangle's
+// pixels (a lit pane) take no light from other groups: glass reflects other light as a mirror, not
+// diffusely, and its own glow outshines that reflection.
 // Built once per scene, a pass per frame: each pass adds the average of its samples (a fixed
 // low-discrepancy set over the area, the same for every pixel and load: no noise) into a target
 // never cleared in between; passes take turns in red, green and blue. The buffer divides the sum
@@ -69,6 +71,23 @@ bool shows_source(vec3 centre, int kind, vec3 half_u, vec3 half_v, float radius,
 	return discriminant >= 0.0 && (-b + sqrt(discriminant)) / a >= surface_t - GLOW_TOLERANCE_M;
 }
 
+// Whether the pixel shows the rectangle of a source outside this layer's group.
+bool shows_other_groups_pane(vec3 origin, vec3 sight, float surface_t) {
+	for (int index = 0; index < source_count; index++) {
+		vec4 a = texelFetch(sources, ivec2(index * 4, 0), 0);
+		vec4 c = texelFetch(sources, ivec2(index * 4 + 2, 0), 0);
+		if (int(round(a.w)) != SOURCE_RECTANGLE || int(round(c.w)) == group) {
+			continue;
+		}
+		vec4 b = texelFetch(sources, ivec2(index * 4 + 1, 0), 0);
+		vec3 n = texelFetch(sources, ivec2(index * 4 + 3, 0), 0).xyz;
+		if (shows_source(a.xyz, SOURCE_RECTANGLE, b.xyz, c.xyz, b.w, n, origin, sight, surface_t)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void fragment() {
 	vec3 point;
 	vec3 normal;
@@ -80,6 +99,7 @@ void fragment() {
 	float surface_t = found ? point.y : -1e9;
 	vec3 start = point + face_normal * RAY_OFFSET_M;
 	float light = 0.0;
+	bool on_glass = shows_other_groups_pane(origin, sight, surface_t);
 	for (int index = 0; index < source_count; index++) {
 		vec4 a = texelFetch(sources, ivec2(index * 4, 0), 0);
 		vec4 b = texelFetch(sources, ivec2(index * 4 + 1, 0), 0);
@@ -94,7 +114,8 @@ void fragment() {
 			light += falloff_at(0.0);
 			continue;
 		}
-		if (!found) {
+		// On another group's pane only this group's own surfaces (a lamp before the window) show.
+		if (!found || on_glass) {
 			continue;
 		}
 		float extent = kind == SOURCE_RECTANGLE ? length(b.xyz + c.xyz) : b.w;

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://addons/swiatlo/tuning/source_profile.gd" id="1_6ers5"]
 
 [sub_resource type="Gradient" id="Gradient_h2ns3"]
-colors = PackedColorArray(1, 0.72156864, 0.4392157, 1, 1, 0.72156864, 0.4392157, 1)
+colors = PackedColorArray(1, 0.78039217, 0.5019608, 1, 1, 0.78039217, 0.5019608, 1)
 
 [sub_resource type="Curve" id="Curve_2veg5"]
 _limits = [0.0, 1.0, 0.0, 6.0]

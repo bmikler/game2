@@ -188,12 +188,20 @@ front_colors = PackedColorArray(0.66, 0.26, 0.23, 1, 0.23, 0.23, 0.23, 1)
 
 [node name="Shop" type="Node2D" parent="."]
 
-[node name="ShopWindow" type="Node2D" parent="Shop"]
-position = Vector2(260, -299.52)
+[node name="ShopWindowLeft" type="Node2D" parent="Shop"]
+position = Vector2(209.2, -299.52)
 script = ExtResource("11")
-position_m = Vector3(6.5, -9.98, 1.5)
+position_m = Vector3(5.23, -9.98, 1.5)
 shape = 1
-size_m = Vector2(5, 2)
+size_m = Vector2(2.46, 2)
+profile = ExtResource("12")
+
+[node name="ShopWindowRight" type="Node2D" parent="Shop"]
+position = Vector2(310.8, -299.52)
+script = ExtResource("11")
+position_m = Vector3(7.77, -9.98, 1.5)
+shape = 1
+size_m = Vector2(2.46, 2)
 profile = ExtResource("12")
 
 [node name="DoorLamp" type="Node2D" parent="Shop"]
@@ -202,53 +210,127 @@ script = ExtResource("11")
 position_m = Vector3(10.8, -9.8, 2.65)
 profile = ExtResource("13")
 
-[node name="Window1" type="Node2D" parent="Shop"]
-position = Vector2(120, -423.52)
+[node name="Window1Left" type="Node2D" parent="Shop"]
+position = Vector2(107.2, -423.52)
 script = ExtResource("11")
-position_m = Vector3(3, -9.98, 4.6)
+position_m = Vector3(2.68, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
 
-[node name="Window2" type="Node2D" parent="Shop"]
-position = Vector2(240, -423.52)
+[node name="Window1Right" type="Node2D" parent="Shop"]
+position = Vector2(132.8, -423.52)
 script = ExtResource("11")
-position_m = Vector3(6, -9.98, 4.6)
+position_m = Vector3(3.32, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
 
-[node name="Window3" type="Node2D" parent="Shop"]
-position = Vector2(360, -423.52)
+[node name="Window2Left" type="Node2D" parent="Shop"]
+position = Vector2(227.2, -423.52)
 script = ExtResource("11")
-position_m = Vector3(9, -9.98, 4.6)
+position_m = Vector3(5.68, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
+
+[node name="Window2Right" type="Node2D" parent="Shop"]
+position = Vector2(252.8, -423.52)
+script = ExtResource("11")
+position_m = Vector3(6.32, -9.98, 4.6)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+
+[node name="Window3Left" type="Node2D" parent="Shop"]
+position = Vector2(347.2, -423.52)
+script = ExtResource("11")
+position_m = Vector3(8.68, -9.98, 4.6)
+shape = 1
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
 
-[node name="Window4" type="Node2D" parent="Shop"]
-position = Vector2(480, -423.52)
+[node name="Window3Right" type="Node2D" parent="Shop"]
+position = Vector2(372.8, -423.52)
 script = ExtResource("11")
-position_m = Vector3(12, -9.98, 4.6)
+position_m = Vector3(9.32, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
 
-[node name="Window5" type="Node2D" parent="Shop"]
-position = Vector2(180, -519.52)
+[node name="Window4Left" type="Node2D" parent="Shop"]
+position = Vector2(467.2, -423.52)
 script = ExtResource("11")
-position_m = Vector3(4.5, -9.98, 7)
+position_m = Vector3(11.68, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
 
-[node name="Window6" type="Node2D" parent="Shop"]
-position = Vector2(420, -519.52)
+[node name="Window4Right" type="Node2D" parent="Shop"]
+position = Vector2(492.8, -423.52)
 script = ExtResource("11")
-position_m = Vector3(10.5, -9.98, 7)
+position_m = Vector3(12.32, -9.98, 4.6)
 shape = 1
-size_m = Vector2(1.2, 1.6)
+size_m = Vector2(0.56, 1.6)
 profile = ExtResource("12")
+
+[node name="Window5Left" type="Node2D" parent="Shop"]
+position = Vector2(107.2, -519.52)
+script = ExtResource("11")
+position_m = Vector3(2.68, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+
+[node name="Window5Right" type="Node2D" parent="Shop"]
+position = Vector2(132.8, -519.52)
+script = ExtResource("11")
+position_m = Vector3(3.32, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+
+[node name="Window6Left" type="Node2D" parent="Shop"]
+position = Vector2(227.2, -519.52)
+script = ExtResource("11")
+position_m = Vector3(5.68, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+profile = ExtResource("12")
+
+[node name="Window6Right" type="Node2D" parent="Shop"]
+position = Vector2(252.8, -519.52)
+script = ExtResource("11")
+position_m = Vector3(6.32, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+profile = ExtResource("12")
+
+[node name="Window7Left" type="Node2D" parent="Shop"]
+position = Vector2(347.2, -519.52)
+script = ExtResource("11")
+position_m = Vector3(8.68, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+profile = ExtResource("12")
+
+[node name="Window7Right" type="Node2D" parent="Shop"]
+position = Vector2(372.8, -519.52)
+script = ExtResource("11")
+position_m = Vector3(9.32, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+profile = ExtResource("12")
+
+[node name="Window8Left" type="Node2D" parent="Shop"]
+position = Vector2(467.2, -519.52)
+script = ExtResource("11")
+position_m = Vector3(11.68, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
+
+[node name="Window8Right" type="Node2D" parent="Shop"]
+position = Vector2(492.8, -519.52)
+script = ExtResource("11")
+position_m = Vector3(12.32, -9.98, 7)
+shape = 1
+size_m = Vector2(0.56, 1.6)
 
 [node name="StreetLampHead1" type="Node2D" parent="Shop"]
 position = Vector2(-400, -168.8)
@@ -350,7 +432,7 @@ top_color = Color(0.32, 0.35, 0.35, 1)
 
 [node name="ShopGlass" type="Node2D" parent="." node_paths=PackedStringArray("sources")]
 script = ExtResource("15")
-sources = [NodePath("../Shop/ShopWindow"), NodePath("../Shop/DoorLamp"), NodePath("../Shop/Window1"), NodePath("../Shop/Window2"), NodePath("../Shop/Window3"), NodePath("../Shop/Window4"), NodePath("../Shop/Window5"), NodePath("../Shop/Window6"), NodePath("../Shop/StreetLampHead1"), NodePath("../Shop/StreetLampHead2"), NodePath("../Shop/StreetLampHead3")]
+sources = [NodePath("../Shop/ShopWindowLeft"), NodePath("../Shop/ShopWindowRight"), NodePath("../Shop/DoorLamp"), NodePath("../Shop/Window1Left"), NodePath("../Shop/Window1Right"), NodePath("../Shop/Window2Left"), NodePath("../Shop/Window2Right"), NodePath("../Shop/Window3Left"), NodePath("../Shop/Window3Right"), NodePath("../Shop/Window4Left"), NodePath("../Shop/Window4Right"), NodePath("../Shop/Window5Left"), NodePath("../Shop/Window5Right"), NodePath("../Shop/Window6Left"), NodePath("../Shop/Window6Right"), NodePath("../Shop/Window7Left"), NodePath("../Shop/Window7Right"), NodePath("../Shop/Window8Left"), NodePath("../Shop/Window8Right"), NodePath("../Shop/StreetLampHead1"), NodePath("../Shop/StreetLampHead2"), NodePath("../Shop/StreetLampHead3")]
 
 [node name="Crate" parent="." instance=ExtResource("8")]
 position = Vector2(-80, 84)
