@@ -76,3 +76,13 @@ pół godziny (pasy A′ przesuwały się po chodniku), a szara zastępcza szyba
 płyta. Teraz okna włączają się i gaszą nagle (5:45, 7:45, 17:15, 23:15), 60 lx, szyba jasna (`source_glass.gd`).
 **Środkowa latarnia** ma jasną plamkę pod sobą, boczne nie: szczyt 38,8 lx (światło obu sąsiadek) wobec 38,0 lx przy
 granicy poziomu ok. 38 lx. Fizyka poprawna, A′ zamienia 2 % różnicy w cały poziom; zostaje do strojenia (`anchor_ev`).
+
+## Do zrobienia w nowej sesji (człowiek, 2026-11-16)
+
+- **Okna z ulicy do poprawy:** „okna były o wiele lepsze w game2” (stary Poligon Ulica: `style-lab/ulica.bat`,
+  `poligony/ulica_bryly.*`, poświata okien w `street_fn.gdshaderinc`, Ściąga 4.4 i sekcja 1: „zapalone okna z poświatą
+  na śniegu”). Żaden inny ticket silnika nie obejmuje świecących okien od strony ulicy: należy to zrobić tutaj. Najpierw
+  porównać na żywo stary i nowy wygląd okna (zrzuty tej samej pory), nazwać różnice, potem poprawić model lub dane
+  (bez łatek pod scenę).
+- Lampa nad drzwiami zostaje na całą dobę (człowiek: „niech świeci”).
+- Ticket zamknąć dopiero po ocenie okien przez człowieka.
