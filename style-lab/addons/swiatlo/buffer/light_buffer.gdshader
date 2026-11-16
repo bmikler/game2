@@ -2,6 +2,8 @@
 // the projection shows there (an asset's sprite pixel on its solids, or the scene receiver nearest the
 // camera), then sums the natural light reaching that point in lux (HDR):
 // ambient + sky × sky share + sun × visibility; sprite pixels add rim light and keep a fill minimum.
+// Alpha holds the sun's share (its cosine × visibility, with rim light): × the sun's light it is the
+// sun's part of the pixel's lux (the A′ pass tells the sun from the sky by it). No surface: all 0.
 shader_type canvas_item;
 render_mode unshaded, blend_disabled;
 
@@ -41,7 +43,7 @@ void fragment() {
 	vec3 face_normal;
 	int found = find_surface(local_px, point, normal, face_normal);
 	if (found < 0) {
-		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
+		COLOR = vec4(0.0);
 	} else if (debug_view == VIEW_RECEIVERS) {
 		vec3 hue = face_normal.z > 0.5 ? vec3(0.35, 0.55, 1.0) : (face_normal.y > 0.5 ? vec3(1.0, 0.6, 0.2) : vec3(0.4, 0.9, 0.4));
 		if (found > 0) {
@@ -78,7 +80,7 @@ void fragment() {
 			if (found > 0) {
 				light = max(light, fill * (ambient_light + sky_light));
 			}
-			COLOR = vec4(light, 1.0);
+			COLOR = vec4(light, sun + back);
 		}
 	}
 }

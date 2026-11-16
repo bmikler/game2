@@ -435,3 +435,19 @@ func test_gate_a_crate_by_a_wall_takes_no_sky_the_wall_took() -> void:
 	for at: Vector3 in [street_side, gap]:
 		var oracle_ev: float = _ev(_oracle_sky(_ground_at_pixel(engine, at.x, at.y), boxes))
 		assert_almost_eq(_ev(_sky(engine, at)), oracle_ev, 0.1, "the oracle at x %s" % at.x)
+
+
+func test_the_buffers_alpha_is_the_suns_share_and_smooth_sky_keeps_the_shade_as_it_is() -> void:
+	var engine: LightEngine = await _location(10.0)
+	engine.set_debug_view(LightEngine.DebugView.NONE)
+	engine.set_sky_style(TuningSet.SkyStyle.SMOOTH)
+	await RenderingServer.frame_post_draw
+	var sunny: Color = _pixel(engine, Vector3(-6.0, 6.0, 0.0))
+	assert_almost_eq(sunny.a, engine.state().sun_direction.z, 0.002, "open ground: the sun's cosine")
+	var shade_point: Vector3 = Vector3(1.0, 2.8, 0.0)
+	var shade: Color = _pixel(engine, shade_point)
+	assert_eq(shade.a, 0.0, "the post's shadow: no sun")
+	var at: Vector2i = Vector2i(PROJECTION.to_screen(shade_point).floor()) - engine.buffer_area().position
+	var styled: Color = engine.styled_image().get_pixelv(at)
+	var expected: float = shade.get_luminance() * engine.state().exposure
+	assert_almost_eq(styled.get_luminance(), expected, expected * 0.01, "the shade's sky light, unstyled")

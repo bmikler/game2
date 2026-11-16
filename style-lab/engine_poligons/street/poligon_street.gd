@@ -39,6 +39,8 @@ func _ready() -> void:
 	_engine_panel.style_mode_set.connect(_engine.set_style_mode)
 	_engine_panel.style_mode_choice().select(_engine.style_mode())
 	_engine_panel.full_dither_set.connect(_engine.set_full_dither_px)
+	_engine_panel.sky_style_set.connect(_engine.set_sky_style)
+	_engine_panel.sky_style_choice().select(_engine.sky_style())
 	_engine_panel.full_dither_choice().select(EnginePanel.FULL_DITHER_VARIANTS_PX.find(_engine.full_dither_px()))
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
@@ -64,6 +66,7 @@ func _ready() -> void:
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
 	_shot.add_switch("dither krótkich kroków", _full_dither_name, _select_full_dither)
+	_shot.add_switch("światło nieba", _sky_style_name, _select_sky_style)
 	if not asset_looks.is_empty():
 		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
@@ -171,6 +174,19 @@ func _select_full_dither(variant_name: String) -> void:
 		return
 	_engine_panel.full_dither_choice().select(index)
 	_engine.set_full_dither_px(EnginePanel.FULL_DITHER_VARIANTS_PX[index])
+
+
+func _sky_style_name() -> String:
+	return EnginePanel.SKY_STYLES[_engine.sky_style()]
+
+
+func _select_sky_style(style_name: String) -> void:
+	var index: int = EnginePanel.SKY_STYLES.find(style_name)
+	if index < 0:
+		push_warning("Unknown sky style in the shot: %s" % style_name)
+		return
+	_engine_panel.sky_style_choice().select(index)
+	_engine.set_sky_style(index as TuningSet.SkyStyle)
 
 
 func _debug_view_name() -> String:

@@ -8,11 +8,16 @@ shader_type canvas_item;
 render_mode unshaded, blend_disabled;
 
 const int MODE_PER_CHANNEL = 1;
+const int SKY_LEVELS = 0;
+const int SKY_SMOOTH = 1;
 const int PATTERN_CHECKER = 1;
 // What `levels` styles.
 const int NATURAL = 0;
 const int ARTIFICIAL = 1;
 const int BOTH = 2;
+// The natural light's sun part (alpha × `sun_light`), and the rest of it (sky, ambient).
+const int SUN = 3;
+const int SOFT = 4;
 // Below this (lux after exposure) a pixel has no light to style.
 const float NO_LIGHT = 1e-6;
 
@@ -23,6 +28,10 @@ uniform ivec2 size = ivec2(1);
 // The Location pixel of the input's first pixel: the pattern sticks to Location pixels.
 uniform vec2 origin_px = vec2(0.0);
 uniform int mode = 0;
+// 0: the light without a hard edge (sky, ambient) in levels with the sun's, 1: smooth, 2: always
+// dithered; in 1 and 2 only the sun gets levels.
+uniform int sky_style = 0;
+uniform vec3 sun_light = vec3(0.0);
 uniform float level_stops = 0.5;
 uniform float seam_px = 3.0;
 // A step between levels shorter than this (pixels) is dithered over its whole length; 0: never.
@@ -36,8 +45,14 @@ float luma(vec3 light) {
 	return dot(light, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// Light after exposure of the natural channel, the artificial one, or both summed.
+// Light after exposure of the natural channel, the artificial one, both summed, or the natural
+// channel's sun or soft part.
 vec3 fetch(int which, ivec2 px) {
+	if (which == SUN || which == SOFT) {
+		vec4 natural_light = texelFetch(natural, px, 0);
+		vec3 sun = sun_light * natural_light.a;
+		return (which == SUN ? sun : max(natural_light.rgb - sun, vec3(0.0))) * exposure;
+	}
 	vec3 light = vec3(0.0);
 	if (which != ARTIFICIAL) {
 		light += texelFetch(natural, px, 0).rgb;
@@ -82,8 +97,9 @@ float pattern(ivec2 px) {
 	return (float(v) + 0.5) / 16.0;
 }
 
-// The light at `px`, styled: its luma moves to the middle of a level, its colour stays.
-vec3 levels(int which, ivec2 px, float threshold) {
+// The light at `px`, styled: its luma moves to the middle of a level, its colour stays. `dithered`:
+// a dither between the two nearest levels however gentle the slope (no flat field).
+vec3 levels(int which, ivec2 px, float threshold, bool dithered) {
 	vec3 light = fetch(which, px);
 	float y = luma(light);
 	if (y < NO_LIGHT) {
@@ -94,7 +110,9 @@ vec3 levels(int which, ivec2 px, float threshold) {
 	// A step shorter than `full_dither_px` (1/g pixels) is dithered all along, one longer than twice
 	// that keeps the narrow seam (research 92 §4b).
 	float w = clamp(seam_px * g, 0.0, 1.0);
-	if (full_dither_px > 0.0) {
+	if (dithered) {
+		w = 1.0;
+	} else if (full_dither_px > 0.0) {
 		w = mix(w, 1.0, smoothstep(0.5 / full_dither_px, 1.0 / full_dither_px, g));
 	}
 	float k = floor(s + w * (threshold - 0.5));
@@ -111,13 +129,20 @@ void fragment() {
 	ivec2 px = ivec2(floor(local_px));
 	float threshold = pattern(px + ivec2(origin_px));
 	vec3 result;
-	if (mode == MODE_PER_CHANNEL) {
-		result = levels(NATURAL, px, threshold);
+	if (sky_style != SKY_LEVELS) {
+		// Levels for the sun alone; the artificial channel styled apart in either mode.
+		result = levels(SUN, px, threshold, false);
+		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true);
 		if (has_artificial) {
-			result += levels(ARTIFICIAL, px, threshold);
+			result += levels(ARTIFICIAL, px, threshold, false);
+		}
+	} else if (mode == MODE_PER_CHANNEL) {
+		result = levels(NATURAL, px, threshold, false);
+		if (has_artificial) {
+			result += levels(ARTIFICIAL, px, threshold, false);
 		}
 	} else {
-		result = levels(BOTH, px, threshold);
+		result = levels(BOTH, px, threshold, false);
 	}
 	COLOR = vec4(result, 1.0);
 }

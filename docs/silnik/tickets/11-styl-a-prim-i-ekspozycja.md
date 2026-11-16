@@ -23,7 +23,27 @@ A′ (poziomy EV, szew ditheru o stałej szerokości w px, kotwica `Y_ref`) kwan
 
 Uliczka, przewiń dobę: wyraźne poziomy z wąskim szwem ditheru, noc ciemna, ale czytelna; mebel z ComfyUI nie gryzie się z ditherem.
 
-## Stan (2026-11-16, Claude, druga sesja) — do sprawdzenia przez człowieka
+## Stan (2026-11-16, Claude, trzecia runda) — do sprawdzenia przez człowieka
+
+**Problem znaleziony przez człowieka (zrzuty 9:41 i 12:01):** w cieniu kamienic i w słońcu przy narożnikach widać duże
+łukowate „plamy” z krawędzią. Przyczyna: A′ tnie na poziomy także światło nieba, które zmienia się łagodnie na
+metrach (mniej nieba przy ścianie). Granica poziomu na takim spadku (100–300 px) to płaskie pole z wąskim szwem, czyli
+krawędź w kształcie linii równego udziału nieba. `full_dither_px` tego nie łapie (to długie kroki). Fizyka jest dobra.
+
+**Zmiana modelu (decyzja człowieka: „go”, warianty do porównania):**
+- Bufor zapisuje w alfie udział słońca (cosinus × widoczność, z rim light), więc A′ odróżnia światło słońca od reszty
+  (niebo, ambient).
+- Nowe pole Zestawu `sky_style` i przełącznik F1 „Światło nieba”: **A** poziomy na sumie (jak dotąd, domyślnie),
+  **B** poziomy tylko dla słońca, niebo gładkie, **C** poziomy tylko dla słońca, niebo zawsze w ditherze (bez pól).
+- Testy: B przepuszcza światło bez słońca bez zmian, dodaje słońce na jego poziomie z ostrą krawędzią; C śledzi długi
+  spadek nieba bez pola i krawędzi (A go nie śledzi); krawędź cienia słońca 1 px w B i C; alfa bufora = cosinus słońca.
+  `node tools/test.mjs`: 164 zielone. Sprawdzone odtworzeniem zrzutów człowieka: w B i C plamy znikają.
+- Czarne prostokąty na zrzutach to obszar poza Lokacją (brak ziemi za d = −40 m), nie błąd światła.
+
+**Do oceny w grze:** te same miejsca, F1 „Światło nieba” A / B / C. Ryzyko B: gładki cień jak „HD” (t37). Ryzyko C:
+drobny dither na całym cieniu jak faktura. Wybrany wariant wpiszę jako domyślny w `outdoor.tres`.
+
+## Stan (2026-11-16, Claude, druga sesja)
 
 Plan z research 92 zrobiony (pkt 1–4 niżej):
 - **A′:** krok krótszy niż `full_dither_px` cały w ditherze, dłuższy niż 2× zostaje polem z wąskim szwem, między nimi

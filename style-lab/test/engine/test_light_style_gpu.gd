@@ -26,24 +26,26 @@ func _uniform(light: Color) -> Image:
 
 ## `full_dither_px` 0 (no short-step dither) unless given: most gates are about the narrow seam.
 func _tuning(level_stops: float, seam_px: float, mode: TuningSet.StyleMode = TuningSet.StyleMode.SUM,
-		full_dither_px: float = 0.0) -> TuningSet:
+		full_dither_px: float = 0.0, sky_style: TuningSet.SkyStyle = TuningSet.SkyStyle.LEVELS) -> TuningSet:
 	var tuning: TuningSet = TuningSet.new()
 	tuning.level_stops = level_stops
 	tuning.seam_px = seam_px
 	tuning.full_dither_px = full_dither_px
+	tuning.sky_style = sky_style
 	tuning.style_mode = mode
 	return tuning
 
 
 ## Runs the pass once: anchor 1 lux, exposure 1 unless given.
 func _styled(natural: Image, tuning: TuningSet, artificial: Image = null, origin: Vector2i = Vector2i.ZERO,
-		exposure: float = 1.0, anchor_lux: float = 1.0) -> Image:
+		exposure: float = 1.0, anchor_lux: float = 1.0, sun_light: Vector3 = Vector3.ZERO) -> Image:
 	var style: LightStyle = LightStyle.new()
 	add_child_autofree(style)
 	var artificial_texture: Texture2D = ImageTexture.create_from_image(artificial) if artificial != null else null
 	style.set_input(ImageTexture.create_from_image(natural), artificial_texture, natural.get_size(), origin)
-	style.set_tuning(tuning, tuning.style_mode, tuning.full_dither_px)
+	style.set_tuning(tuning, tuning.style_mode, tuning.full_dither_px, tuning.sky_style)
 	style.set_exposure(exposure, anchor_lux)
+	style.set_sun(sun_light)
 	await RenderingServer.frame_post_draw
 	return style.image()
 
@@ -298,3 +300,78 @@ func test_gate_brighter_sky_moves_no_level_boundary() -> void:
 				if absf(level_scaled - _steps_of_pixel(styled.get_pixel(x, row).r)) > 0.1:
 					moved += 1
 		assert_eq(moved, 0, "full dither %s px" % full)
+
+
+
+# Sky styles: the buffer's alpha holds the sun's share (cosine × visibility; × the sun's light it is
+# the sun's lux), the rest of the light (sky, ambient) has no hard edge. Levels for both (A), or
+# levels for the sun only with the rest smooth (B) or always dithered (C).
+
+## `soft` lux everywhere, plus a sun of `sun_lux` where `sunny` says so.
+func _sun_and_soft(soft: Callable, sunny: Callable) -> Image:
+	var image: Image = Image.create(WIDTH, HEIGHT, false, Image.FORMAT_RGBAF)
+	for x: int in WIDTH:
+		var y: float = soft.call(x)
+		var sun: float = 1.0 if sunny.call(x) else 0.0
+		for row: int in HEIGHT:
+			image.set_pixel(x, row, Color(y + 4.0 * sun, y + 4.0 * sun, y + 4.0 * sun, sun))
+	return image
+
+
+func test_smooth_sky_keeps_the_light_without_the_sun_as_it_is() -> void:
+	var ramp: Image = _gradient(func(x: int) -> float: return -1.1 + 0.02 * x)
+	for x: int in WIDTH:
+		for row: int in HEIGHT:
+			var pixel: Color = ramp.get_pixel(x, row)
+			pixel.a = 0.0
+			ramp.set_pixel(x, row, pixel)
+	var styled: Image = await _styled(ramp, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.SMOOTH),
+			null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0))
+	for x: int in WIDTH:
+		var lux: float = ramp.get_pixel(x, 5).r
+		assert_almost_eq(styled.get_pixel(x, 5).r, lux, lux * 0.002, "column %d" % x)
+
+
+func test_smooth_sky_adds_the_sun_on_its_level_with_a_crisp_edge() -> void:
+	# A sun of 4 lux (the middle of a level) over half the strip, a soft slope under all of it.
+	var soft: Callable = func(x: int) -> float: return 0.5 + 0.002 * x
+	var light: Image = _sun_and_soft(soft, func(x: int) -> bool: return x < WIDTH / 2)
+	var styled: Image = await _styled(light, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.SMOOTH),
+			null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0))
+	for x: int in WIDTH:
+		var y: float = soft.call(x)
+		var expected: float = y + (4.0 if x < WIDTH / 2 else 0.0)
+		assert_almost_eq(styled.get_pixel(x, 7).r, expected, expected * 0.002, "column %d" % x)
+
+
+func test_dithered_sky_has_no_flat_field_on_a_long_slope() -> void:
+	# A wall's sky shade: a level over 285 px. Levels make a flat field and an edge; the dithered
+	# sky follows the slope in its 4 px mean.
+	var steps: Callable = func(x: int) -> float: return 0.7 + x / 285.0
+	var light: Image = _gradient(func(x: int) -> float:
+		var s: float = steps.call(x)
+		return _ev_of_steps(s))
+	for x: int in WIDTH:
+		for row: int in HEIGHT:
+			var pixel: Color = light.get_pixel(x, row)
+			pixel.a = 0.0
+			light.set_pixel(x, row, pixel)
+	var sun: Vector3 = Vector3(4.0, 4.0, 4.0)
+	var dithered: Image = await _styled(light, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.DITHER),
+			null, Vector2i.ZERO, 1.0, 1.0, sun)
+	var worst: Vector2 = _tracking(steps, dithered)
+	assert_lt(worst.x, 0.35, "the mean follows the light")
+	assert_lt(worst.y, 0.35, "no jump of its own")
+	var levels: Image = await _styled(light, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.LEVELS),
+			null, Vector2i.ZERO, 1.0, 1.0, sun)
+	assert_gt(_tracking(steps, levels).y, 0.35, "levels make an edge there")
+
+
+func test_without_the_sun_every_sky_style_keeps_the_sun_edge_sharp() -> void:
+	# The sun's shadow edge on a flat soft light: one pixel, whatever the sky style.
+	for style: TuningSet.SkyStyle in [TuningSet.SkyStyle.SMOOTH, TuningSet.SkyStyle.DITHER]:
+		var light: Image = _sun_and_soft(func(_x: int) -> float: return 1.0, func(x: int) -> bool: return x < WIDTH / 2)
+		var styled: Image = await _styled(light, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, style),
+				null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0))
+		assert_eq(_mixed_columns(styled), 0, "sky style %d" % style)
+		assert_gt(styled.get_pixel(WIDTH / 2 - 1, 0).r, styled.get_pixel(WIDTH / 2, 0).r * 4.0, "the edge in one pixel")

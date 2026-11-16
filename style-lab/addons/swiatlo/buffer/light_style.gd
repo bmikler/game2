@@ -28,7 +28,7 @@ func _init() -> void:
 	_view.add_child(_canvas)
 
 
-## The light to style (lux, HDR), its size in pixels and the Location pixel of its first pixel
+## The light to style (lux, HDR; the natural light's alpha is the sun's share, see `set_sun`), its size in pixels and the Location pixel of its first pixel
 ## (the dither pattern sticks to Location pixels). `artificial` may be null (no artificial light).
 func set_input(natural: Texture2D, artificial: Texture2D, size: Vector2i, origin_px: Vector2i) -> void:
 	_view.size = size.max(Vector2i.ONE)
@@ -41,11 +41,13 @@ func set_input(natural: Texture2D, artificial: Texture2D, size: Vector2i, origin
 	redraw()
 
 
-## The A′ constants of the tuning set; `mode` and `full_dither_px` may differ from the set's (the
-## F1 switches).
-func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float) -> void:
+## The A′ constants of the tuning set; `mode`, `full_dither_px` and `sky_style` may differ from the
+## set's (the F1 switches).
+func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float,
+		sky_style: TuningSet.SkyStyle) -> void:
 	_material.set_shader_parameter(&"mode", mode)
 	_material.set_shader_parameter(&"full_dither_px", full_dither_px)
+	_material.set_shader_parameter(&"sky_style", sky_style)
 	_material.set_shader_parameter(&"level_stops", tuning.level_stops)
 	_material.set_shader_parameter(&"seam_px", tuning.seam_px)
 	_material.set_shader_parameter(&"seam_pattern", tuning.seam_pattern)
@@ -59,6 +61,12 @@ func set_exposure(exposure: float, anchor_lux: float) -> void:
 	_material.set_shader_parameter(&"exposure", exposure)
 	_anchor_lux = anchor_lux
 	_update_anchor()
+	redraw()
+
+
+## The sun's light (colour × lux): the natural input's alpha × this is the sun's part of its light.
+func set_sun(sun_light: Vector3) -> void:
+	_material.set_shader_parameter(&"sun_light", sun_light)
 	redraw()
 
 

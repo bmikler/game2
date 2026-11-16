@@ -9,6 +9,10 @@ extends Resource
 ## A′ on the luminance of the sum of both channels (continuous colour), or on the natural and the
 ## artificial channel apart, then summed.
 enum StyleMode { SUM, PER_CHANNEL }
+## How light without a hard edge (sky, ambient) is styled: in levels with the sun's light (A), or
+## the sun alone gets levels and the rest stays smooth (B) or is always dithered between levels (C).
+## A slow slope of sky light (beside a wall, round a corner) makes flat rings in levels.
+enum SkyStyle { LEVELS, SMOOTH, DITHER }
 ## The ordered pattern in the dither seam between two levels.
 enum SeamPattern { BAYER, CHECKER }
 ## How light shafts and dust are drawn (they get no A′ levels).
@@ -39,6 +43,10 @@ enum ScatterStyle { SMOOTH, DITHER }
 @export_range(0.0, 48.0, 1.0) var full_dither_px: float = 24.0:
 	set(value):
 		full_dither_px = value
+		emit_changed()
+@export var sky_style: SkyStyle = SkyStyle.LEVELS:
+	set(value):
+		sky_style = value
 		emit_changed()
 @export var seam_pattern: SeamPattern = SeamPattern.BAYER:
 	set(value):

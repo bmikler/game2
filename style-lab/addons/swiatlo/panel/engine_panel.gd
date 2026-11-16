@@ -12,6 +12,7 @@ signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
 signal style_mode_set(mode: TuningSet.StyleMode)
 signal full_dither_set(px: float)
+signal sky_style_set(style: TuningSet.SkyStyle)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -31,6 +32,10 @@ const STYLE_MODE_HINT: String = "Kanał sztuczny (lampy) dojdzie w tickecie 13; 
 const FULL_DITHER_VARIANTS_PX: PackedFloat32Array = [0.0, 16.0, 24.0, 40.0]
 ## What the short-step dither does, under its choice.
 const FULL_DITHER_HINT: String = "Krótki spadek światła (np. przy meblu) cały w ditherze zamiast płaskiej plamy; 0 px = A′ bez tego."
+## Sky style names in TuningSet.SkyStyle order (critic variants A, B, C).
+const SKY_STYLES: PackedStringArray = ["A: poziomy", "B: gładkie", "C: dither"]
+## What the sky styles do, under their choice.
+const SKY_STYLE_HINT: String = "Światło nieba (cień budynku, róg ściany): A w poziomach razem ze słońcem, B gładkie, C zawsze w ditherze. W B i C poziomy ma tylko słońce."
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -47,6 +52,7 @@ var _debug_hint: Label
 var _map_top: OptionButton
 var _style_mode: OptionButton
 var _full_dither: OptionButton
+var _sky_style: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -125,6 +131,13 @@ func _ready() -> void:
 	full_dither_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	full_dither_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
 	add_child(full_dither_hint)
+	_sky_style = _choice("Światło nieba", SKY_STYLES)
+	_sky_style.item_selected.connect(func(index: int) -> void: sky_style_set.emit(index as TuningSet.SkyStyle))
+	var sky_style_hint: Label = Label.new()
+	sky_style_hint.text = SKY_STYLE_HINT
+	sky_style_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sky_style_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
+	add_child(sky_style_hint)
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -156,6 +169,11 @@ func style_mode_choice() -> OptionButton:
 ## signal, e.g. from the tuning set).
 func full_dither_choice() -> OptionButton:
 	return _full_dither
+
+
+## The sky style choice, in TuningSet.SkyStyle order (the embedder may set it without a signal).
+func sky_style_choice() -> OptionButton:
+	return _sky_style
 
 
 ## Names of the short-step dither variants, in FULL_DITHER_VARIANTS_PX order.

@@ -31,6 +31,8 @@ var _debug_view: DebugView = DebugView.NONE
 var _style_mode_override: int = -1
 ## The short-step dither length picked in F1 (negative: the tuning set's own).
 var _full_dither_override: float = -1.0
+## The sky style picked in F1 (−1: the tuning set's own).
+var _sky_style_override: int = -1
 # Helper nodes without an owner: never saved into the scene.
 var _buffer: LightBuffer
 var _solids_overlay: SolidsOverlay
@@ -198,9 +200,22 @@ func full_dither_px() -> float:
 	return tuning_set().full_dither_px
 
 
+## Compares sky styles live (F1 variants) without changing the tuning set.
+func set_sky_style(style: TuningSet.SkyStyle) -> void:
+	_sky_style_override = style
+	_recompute()
+
+
+## The sky style in use: the F1 variant's, or else the tuning set's.
+func sky_style() -> TuningSet.SkyStyle:
+	if _sky_style_override >= 0:
+		return _sky_style_override as TuningSet.SkyStyle
+	return tuning_set().sky_style
+
+
 func _recompute() -> void:
 	_state.compute(curves, sky(), hour, _north_at_top, exposure_reference())
 	if is_instance_valid(_buffer):
-		_buffer.set_tuning(tuning_set(), style_mode(), full_dither_px())
+		_buffer.set_tuning(tuning_set(), style_mode(), full_dither_px(), sky_style())
 		_buffer.set_state(_state)
 	state_changed.emit(_state)

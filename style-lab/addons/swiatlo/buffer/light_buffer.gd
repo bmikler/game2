@@ -34,6 +34,8 @@ func _init() -> void:
 	_view = SubViewport.new()
 	_view.use_hdr_2d = true
 	_view.disable_3d = true
+	# Alpha carries the sun's share, not coverage.
+	_view.transparent_bg = true
 	_view.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_view.size = Vector2i.ONE
 	add_child(_view)
@@ -98,13 +100,15 @@ func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_style.set_exposure(state.exposure, state.level_anchor)
+	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity)
 	_redraw()
 
 
-## Takes the Location's tuning set (receivers, A′ in `mode` with `full_dither_px`); a new modelling
-## rebuilds the sky.
-func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float) -> void:
-	_style.set_tuning(tuning, mode, full_dither_px)
+## Takes the Location's tuning set (receivers, A′ in `mode` with `full_dither_px` and `sky_style`);
+## a new modelling rebuilds the sky.
+func set_tuning(tuning: TuningSet, mode: TuningSet.StyleMode, full_dither_px: float,
+		sky_style: TuningSet.SkyStyle) -> void:
+	_style.set_tuning(tuning, mode, full_dither_px, sky_style)
 	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
 	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
 	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
