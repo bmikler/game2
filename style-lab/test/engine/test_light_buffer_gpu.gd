@@ -1,5 +1,6 @@
 extends GutTest
 ## Location → light buffer (GPU, window off screen). Gates check rules of light, not the look.
+## Sun gates read the channels view (the sun alone, without the sky that solids also shade).
 
 const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/projection.tres")
 
@@ -20,7 +21,7 @@ func _location(hour: float) -> LightEngine:
 	view.add_child(engine)
 	add_child_autofree(view)
 	engine.set_hour(hour)
-	await RenderingServer.frame_post_draw
+	await _channels_view(engine)
 	return engine
 
 
@@ -31,10 +32,17 @@ func _solid(at: Vector3, size: Vector3) -> Solid:
 	return solid
 
 
-## Natural light (lux) on the ground at (x, d).
+## Waits for the sky layer, then shows the channels view.
+func _channels_view(engine: LightEngine) -> void:
+	while not engine.is_sky_complete():
+		await RenderingServer.frame_post_draw
+	engine.set_debug_view(LightEngine.DebugView.CHANNELS)
+	await RenderingServer.frame_post_draw
+
+
+## Lux the sun alone gives the ground at (x, d) (channels view).
 func _ground(engine: LightEngine, x: float, d: float) -> float:
-	var pixel: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(x, d, 0.0)).floor()) - engine.buffer_area().position
-	return engine.buffer_image().get_pixelv(pixel).get_luminance()
+	return _lux(engine, Vector3(x, d, 0.0))
 
 
 ## Lux the sun alone gives open ground now.
@@ -67,16 +75,16 @@ func test_afternoon_shadow_falls_left_away_from_the_western_sun() -> void:
 
 func test_shadow_light_is_what_still_reaches_it_not_black() -> void:
 	var engine: LightEngine = await _location(10.0)
-	assert_gt(_ground(engine, 1.0, 2.8), 0.0)
+	assert_eq(_ground(engine, 1.0, 2.8), 0.0, "no sun in the shadow")
+	engine.set_debug_view(LightEngine.DebugView.NONE)
+	await RenderingServer.frame_post_draw
+	assert_gt(_pixel(engine, Vector3(1.0, 2.8, 0.0)).get_luminance(), 0.0)
 
 
 func test_the_top_of_the_post_takes_the_sun_its_shaded_front_does_not() -> void:
 	var engine: LightEngine = await _location(12.5)
-	var area: Rect2i = engine.buffer_area()
-	var top: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(0.0, 0.0, 3.0)).floor()) - area.position
-	var front: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(0.0, 0.5, 1.5)).floor()) - area.position
-	var image: Image = engine.buffer_image()
-	assert_gt(image.get_pixelv(top).get_luminance(), image.get_pixelv(front).get_luminance() * 2.0,
+	assert_gt(_lux(engine, Vector3(0.0, 0.0, 3.0)), 100.0)
+	assert_eq(_lux(engine, Vector3(0.0, 0.5, 1.5)), 0.0,
 			"the front faces north, away from the noon sun")
 
 
@@ -124,7 +132,7 @@ func _scene(hour: float, solids: Array[Solid]) -> LightEngine:
 	view.add_child(engine)
 	add_child_autofree(view)
 	engine.set_hour(hour)
-	await RenderingServer.frame_post_draw
+	await _channels_view(engine)
 	return engine
 
 
@@ -134,10 +142,16 @@ func _shaped(at: Vector3, size: Vector3, shape: Solid.Shape) -> Solid:
 	return solid
 
 
-## Natural light (lux) at the screen pixel showing the point (x, d, z) in metres.
+## Lux the sun alone gives the screen pixel showing the point (x, d, z) in metres (channels view).
 func _lux(engine: LightEngine, point: Vector3) -> float:
+	var state: DayState = engine.state()
+	return _pixel(engine, point).r * state.sun_color.get_luminance() * state.sun_intensity
+
+
+## The buffer pixel showing the point (x, d, z) in metres.
+func _pixel(engine: LightEngine, point: Vector3) -> Color:
 	var pixel: Vector2i = Vector2i(PROJECTION.to_screen(point).floor()) - engine.buffer_area().position
-	return engine.buffer_image().get_pixelv(pixel).get_luminance()
+	return engine.buffer_image().get_pixelv(pixel)
 
 
 ## Where the sun's ray through `point` reaches the ground.
@@ -219,3 +233,95 @@ func test_receivers_follow_the_curve_of_a_cylinder_and_the_triangle_of_a_gable()
 	assert_gt(gable.r, gable.b, "inside the gable triangle: the front wall")
 	var beside: Color = at.call(Vector3(6.5, 0.0, 5.5))
 	assert_gt(beside.b, beside.r, "above the eave beside the gable: the slope behind")
+
+
+## Sky share (0–1) at the screen pixel showing the point (channels view).
+func _sky(engine: LightEngine, point: Vector3) -> float:
+	return _pixel(engine, point).b
+
+
+## Two blocks 6 × 6 × 8 m with a gap 2 m wide between them (x −1…1, d −3…3).
+func _gap() -> Array[Solid]:
+	return [_solid(Vector3(-4.0, 3.0, 0.0), Vector3(6.0, 6.0, 8.0)), _solid(Vector3(4.0, 3.0, 0.0), Vector3(6.0, 6.0, 8.0))]
+
+
+func test_gate_open_ground_sees_the_whole_sky_and_an_open_wall_half() -> void:
+	var engine: LightEngine = await _scene(12.0, [])
+	assert_almost_eq(_sky(engine, Vector3(0.0, 0.0, 0.0)), 1.0, 0.002, "open ground")
+	assert_almost_eq(_sky(engine, Vector3(15.0, -15.0, 0.0)), 1.0, 0.002, "open ground far off")
+	var block: LightEngine = await _scene(12.0, [_solid(Vector3(0.0, 0.0, 0.0), Vector3(2.0, 2.0, 3.0))])
+	assert_almost_eq(_sky(block, Vector3(0.0, 0.0, 2.0)), 0.5, 0.005, "an open wall sees half the sky")
+	assert_almost_eq(_sky(block, Vector3(0.0, -1.0, 3.0)), 1.0, 0.002, "the top of the block")
+
+
+func test_gate_a_narrow_gap_sees_less_sky_than_the_open_street() -> void:
+	var engine: LightEngine = await _scene(12.0, _gap())
+	var open: float = _sky(engine, Vector3(0.0, 15.0, 0.0))
+	var mouth: float = _sky(engine, Vector3(0.0, 4.0, 0.0))
+	var gap: float = _sky(engine, Vector3(0.0, 0.0, 0.0))
+	# Out in the street the two blocks still hide about 5 % of the dome.
+	assert_gt(open, 0.9, "open street in front of the gap")
+	assert_lt(mouth, open, "the gap's mouth sees less")
+	assert_lt(gap, mouth, "inside the gap less still")
+	assert_lt(gap, 0.4, "the gap sees mostly the walls")
+	assert_gt(gap, 0.05, "but never black: the strip of sky above it")
+
+
+func test_gate_sky_without_stripes_out_of_the_gap() -> void:
+	# Pixel by pixel down the screen from the middle of the gap out into the street (d 0 … 12): the
+	# sky share only grows, and its slope changes gently: a band is a jump, then flat. The sharpest
+	# real bend is the gap's mouth (about 0,005); one direction of the dome is 1/2048. A sky of 64
+	# directions bends by 0,02 and more. The gap is open at both ends, so
+	# its middle sees the least.
+	var engine: LightEngine = await _scene(12.0, _gap())
+	var area: Rect2i = engine.buffer_area()
+	var image: Image = engine.buffer_image()
+	var from: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(0.0, 0.0, 0.0)).floor()) - area.position
+	var to: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(0.0, 12.0, 0.0)).floor()) - area.position
+	var before: float = image.get_pixel(from.x, from.y).b
+	var worst_drop: float = 0.0
+	var worst_bend: float = 0.0
+	var slope: float = 0.0
+	for y: int in range(from.y + 1, to.y + 1):
+		var share: float = image.get_pixel(from.x, y).b
+		worst_drop = maxf(worst_drop, before - share)
+		if y > from.y + 1:
+			worst_bend = maxf(worst_bend, absf(share - before - slope))
+		slope = share - before
+		before = share
+	assert_lt(worst_drop, 0.002, "the share never falls on the way out")
+	assert_lt(worst_bend, 0.008, "no bands")
+
+
+func test_gate_sky_is_built_over_frames_then_only_multiplied() -> void:
+	var view: SubViewport = SubViewport.new()
+	view.add_child(LocationEnvironment.new())
+	var ground: Occluder = Occluder.new()
+	ground.add_child(_solid(Vector3(0.0, 20.0, -0.1), Vector3(40.0, 40.0, 0.1)))
+	view.add_child(ground)
+	var engine: LightEngine = LightEngine.new()
+	engine.rate = 0.0
+	view.add_child(engine)
+	add_child_autofree(view)
+	await RenderingServer.frame_post_draw
+	assert_false(engine.is_sky_complete(), "several frames, not one")
+	while not engine.is_sky_complete():
+		await RenderingServer.frame_post_draw
+	for hour: float in [22.0, 7.0, 13.0]:
+		engine.set_hour(hour)
+		assert_true(engine.is_sky_complete(), "a new hour does not rebuild the sky")
+		await RenderingServer.frame_post_draw
+		var state: DayState = engine.state()
+		var expected: float = (state.sky_color * state.sky_intensity + state.ambient_color * state.ambient_intensity).get_luminance()
+		var open: float = _pixel(engine, Vector3(0.0, 0.0, 0.0)).get_luminance()
+		if state.sun_elevation > 0.0:
+			expected += state.sun_color.get_luminance() * state.sun_intensity * state.sun_direction.z
+		assert_almost_eq(open, expected, expected * 0.01, "%d:00 open ground: ambient + sky + sun" % hour)
+
+
+func test_debug_view_channels_shows_sun_in_red_and_sky_in_blue() -> void:
+	var engine: LightEngine = await _scene(12.5, _gap())
+	var open: Color = _pixel(engine, Vector3(0.0, 15.0, 0.0))
+	assert_almost_eq(open.r, engine.state().sun_direction.z, 0.001, "red: the sun's cosine on open ground")
+	assert_gt(open.b, 0.9, "blue: the sky share")
+	assert_eq(open.g, 0.0, "green: no artificial channel yet")

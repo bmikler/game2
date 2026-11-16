@@ -60,16 +60,20 @@ func test_shot_button_asks_for_a_shot_and_shows_the_path() -> void:
 	assert_string_contains(_text(panel), "a.png")
 
 
-func test_debug_view_choice_reports_none_solids_receivers() -> void:
+func test_debug_view_choice_reports_none_solids_receivers_channels() -> void:
 	var panel: EnginePanel = _panel()
 	watch_signals(panel)
 	var choice: OptionButton = panel.debug_view_choice()
-	assert_eq(choice.item_count, 3)
+	assert_eq(choice.item_count, 4)
 	assert_eq(choice.get_item_text(1), "Bryły")
 	assert_eq(choice.get_item_text(2), "Odbiorniki")
 	choice.select(2)
 	choice.item_selected.emit(2)
 	assert_signal_emitted_with_parameters(panel, "debug_view_set", [LightEngine.DebugView.RECEIVERS])
+	assert_eq(choice.get_item_text(3), "Kanały")
+	choice.select(3)
+	choice.item_selected.emit(3)
+	assert_signal_emitted_with_parameters(panel, "debug_view_set", [LightEngine.DebugView.CHANNELS])
 
 
 func test_map_top_choice_reports_north() -> void:

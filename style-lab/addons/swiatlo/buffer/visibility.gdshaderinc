@@ -6,6 +6,11 @@
 uniform sampler2D solids : filter_nearest;
 uniform int solid_count = 0;
 
+// Rays start this far off the face along its normal, so they do not begin inside the solid; and
+// reach this far when nothing nearer stops them (sun, sky).
+const float RAY_OFFSET_M = 0.02;
+const float FAR_M = 1000.0;
+
 const int SOLID_ROOF_X = 1;
 const int SOLID_ROOF_D = 2;
 const int SOLID_CYLINDER = 3;

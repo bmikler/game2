@@ -115,6 +115,7 @@ func _select_debug_view(view_name: String) -> void:
 		push_warning("Unknown debug view in the shot: %s" % view_name)
 		return
 	_engine_panel.debug_view_choice().select(index)
+	_engine_panel.show_debug_hint(index)
 	_engine.set_debug_view(index as LightEngine.DebugView)
 
 

@@ -15,7 +15,10 @@ const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
 const COMPASS: Vector2 = Vector2(64.0, 64.0)
 ## Debug view names in LightEngine.DebugView order.
-const DEBUG_VIEWS: PackedStringArray = ["brak", "Bryły", "Odbiorniki"]
+const DEBUG_VIEWS: PackedStringArray = ["brak", "Bryły", "Odbiorniki", "Kanały"]
+## What each debug view shows (empty: nothing to explain), in DEBUG_VIEWS order.
+const DEBUG_HINTS: PackedStringArray = ["", "", "",
+		"czerwony: słońce (kąt × widoczność), niebieski: udział nieba (1 = całe niebo), zielony: kanał sztuczny"]
 ## Map top names: index 1 is north at the top.
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
 ## Swatch rows: key → Polish label shown in F1.
@@ -30,6 +33,7 @@ var _rate: HSlider
 var _readout: Label
 var _shot_label: Label
 var _debug_view: OptionButton
+var _debug_hint: Label
 var _map_top: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
@@ -96,7 +100,13 @@ func _ready() -> void:
 	_map_top = _choice("Góra mapy", MAP_TOPS)
 	_map_top.item_selected.connect(func(index: int) -> void: north_at_top_set.emit(index == 1))
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
+	_debug_hint = Label.new()
+	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_debug_hint.custom_minimum_size = Vector2(WIDTH, 0.0)
+	add_child(_debug_hint)
+	show_debug_hint(0)
 	_debug_view.item_selected.connect(func(index: int) -> void:
+		show_debug_hint(index)
 		debug_view_set.emit(index as LightEngine.DebugView))
 
 
@@ -114,6 +124,12 @@ func map_top_choice() -> OptionButton:
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).
 func debug_view_choice() -> OptionButton:
 	return _debug_view
+
+
+## Explains the debug view chosen (the embedder calls it when it selects a view without a signal).
+func show_debug_hint(index: int) -> void:
+	_debug_hint.text = DEBUG_HINTS[index]
+	_debug_hint.visible = not DEBUG_HINTS[index].is_empty()
 
 
 ## Shows the day state (the embedder calls it on every change).

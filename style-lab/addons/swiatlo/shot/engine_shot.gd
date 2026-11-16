@@ -109,6 +109,9 @@ func _replay_if_asked() -> void:
 	apply(description)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# The sky layer is built over a few frames after loading.
+	while is_instance_valid(engine) and not engine.is_sky_complete():
+		await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
 	take(source.get_basename() + REPLAY_SUFFIX + ".png")
 	_quit_if_asked(0)

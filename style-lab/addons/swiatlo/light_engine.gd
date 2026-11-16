@@ -7,8 +7,9 @@ extends Node
 
 signal state_changed(state: DayState)
 
-## What the engine shows over the picture: nothing extra, the solids' edges, or the receivers.
-enum DebugView { NONE, SOLIDS, RECEIVERS }
+## What the engine shows over the picture: nothing extra, the solids' edges, the receivers, or the
+## channels (the geometry of each light: red the sun, blue the sky share).
+enum DebugView { NONE, SOLIDS, RECEIVERS, CHANNELS }
 
 ## The one projection of the engine, shared with the contract nodes.
 const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/projection.tres")
@@ -98,7 +99,13 @@ func set_north_at_top(north: bool) -> void:
 func set_debug_view(view: DebugView) -> void:
 	_debug_view = view
 	_solids_overlay.visible = view == DebugView.SOLIDS
-	_buffer.set_view(LightBuffer.View.RECEIVERS if view == DebugView.RECEIVERS else LightBuffer.View.LIGHT)
+	match view:
+		DebugView.RECEIVERS:
+			_buffer.set_view(LightBuffer.View.RECEIVERS)
+		DebugView.CHANNELS:
+			_buffer.set_view(LightBuffer.View.CHANNELS)
+		_:
+			_buffer.set_view(LightBuffer.View.LIGHT)
 
 
 func debug_view() -> DebugView:
@@ -121,6 +128,12 @@ func buffer_area() -> Rect2i:
 ## The light buffer as last rendered (natural light in lux per pixel).
 func buffer_image() -> Image:
 	return _buffer.image()
+
+
+## Whether the sky layer is complete: it is built over a few frames after loading or changing the
+## Location (until then the sky is already there, from fewer directions).
+func is_sky_complete() -> bool:
+	return _buffer.is_sky_complete()
 
 
 func sky() -> SkyProfile:
