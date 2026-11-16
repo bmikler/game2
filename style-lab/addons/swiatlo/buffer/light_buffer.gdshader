@@ -1,7 +1,8 @@
 // The light buffer: one pixel per game pixel over the whole Location. Each pixel finds the surface
 // the projection shows there (an asset's sprite pixel on its solids, or the scene receiver nearest the
 // camera), then sums the natural light reaching that point in lux (HDR):
-// ambient + sky × sky share + sun × visibility; sprite pixels add rim light and keep a fill minimum.
+// ambient + sky × sky share + sun × visibility (+ natural sources); sprite pixels add rim light and
+// keep a fill minimum.
 // Alpha holds the sun's share (its cosine × visibility, with rim light): × the sun's light it is the
 // sun's part of the pixel's lux (the A′ pass tells the sun from the sky by it). No surface: all 0.
 shader_type canvas_item;
@@ -18,6 +19,11 @@ const int VIEW_CHANNELS = 3;
 // counted so far.
 uniform sampler2D sky_share : filter_nearest;
 uniform float sky_share_scale = 0.0;
+// The light sources' channels in lux (SourceLight): natural ones join this buffer's light; the
+// artificial one is only read for the channels view.
+uniform sampler2D natural_sources : filter_nearest;
+uniform bool has_natural_sources = false;
+uniform sampler2D artificial_sources : filter_nearest;
 
 uniform vec3 sun_direction = vec3(0.0, 0.0, 1.0);
 // Colour × lux.
@@ -73,12 +79,18 @@ void fragment() {
 		}
 		if (debug_view == VIEW_CHANNELS) {
 			// Geometry of the natural channel, without colours: red the sun (its cosine on the face
-			// × visibility), blue the sky share; green is kept for the artificial channel.
-			COLOR = vec4(sun, 0.0, sky, 1.0);
+			// × visibility), blue the sky share; green the artificial channel's share of it and of
+			// the open sky's light.
+			float artificial = dot(texelFetch(artificial_sources, ivec2(local_px), 0).rgb, vec3(0.2126, 0.7152, 0.0722));
+			float open_sky = dot(ambient_light + sky_light, vec3(0.2126, 0.7152, 0.0722));
+			COLOR = vec4(sun, artificial / max(artificial + open_sky, 1e-6), sky, 1.0);
 		} else {
 			vec3 light = ambient_light + sky_light * sky + sun_light * (sun + back);
 			if (found > 0) {
 				light = max(light, fill * (ambient_light + sky_light));
+			}
+			if (has_natural_sources) {
+				light += texelFetch(natural_sources, ivec2(local_px), 0).rgb;
 			}
 			COLOR = vec4(light, sun + back);
 		}

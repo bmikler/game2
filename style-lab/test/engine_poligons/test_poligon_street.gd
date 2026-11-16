@@ -44,7 +44,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
 	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
-			"wygląd assetu": "ComfyUI, dodatki nadmuchane"})
+			"tryb A′": "na sumie", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -162,3 +162,37 @@ func test_replayed_shot_keeps_the_stall_look() -> void:
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_eq((replay.get_node("%LookChoice") as OptionButton).selected, 2)
+
+
+func test_style_mode_from_f1_reaches_the_engine_and_the_shot() -> void:
+	var poligon: Node = _poligon()
+	var choice: OptionButton = (poligon.get_node("%EnginePanel") as EnginePanel).style_mode_choice()
+	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
+	assert_eq(choice.selected, engine.tuning_set().style_mode, "F1 starts at the tuning set's mode")
+	assert_true((choice.get_parent() as Control).visible, "shown: the street has lamps (an artificial channel)")
+	choice.select(1)
+	choice.item_selected.emit(1)
+	assert_eq(engine.style_mode(), TuningSet.StyleMode.PER_CHANNEL)
+	assert_eq(engine.tuning_set().style_mode, TuningSet.StyleMode.SUM, "the set itself stays")
+	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	assert_eq(description.switches["tryb A′"], "na kanałach")
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%Engine") as LightEngine).style_mode(), TuningSet.StyleMode.PER_CHANNEL)
+
+
+func test_the_shop_has_its_lamps_and_lit_windows() -> void:
+	var poligon: Node = _poligon()
+	var description: SceneDescription = (poligon.get_node("%Engine") as LightEngine).scene_description()
+	var by_profile: Dictionary[String, int] = {}
+	for source: SourceEntry in description.sources:
+		var profile_name: String = source.profile.resource_path.get_file().get_basename()
+		var count: int = by_profile.get(profile_name, 0)
+		by_profile[profile_name] = count + 1
+	var street_lamps: int = by_profile.get("street_lamp", 0)
+	var wall_lamps: int = by_profile.get("wall_lamp", 0)
+	var windows: int = by_profile.get("lit_window", 0)
+	assert_eq(street_lamps, 3, "three street lamps")
+	assert_eq(wall_lamps, 1, "a lamp over the shop door")
+	assert_gt(windows, 1, "the shop window and lit windows above")
+	assert_eq(description.source_groups.size(), 3, "one layer per profile")

@@ -27,6 +27,8 @@ var _fallback_sky: SkyProfile = SkyProfile.new()
 var _fallback_tuning: TuningSet = TuningSet.new()
 var _description: SceneDescription = SceneDescription.new()
 var _debug_view: DebugView = DebugView.NONE
+## The A′ mode switched in F1 (−1: the tuning set's own).
+var _style_mode_override: int = -1
 # Helper nodes without an owner: never saved into the scene.
 var _buffer: LightBuffer
 var _solids_overlay: SolidsOverlay
@@ -148,6 +150,34 @@ func is_sky_complete() -> bool:
 	return _buffer.is_sky_complete()
 
 
+## Whether the sky layer and the light sources' layers are complete (built like the sky).
+func is_complete() -> bool:
+	return _buffer.is_complete()
+
+
+## The artificial channel (lamps, lit windows) as last rendered, lux per pixel.
+func artificial_image() -> Image:
+	return _buffer.artificial_image()
+
+
+## The light sources' layers (one per source group).
+func source_light() -> SourceLight:
+	return _buffer.sources()
+
+
+## Compares the A′ modes live (F1) without changing the tuning set.
+func set_style_mode(mode: TuningSet.StyleMode) -> void:
+	_style_mode_override = mode
+	_recompute()
+
+
+## The A′ mode in use: the F1 switch's, or else the tuning set's.
+func style_mode() -> TuningSet.StyleMode:
+	if _style_mode_override >= 0:
+		return _style_mode_override as TuningSet.StyleMode
+	return tuning_set().style_mode
+
+
 func sky() -> SkyProfile:
 	if is_instance_valid(_environment) and _environment.sky != null:
 		return _environment.sky
@@ -169,8 +199,8 @@ func exposure_reference() -> float:
 
 
 func _recompute() -> void:
-	_state.compute(curves, sky(), hour, _north_at_top, exposure_reference())
+	_state.compute(curves, sky(), hour, _north_at_top, exposure_reference(), _description.source_groups)
 	if is_instance_valid(_buffer):
-		_buffer.set_tuning(tuning_set())
+		_buffer.set_tuning(tuning_set(), style_mode())
 		_buffer.set_state(_state)
 	state_changed.emit(_state)

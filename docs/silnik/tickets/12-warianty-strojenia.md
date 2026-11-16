@@ -4,8 +4,11 @@ title: Warianty strojenia
 labels: [ready-for-agent]
 status: open
 assignee:
-blocked_by: [11]
+blocked_by: [11, 19]
 ---
+
+Przesunięty za Skwer (19), jak w kolejności specyfikacji (człowiek, 2026-11-16): to mechanizm do strojenia na
+końcu, a do tego czasu tickety mają własne przełączniki w F1.
 
 ## Co zbudować
 

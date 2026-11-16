@@ -7,7 +7,8 @@ extends Resource
 ## that will read them.
 
 ## A′ on the luminance of the sum of both channels (continuous colour), or on the natural and the
-## artificial channel apart, then summed.
+## artificial channel apart, then summed. With the sky light smooth or dithered (SkyStyle B, C) the
+## sum is the sun's light and the artificial channel's, apart the two of them.
 enum StyleMode { SUM, PER_CHANNEL }
 ## How light without a hard edge (sky, ambient) is styled: in levels with the sun's light (A), or
 ## the sun alone gets levels and the rest stays smooth (B) or is always dithered between levels (C).

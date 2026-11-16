@@ -1,7 +1,7 @@
 class_name EnginePanel
 extends VBoxContainer
-## The engine panel for a Location's F1: frames per second, hour, time rate, the day state readout
-## and the shot button.
+## The engine panel for a Location's F1: frames per second, hour, time rate, the day state readout,
+## the shot button and the A′ mode.
 ## It only reports changes through signals; whoever embeds it wires them to the LightEngine and the
 ## EngineShot and calls `show_state` and `show_shot`.
 ## UI text is Polish (for the human).
@@ -11,6 +11,7 @@ signal rate_set(minutes_per_second: float)
 signal shot_requested
 signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
+signal style_mode_set(mode: TuningSet.StyleMode)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -22,6 +23,8 @@ const DEBUG_HINTS: PackedStringArray = ["", "", "",
 		"czerwony: słońce (kąt × widoczność), niebieski: udział nieba (1 = całe niebo), zielony: kanał sztuczny"]
 ## Map top names: index 1 is north at the top.
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
+## A′ mode names in TuningSet.StyleMode order: levels on the sum of sun and lamps, or on each apart.
+const STYLE_MODES: PackedStringArray = ["na sumie", "na kanałach"]
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -37,6 +40,7 @@ var _shot_label: Label
 var _debug_view: OptionButton
 var _debug_hint: Label
 var _map_top: OptionButton
+var _style_mode: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -106,6 +110,8 @@ func _ready() -> void:
 
 	_map_top = _choice("Góra mapy", MAP_TOPS)
 	_map_top.item_selected.connect(func(index: int) -> void: north_at_top_set.emit(index == 1))
+	_style_mode = _choice("Tryb A′", STYLE_MODES)
+	_style_mode.item_selected.connect(func(index: int) -> void: style_mode_set.emit(index as TuningSet.StyleMode))
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -130,6 +136,17 @@ func set_rate(minutes_per_second: float) -> void:
 ## The map top choice (the embedder may set it without a signal, e.g. after a replayed shot).
 func map_top_choice() -> OptionButton:
 	return _map_top
+
+
+## Shows the A′ mode choice only where it matters: with an artificial channel (lamps) the modes
+## differ, without one they give the same picture.
+func show_style_mode(shown: bool) -> void:
+	(_style_mode.get_parent() as Control).visible = shown
+
+
+## The A′ mode choice (the embedder may set it without a signal, e.g. from the tuning set).
+func style_mode_choice() -> OptionButton:
+	return _style_mode
 
 
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).

@@ -36,6 +36,9 @@ func _ready() -> void:
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
 	_engine_panel.debug_view_set.connect(_engine.set_debug_view)
 	_engine_panel.north_at_top_set.connect(_engine.set_north_at_top)
+	_engine_panel.style_mode_set.connect(_engine.set_style_mode)
+	_engine_panel.style_mode_choice().select(_engine.style_mode())
+	_engine_panel.show_style_mode(_engine.source_light().has_channel(SourceProfile.Channel.ARTIFICIAL))
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
 	_engine_panel.show_state(_engine.state())
@@ -58,6 +61,7 @@ func _ready() -> void:
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("kamera", _camera_name, _place_camera)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
+	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
 	if not asset_looks.is_empty():
 		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
@@ -139,6 +143,19 @@ func _select_map_top(top_name: String) -> void:
 		return
 	_engine_panel.map_top_choice().select(index)
 	_engine.set_north_at_top(index == 1)
+
+
+func _style_mode_name() -> String:
+	return EnginePanel.STYLE_MODES[_engine.style_mode()]
+
+
+func _select_style_mode(mode_name: String) -> void:
+	var index: int = EnginePanel.STYLE_MODES.find(mode_name)
+	if index < 0:
+		push_warning("Unknown A′ mode in the shot: %s" % mode_name)
+		return
+	_engine_panel.style_mode_choice().select(index)
+	_engine.set_style_mode(index as TuningSet.StyleMode)
 
 
 func _debug_view_name() -> String:

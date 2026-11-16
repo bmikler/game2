@@ -15,9 +15,11 @@ const int PATTERN_CHECKER = 1;
 const int NATURAL = 0;
 const int ARTIFICIAL = 1;
 const int BOTH = 2;
-// The natural light's sun part (alpha × `sun_light`), and the rest of it (sky, ambient).
+// The natural light's sun part (alpha × `sun_light`), and the rest of it (sky, ambient); the
+// light with hard shadow edges: the sun and the artificial channel.
 const int SUN = 3;
 const int SOFT = 4;
+const int HARD = 5;
 // Below this (lux after exposure) a pixel has no light to style.
 const float NO_LIGHT = 1e-6;
 
@@ -45,13 +47,19 @@ float luma(vec3 light) {
 	return dot(light, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// Light after exposure of the natural channel, the artificial one, both summed, or the natural
-// channel's sun or soft part.
+// Light after exposure of the natural channel, the artificial one, both summed, the natural
+// channel's sun or soft part, or the sun with the artificial channel.
 vec3 fetch(int which, ivec2 px) {
-	if (which == SUN || which == SOFT) {
+	if (which == SUN || which == SOFT || which == HARD) {
 		vec4 natural_light = texelFetch(natural, px, 0);
 		vec3 sun = sun_light * natural_light.a;
-		return (which == SUN ? sun : max(natural_light.rgb - sun, vec3(0.0))) * exposure;
+		if (which == SOFT) {
+			return max(natural_light.rgb - sun, vec3(0.0)) * exposure;
+		}
+		if (which == HARD && has_artificial) {
+			sun += texelFetch(artificial, px, 0).rgb;
+		}
+		return sun * exposure;
 	}
 	vec3 light = vec3(0.0);
 	if (which != ARTIFICIAL) {
@@ -130,12 +138,17 @@ void fragment() {
 	float threshold = pattern(px + ivec2(origin_px));
 	vec3 result;
 	if (sky_style != SKY_LEVELS) {
-		// Levels for the sun alone; the artificial channel styled apart in either mode.
-		result = levels(SUN, px, threshold, false);
-		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true);
-		if (has_artificial) {
-			result += levels(ARTIFICIAL, px, threshold, false);
+		// Levels only for the light with hard shadow edges (the sun, the artificial channel): on
+		// their sum, or on each apart (mode); the rest is smooth or dithered.
+		if (mode == MODE_PER_CHANNEL) {
+			result = levels(SUN, px, threshold, false);
+			if (has_artificial) {
+				result += levels(ARTIFICIAL, px, threshold, false);
+			}
+		} else {
+			result = levels(HARD, px, threshold, false);
 		}
+		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true);
 	} else if (mode == MODE_PER_CHANNEL) {
 		result = levels(NATURAL, px, threshold, false);
 		if (has_artificial) {

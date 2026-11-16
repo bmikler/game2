@@ -41,9 +41,9 @@ func set_input(natural: Texture2D, artificial: Texture2D, size: Vector2i, origin
 	redraw()
 
 
-## The A′ constants of the tuning set.
-func set_tuning(tuning: TuningSet) -> void:
-	_material.set_shader_parameter(&"mode", tuning.style_mode)
+## The A′ constants of the tuning set; `style_mode` other than −1 replaces the set's mode (F1).
+func set_tuning(tuning: TuningSet, style_mode: int = -1) -> void:
+	_material.set_shader_parameter(&"mode", tuning.style_mode if style_mode < 0 else style_mode)
 	_material.set_shader_parameter(&"full_dither_px", tuning.full_dither_px)
 	_material.set_shader_parameter(&"sky_style", tuning.sky_style)
 	_material.set_shader_parameter(&"level_stops", tuning.level_stops)

@@ -12,6 +12,10 @@ var receivers: Array[Receiver] = []
 var assets: Array[AssetEntry] = []
 ## Screen pixels relative to the Location's origin; empty without solids.
 var area: Rect2i = Rect2i()
+## Light sources with a profile, each in its group.
+var sources: Array[SourceEntry] = []
+## One group per profile, in the order profiles first appear: one light buffer layer each.
+var source_groups: Array[SourceProfile] = []
 
 
 ## `assets` name their ranges in `shapes`; those solids get no receivers.
@@ -53,8 +57,8 @@ static func from_boxes(boxes: Array[AABB], projection: LightProjection) -> Scene
 	return from_shapes(shapes, projection)
 
 
-## Collects the solids of every Occluder in the tree, and the assets among them (Occluders with an
-## AssetSprite holding a texture).
+## Collects the solids of every Occluder in the tree, the assets among them (Occluders with an
+## AssetSprite holding a texture) and the light sources with a profile.
 static func from_tree(tree: SceneTree, projection: LightProjection) -> SceneDescription:
 	var shapes: Array[SolidShape] = []
 	var asset_entries: Array[AssetEntry] = []
@@ -65,7 +69,21 @@ static func from_tree(tree: SceneTree, projection: LightProjection) -> SceneDesc
 		if sprite != null and sprite.texture != null and not own.is_empty():
 			asset_entries.append(AssetEntry.from_occluder(occluder, sprite, own, shapes.size()))
 		shapes.append_array(own)
-	return from_shapes(shapes, projection, asset_entries)
+	var description: SceneDescription = from_shapes(shapes, projection, asset_entries)
+	for node: Node in tree.get_nodes_in_group(LightSource.GROUP):
+		var source: LightSource = node as LightSource
+		if source.profile != null:
+			description.add_source(source.entry())
+	return description
+
+
+## Adds a source to the group of its profile (a new group for a new profile).
+func add_source(source: SourceEntry) -> void:
+	source.group = source_groups.find(source.profile)
+	if source.group < 0:
+		source.group = source_groups.size()
+		source_groups.append(source.profile)
+	sources.append(source)
 
 
 ## Solids for the shaders: two RGBAF texels each, (min, kind) and (max, eave); one texel when
@@ -96,6 +114,18 @@ func asset_data() -> Image:
 	var texels: PackedColorArray = PackedColorArray()
 	for entry: AssetEntry in assets:
 		texels.append(Color(entry.first_solid, entry.solid_count, entry.front_d, 0.0))
+	return _row(texels)
+
+
+## Light sources for the shaders: four RGBAF texels each, (centre, kind), (half_u, radius),
+## (half_v, group), (normal, 0).
+func source_data() -> Image:
+	var texels: PackedColorArray = PackedColorArray()
+	for source: SourceEntry in sources:
+		texels.append(_texel(source.centre, source.kind))
+		texels.append(_texel(source.half_u, source.radius))
+		texels.append(_texel(source.half_v, source.group))
+		texels.append(_texel(source.normal, 0.0))
 	return _row(texels)
 
 

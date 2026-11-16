@@ -26,6 +26,10 @@ func _init() -> void:
 	_save(_sky(Color("#26305c"), 3.0), "sky_village.tres") # dark and cold
 	_save(_tuning_set("outdoor"), "outdoor.tres")
 	_save(_tuning_set("interior"), "interior.tres")
+	DirAccess.make_dir_recursive_absolute(FOLDER + "sources")
+	_save(_street_lamp(), "sources/street_lamp.tres")
+	_save(_wall_lamp(), "sources/wall_lamp.tres")
+	_save(_lit_window(), "sources/lit_window.tres")
 	quit()
 
 
@@ -155,3 +159,61 @@ func _tuning_set(label: String) -> TuningSet:
 	tuning_set.window_patch_strength = 0.5 if interior else 1.0
 	tuning_set.dust_density = 75.0 if interior else 0.0
 	return tuning_set
+
+
+## Cheat sheet 4.4, street lamp: #ffa357, 60 lx on the ground under a bulb 4 m up, reaching 14 m; off
+## about 8:00, on gradually at dusk (the sun goes behind the roofs at 17:36, sets at 18:06).
+func _street_lamp() -> SourceProfile:
+	return _source_profile(Color("#ffa357"), _hours(60.0, [Vector2(7.6, 8.0), Vector2(17.3, 18.1)]),
+			_inverse_square(4.0, 4.0, 14.0))
+
+
+## Cheat sheet 4.4, wall sconce over the shop door: #ffa357, 100 lx 2.5 m below it; on all day (the
+## shop is open, its light adds to the sun's).
+func _wall_lamp() -> SourceProfile:
+	return _source_profile(Color("#ffa357"), _hours(100.0, []), _inverse_square(2.5, 4.0, 8.0))
+
+
+## Cheat sheet 4.4, a lit window seen from the street: warm, reaching 6 m; lit in the evening and
+## early morning, dark after half past eleven. 40 lx 1 m in front of it and on its glass (brighter
+## glass burnt out flat at night).
+func _lit_window() -> SourceProfile:
+	return _source_profile(Color("#ffb870"),
+			_hours(40.0, [Vector2(5.5, 6.0), Vector2(7.5, 8.0), Vector2(16.8, 17.6), Vector2(23.0, 23.5)], false),
+			_inverse_square(1.0, 1.0, 6.0))
+
+
+func _source_profile(color: Color, intensity: Curve, falloff: Curve) -> SourceProfile:
+	var profile: SourceProfile = SourceProfile.new()
+	profile.channel = SourceProfile.Channel.ARTIFICIAL
+	profile.color = _gradient({0.0: color, 24.0: color})
+	profile.intensity = intensity
+	profile.falloff = falloff
+	return profile
+
+
+## `lux` switched in turn over the given ramps (from, to hours), on at midnight or off; no ramps:
+## always as at midnight.
+func _hours(lux: float, ramps: Array[Vector2], on_at_midnight: bool = true) -> Curve:
+	var on: bool = on_at_midnight
+	var points: PackedVector2Array = PackedVector2Array([Vector2(0.0, lux if on else 0.0)])
+	for ramp: Vector2 in ramps:
+		points.append(Vector2(ramp.x, lux if on else 0.0))
+		on = not on
+		points.append(Vector2(ramp.y, lux if on else 0.0))
+	points.append(Vector2(24.0, lux if on else 0.0))
+	return _curve(points, 0.0, 100000.0)
+
+
+## Light falling with the square of the distance, 1 at `reference_m`, at most `cap` near the source,
+## eased to 0 at `reach_m` (so the layer can stop there).
+func _inverse_square(reference_m: float, cap: float, reach_m: float) -> Curve:
+	var points: PackedVector2Array = PackedVector2Array()
+	for step: int in 33:
+		var distance: float = reach_m * step / 32.0
+		var square: float = minf(pow(reference_m / maxf(distance, 0.001), 2.0), cap)
+		var ease: float = pow(1.0 - pow(distance / reach_m, 4.0), 2.0)
+		points.append(Vector2(distance, square * ease))
+	var curve: Curve = _curve(points, 0.0, cap)
+	curve.max_domain = reach_m
+	return curve

@@ -1,7 +1,8 @@
 class_name LightBuffer
 extends Node
 ## The light buffer: the Location's light, one pixel per game pixel over the buffer area, in HDR
-## (natural channel: sun, sky, ambient). Rendered in its own viewport when the scene or the day
+## (natural channel: sun, sky, ambient and natural sources; artificial channel: the other sources,
+## SourceLight). Rendered in its own viewport when the scene or the day
 ## state changes (and while the sky layer is being built), styled by the A′ pass (with exposure)
 ## and shown over the Location's picture: albedo × styled light. A helper of the LightEngine; it
 ## has no owner, so it is never saved into a scene.
@@ -24,6 +25,7 @@ var _area: Rect2i = Rect2i()
 var _sky: SkyLayer
 var _style: LightStyle
 var _assets: AssetLayer
+var _sources: SourceLight
 var _modelling: float = -1.0
 
 
@@ -31,6 +33,10 @@ func _init() -> void:
 	# The asset layer first: the layers that read it are drawn after it.
 	_assets = AssetLayer.new()
 	add_child(_assets)
+	# The source layers and channels next: the buffer and the A′ pass read them.
+	_sources = SourceLight.new()
+	add_child(_sources)
+	_sources.changed.connect(_redraw)
 	_view = SubViewport.new()
 	_view.use_hdr_2d = true
 	_view.disable_3d = true
@@ -74,7 +80,6 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 	_view.size = _area.size if _area.has_area() else Vector2i.ONE
 	_canvas.size = Vector2(_view.size)
 	_display.position = Vector2(_area.position)
-	_style.set_input(_view.get_texture(), null, _view.size, _area.position)
 	var solids: ImageTexture = ImageTexture.create_from_image(description.solid_data())
 	var receivers: ImageTexture = ImageTexture.create_from_image(description.receiver_data())
 	_material.set_shader_parameter(&"solids", solids)
@@ -90,6 +95,13 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 	_sky.build(_area, solids, description.solids.size(), receivers, description.receivers.size(), _assets.texture(),
 			assets, projection)
 	_material.set_shader_parameter(&"sky_share_scale", _sky.share_scale())
+	_sources.build(description, solids, receivers, assets, _assets.texture(), projection, maxf(_modelling, 0.0))
+	_material.set_shader_parameter(&"natural_sources", _sources.texture(SourceProfile.Channel.NATURAL))
+	_material.set_shader_parameter(&"has_natural_sources", _sources.has_channel(SourceProfile.Channel.NATURAL))
+	var artificial: Texture2D = _sources.texture(SourceProfile.Channel.ARTIFICIAL)
+	_material.set_shader_parameter(&"artificial_sources", artificial)
+	var has_artificial: bool = _sources.has_channel(SourceProfile.Channel.ARTIFICIAL)
+	_style.set_input(_view.get_texture(), artificial if has_artificial else null, _view.size, _area.position)
 	_redraw()
 
 
@@ -101,12 +113,14 @@ func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_style.set_exposure(state.exposure, state.level_anchor)
 	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity)
+	_sources.set_state(state)
 	_redraw()
 
 
-## Takes the Location's tuning set (receivers, A′); a new modelling rebuilds the sky.
-func set_tuning(tuning: TuningSet) -> void:
-	_style.set_tuning(tuning)
+## Takes the Location's tuning set (receivers, A′ in `style_mode`); a new modelling rebuilds the sky
+## and the source layers.
+func set_tuning(tuning: TuningSet, style_mode: TuningSet.StyleMode) -> void:
+	_style.set_tuning(tuning, style_mode)
 	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
 	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
 	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
@@ -114,6 +128,7 @@ func set_tuning(tuning: TuningSet) -> void:
 		_modelling = tuning.receiver_modelling
 		_sky.set_modelling(_modelling)
 		_sky.restart()
+		_sources.set_modelling(_modelling)
 	_redraw()
 
 
@@ -134,6 +149,11 @@ func image() -> Image:
 	return _view.get_texture().get_image()
 
 
+## The artificial channel as last rendered (lux per pixel, HDR).
+func artificial_image() -> Image:
+	return _sources.texture(SourceProfile.Channel.ARTIFICIAL).get_image()
+
+
 ## The styled light as last rendered (after A′ and exposure, HDR).
 func styled_image() -> Image:
 	return _style.image()
@@ -142,6 +162,16 @@ func styled_image() -> Image:
 ## Whether the sky layer of the current scene is complete (it takes a few frames after `set_scene`).
 func is_sky_complete() -> bool:
 	return _sky.is_complete()
+
+
+## Whether the sky layer and every source layer are complete.
+func is_complete() -> bool:
+	return _sky.is_complete() and _sources.is_complete()
+
+
+## The source layers (one per source group).
+func sources() -> SourceLight:
+	return _sources
 
 
 func _on_sky_pass(_passes_done: int) -> void:
