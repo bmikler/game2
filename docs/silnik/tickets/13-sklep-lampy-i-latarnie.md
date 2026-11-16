@@ -2,7 +2,7 @@
 id: 13
 title: Sklep z lampami i latarniami
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [08]
 ---
@@ -23,6 +23,11 @@ blocked_by: [08]
 ## Jak sprawdzić
 
 Sklep o 22:00: cienie słupów od trzech latarń krzyżują się, przecięcie ciemniejsze, kolor cienia to światło pozostałych Źródeł. O 16:30 latarnie zapalają się stopniowo. Przełącz tryb A′: różnica ciepłego i chłodnego światła.
+
+## Ocena człowieka
+
+2026-11-16: okna od strony ulicy „z grubsza ok”; ticket zamknięty. Kinkiet świeci całą dobę. Ograniczenia z sekcji
+„Okna od strony ulicy” zostają (środkowa latarnia o poziom jaśniejsza do strojenia `anchor_ev`). 186 testów zielonych.
 
 ## Stan (2026-11-16, Claude) — do sprawdzenia przez człowieka
 
@@ -111,7 +116,7 @@ ticket 40 mapy grafiki, reference/nastroj/) nie należą do ticketu: nie commito
 zastępcza szyba szara pod ciepłym światłem = brązowa płyta; kinkiet 20 cm od muru daje dużą plamę na ścianie; środkowa
 latarnia ma o jeden poziom więcej (granica przy 38 lx), do strojenia.
 
-## Okna od strony ulicy (2026-11-16, druga sesja) — do oceny przez człowieka
+## Okna od strony ulicy (2026-11-16, druga sesja)
 
 Porównanie ze starym Poligonem Ulica o 22:00 (zrzuty tej samej pory; ekspozycja nowego 1/62 lx):
 1. Stare okno ma ramę #cfc8b8, słupek (dwa skrzydła) i śnieg na parapecie; nowe było płaską kartą.
