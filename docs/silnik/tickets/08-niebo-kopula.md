@@ -40,3 +40,11 @@ Uliczka o zmierzchu i w pochmurnej godzinie: cień kamienic nie jest czarny, prz
 1. **17:48** (słońce już za dachami, świeci samo niebo), kamera przy prześwicie 2 m (start): fasady i ulica w cieniu nie są czarne, w prześwicie ciemniej niż na ulicy, ulica jaśnieje z odległością od kamienic, bez pasów.
 2. To samo **18:36** (zmierzch) i przy przejściu w głąb (kamera w prawo, ok. x = 18 m): szersze przejście jaśniejsze niż wąski prześwit.
 3. **12:30**, „Widok debug” → „Kanały”: ulica w cieniu kamienic niebieska, w prześwicie czerwono (słońce, mało nieba), na otwartej ulicy fiolet; niebieski gładko jaśnieje od fasad.
+
+### Ocena człowieka
+
+2026-11-16: „poza tym paskiem ze screena wszystko wygląda dobrze”. Pasek (zrzut `shots/engine/poligon_street__0747__…`, 07:47, przejście w głąb) to nie błąd silnika: słońce 7° od południowego wschodu przechodzi szczeliną ok. 0,7 m między tylnym narożnikiem środkowej kamienicy (x = 15, d = −18) a przednim narożnikiem oficyny na podwyższeniu (x = 12, d = −23). Sprawdzone promieniami punkt po punkcie w poprzek smugi: z lewej zasłania kamienica, z prawej oficyna, pośrodku otwarte. Znika, gdy słońce się podniesie.
+
+### Plac (prośba człowieka, 2026-11-16)
+
+„Zrób na mapie przerwę w budynkach (jakiś plac), żeby więcej słońca wchodziło przy południu na górze.” Zachodnia kamienica skrócona do 15 m (x −16…−1), **plac** 20 m (x −36…−16), dalej nowa kamienica do brzegu mapy (x −50…−36, 9,5 m); plac zamyka od południa kamienica 22 m od ulicy (d −40…−32, 9 m). W południe słońce oświetla cały plac i ulicę przed nim; o 9:30 skośny cień sąsiedniej kamienicy. Kamera: w lewo do x ≈ −26 m.
