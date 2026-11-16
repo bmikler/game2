@@ -100,8 +100,7 @@ func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_style.set_exposure(state.exposure, state.level_anchor)
-	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity,
-			_rgb(state.sky_color) * state.sky_intensity + _rgb(state.ambient_color) * state.ambient_intensity)
+	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity)
 	_redraw()
 
 

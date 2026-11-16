@@ -10,7 +10,6 @@ render_mode unshaded, blend_disabled;
 const int MODE_PER_CHANNEL = 1;
 const int SKY_LEVELS = 0;
 const int SKY_SMOOTH = 1;
-const int SKY_FLAT = 3;
 const int PATTERN_CHECKER = 1;
 // What `levels` styles.
 const int NATURAL = 0;
@@ -19,8 +18,6 @@ const int BOTH = 2;
 // The natural light's sun part (alpha × `sun_light`), and the rest of it (sky, ambient).
 const int SUN = 3;
 const int SOFT = 4;
-// The sun part with open ground's sky and ambient instead of the pixel's own.
-const int FLAT = 5;
 // Below this (lux after exposure) a pixel has no light to style.
 const float NO_LIGHT = 1e-6;
 
@@ -32,11 +29,9 @@ uniform ivec2 size = ivec2(1);
 uniform vec2 origin_px = vec2(0.0);
 uniform int mode = 0;
 // 0: the light without a hard edge (sky, ambient) in levels with the sun's, 1: smooth, 2: always
-// dithered (in 1 and 2 only the sun gets levels), 3: as on open ground everywhere, the sum in levels.
+// dithered; in 1 and 2 only the sun gets levels.
 uniform int sky_style = 0;
 uniform vec3 sun_light = vec3(0.0);
-// Sky + ambient on open ground (lux).
-uniform vec3 open_sky_light = vec3(0.0);
 uniform float level_stops = 0.5;
 uniform float seam_px = 3.0;
 // A step between levels shorter than this (pixels) is dithered over its whole length; 0: never.
@@ -51,15 +46,11 @@ float luma(vec3 light) {
 }
 
 // Light after exposure of the natural channel, the artificial one, both summed, or the natural
-// channel's sun or soft part, or its sun part with open ground's soft part.
+// channel's sun or soft part.
 vec3 fetch(int which, ivec2 px) {
-	if (which == SUN || which == SOFT || which == FLAT) {
+	if (which == SUN || which == SOFT) {
 		vec4 natural_light = texelFetch(natural, px, 0);
 		vec3 sun = sun_light * natural_light.a;
-		if (which == FLAT) {
-			// No surface (no light at all) stays dark.
-			return luma(natural_light.rgb) < NO_LIGHT ? vec3(0.0) : (sun + open_sky_light) * exposure;
-		}
 		return (which == SUN ? sun : max(natural_light.rgb - sun, vec3(0.0))) * exposure;
 	}
 	vec3 light = vec3(0.0);
@@ -138,12 +129,7 @@ void fragment() {
 	ivec2 px = ivec2(floor(local_px));
 	float threshold = pattern(px + ivec2(origin_px));
 	vec3 result;
-	if (sky_style == SKY_FLAT) {
-		result = levels(FLAT, px, threshold, false);
-		if (has_artificial) {
-			result += levels(ARTIFICIAL, px, threshold, false);
-		}
-	} else if (sky_style != SKY_LEVELS) {
+	if (sky_style != SKY_LEVELS) {
 		// Levels for the sun alone; the artificial channel styled apart in either mode.
 		result = levels(SUN, px, threshold, false);
 		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true);

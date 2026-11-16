@@ -49,12 +49,8 @@ słabo”. A′ na niebie „wygląda nawet ładnie artystycznie, ale cienie nie
 później: ręczne globalne metody nadpisujące fizykę dla ładniejszego wyglądu. `sky_style = SMOOTH` w `outdoor.tres` i
 `interior.tres` (generator `start_values.gd`); A i C zostają w F1 do porównań.
 
-**Wariant D (prośba człowieka: „A′, a cień na cieniu ma się wyrównać do jednego koloru”, też jako „A′ bez cieni ze
-światła nieba”):** niebo i ambient wszędzie jak na otwartym terenie (bez udziału nieba piksela), A′ na sumie. Każdy cień
-słońca to jeden płaski poziom z ostrą krawędzią; brak przyciemnień od zasłoniętego nieba (także pod meblami i przy
-ścianach), ściany w cieniu tak jasne jak ziemia. Koszt: kilka ALU, bez odczytów. Sprawdzone odtworzeniem zrzutów 9:41 i
-12:01. Uwaga: we wnętrzu D da pełne niebo w pokoju (tam światło nieba musi zależeć od okien), więc to wariant pleneru.
-Domyślne zostaje B, dopóki człowiek nie wybierze inaczej. `node tools/test.mjs`: 164 zielone.
+**Wariant D odrzucony i usunięty (2026-11-16):** niebo wszędzie jak na otwartym terenie, A′ na sumie (każdy cień
+słońca jednym kolorem). Człowiek: „to po prostu bardziej płaska opcja gładka”.
 
 **Do oceny w grze (przed decyzją):** te same miejsca, F1 „Światło nieba” A / B / C. Ryzyko B: gładki cień jak „HD” (t37). Ryzyko C:
 drobny dither na całym cieniu jak faktura. Wybrany wariant wpiszę jako domyślny w `outdoor.tres`.

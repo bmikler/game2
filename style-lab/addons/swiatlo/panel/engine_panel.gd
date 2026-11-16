@@ -25,8 +25,8 @@ const DEBUG_HINTS: PackedStringArray = ["", "", "",
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
 ## Variants of the short-step dither length (research 92) compared in F1; 0 is the A′ before it.
 const FULL_DITHER_VARIANTS_PX: PackedFloat32Array = [0.0, 16.0, 24.0, 40.0]
-## Sky style names in TuningSet.SkyStyle order (critic variants A–D).
-const SKY_STYLES: PackedStringArray = ["A: poziomy", "B: gładkie", "C: dither", "D: jeden kolor"]
+## Sky style names in TuningSet.SkyStyle order (critic variants A, B, C).
+const SKY_STYLES: PackedStringArray = ["A: poziomy", "B: gładkie", "C: dither"]
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",

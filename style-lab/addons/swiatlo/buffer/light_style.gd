@@ -65,10 +65,8 @@ func set_exposure(exposure: float, anchor_lux: float) -> void:
 
 
 ## The sun's light (colour × lux): the natural input's alpha × this is the sun's part of its light.
-## `open_sky_light`: sky + ambient on open ground (lux), the rest of the light in the flat sky style.
-func set_sun(sun_light: Vector3, open_sky_light: Vector3) -> void:
+func set_sun(sun_light: Vector3) -> void:
 	_material.set_shader_parameter(&"sun_light", sun_light)
-	_material.set_shader_parameter(&"open_sky_light", open_sky_light)
 	redraw()
 
 
