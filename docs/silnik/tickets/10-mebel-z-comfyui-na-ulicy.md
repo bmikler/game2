@@ -2,7 +2,7 @@
 id: 10
 title: Mebel z ComfyUI na Ulicy
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [09]
 ---
@@ -13,11 +13,11 @@ Drugi sprawdzian kontraktu assetu, tym razem w prawdziwym silniku: obiekt z peł
 
 ## Kryteria akceptacji
 
-- [ ] Przed generacją pytanie do człowieka (co, po co, koszt); odrzucone obrazy usuwane od razu.
-- [ ] Zero kodu pod konkretny obiekt; potrzebna zmiana kontraktu = stop i rozmowa, nie łatka.
-- [ ] Porównanie w F1: obiekt z ComfyUI / prosty sprite z „Oświetlenia sprite'ów na Bryłach”.
-- [ ] Normalne dodatków wypełnia narzędzie Przepisu (`style-lab/tools/meble/`), nie silnik.
-- [ ] Przełącznik ticketu w F1: normalne dodatków „nadmuchane” / stała normalna do kamery (dwie mapy normalnych tego samego assetu, obie pełne); wybór człowieka zapisany w tickecie i w Przepisie mebli. Jeśli oba źle: stop i rozmowa (następna droga: estymator normalnych w ComfyUI).
+- [x] Przed generacją pytanie do człowieka (co, po co, koszt); odrzucone obrazy usuwane od razu.
+- [x] Zero kodu pod konkretny obiekt; potrzebna zmiana kontraktu = stop i rozmowa, nie łatka.
+- [x] Porównanie w F1: obiekt z ComfyUI / prosty sprite z „Oświetlenia sprite'ów na Bryłach”.
+- [x] Normalne dodatków wypełnia narzędzie Przepisu (`style-lab/tools/meble/`), nie silnik.
+- [x] Przełącznik ticketu w F1: normalne dodatków „nadmuchane” / stała normalna do kamery (dwie mapy normalnych tego samego assetu, obie pełne); wybór człowieka zapisany w tickecie i w Przepisie mebli. Jeśli oba źle: stop i rozmowa (następna droga: estymator normalnych w ComfyUI).
 
 ## Jak sprawdzić
 
@@ -47,4 +47,6 @@ O 9:00 i 16:00 stragan stoi w cieniu kamienic (słońce w południe 30°), więc
 
 ### Ocena człowieka
 
-(czeka)
+2026-11-16: „generalnie nie widzę żadnej różnicy”; cienie mogą być uproszczone: cień rzucają Bryły bez szczegółów sprite'a (tak samo jak uproszczony cień postaci), to jest ok.
+
+**Decyzja (Claude, człowiek zostawia technikę):** normalne dodatków **nadmuchane** zostają w Przepisie mebli jako domyślne. Wizualnie oba warianty są dla człowieka nie do odróżnienia w świetle słońca i nieba, a nadmuchane nie kosztują nic w silniku (to dane assetu) i są zgodne z regułą Przepisu. Ponowne sprawdzenie przy świetle lampy z boku w tickecie 21 (salon, meble i lampa); jeśli tam też bez różnicy, Przepis może przejść na prostszą stałą normalną. Estymator normalnych w ComfyUI niepotrzebny. Przełącznik „Stragan” zostaje w F1 do porównań (prosty sprite / ComfyUI).
