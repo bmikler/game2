@@ -53,3 +53,11 @@ jeszcze do ok. 19:00: to ekspozycja automatyczna otwiera się, gdy niebo ciemnie
 żaden profil dziś go nie używa. Ostrzeżenie „Źródło w Bryle” i pomiar czasu wczytania (≤ 2 s) to tickety 25 i 19.
 Kinkiet świeci całą dobę (ticket: „także w słońcu”), Ściąga miała dla kinkietu harmonogram wieczorny. Przełącznik
 „Tryb A′” widać tylko w Lokacji z kanałem sztucznym.
+
+**Poprawka po ocenie (2026-11-16):** człowiek: latarnie „zapalają się skokowo” i ich światło zmienia się po
+zapaleniu. Pomiar co 5 min: lampa stała (25 lx), a obraz skakał 0,30 → 0,58 → 0,45, bo siatka poziomów A′ stała na
+kotwicy otwartego nieba, które po zachodzie ciemnieje ok. 30×. Przy gładkim (B) i ditherowanym (C) niebie siatka
+słońca i lamp stoi teraz na stałych luksach (1 lx × 2^`anchor_ev`): pasy plamy lampy nie ruszają się przez cały
+wieczór (bramka w `test_light_style_gpu.gd`). Zostaje płynne rozjaśnianie z ekspozycją automatyczną 18:00–18:50 i
+lekkie zblednięcie (ok. 9 %) do 19:15: dzienna krzywa nieba schodzi do 6 lx, noc miasta ma 20 lx (strojenie krzywych).
+Człowiek: piksele (poziomy) na świetle lamp „nawet spoko”; niebo zostaje gładkie (B).

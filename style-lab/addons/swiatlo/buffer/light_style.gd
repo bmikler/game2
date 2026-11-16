@@ -84,3 +84,4 @@ func image() -> Image:
 
 func _update_anchor() -> void:
 	_material.set_shader_parameter(&"anchor", maxf(_anchor_lux, DayState.MIN_BRIGHTNESS) * pow(2.0, _anchor_ev))
+	_material.set_shader_parameter(&"hard_anchor", pow(2.0, _anchor_ev))

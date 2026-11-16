@@ -377,3 +377,20 @@ func test_without_the_sun_every_sky_style_keeps_the_sun_edge_sharp() -> void:
 				null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0))
 		assert_eq(_mixed_columns(styled), 0, "sky style %d" % style)
 		assert_gt(styled.get_pixel(WIDTH / 2 - 1, 0).r, styled.get_pixel(WIDTH / 2, 0).r * 4.0, "the edge in one pixel")
+
+
+func test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sky_darkens() -> void:
+	# Ticket 13: a lamp's light is fixed; the sky (and with it the open-sky anchor) falls at dusk.
+	# Its levels sit at fixed lux, so the bands of its pool do not move or jump.
+	var no_natural: Image = _uniform(Color(0.0, 0.0, 0.0, 0.0))
+	var lamp: Image = _gradient(func(x: int) -> float: return -1.1 + 0.02 * x)
+	for mode: TuningSet.StyleMode in [TuningSet.StyleMode.SUM, TuningSet.StyleMode.PER_CHANNEL]:
+		var tuning: TuningSet = _tuning(0.5, 3.0, mode, 24.0, TuningSet.SkyStyle.SMOOTH)
+		var dusk: Image = await _styled(no_natural, tuning, lamp, Vector2i.ZERO, 1.0, 200.0)
+		var night: Image = await _styled(no_natural, tuning, lamp, Vector2i.ZERO, 1.0, 7.0)
+		var moved: int = 0
+		for x: int in WIDTH:
+			for row: int in HEIGHT:
+				if not is_equal_approx(dusk.get_pixel(x, row).r, night.get_pixel(x, row).r):
+					moved += 1
+		assert_eq(moved, 0, "mode %s" % mode)

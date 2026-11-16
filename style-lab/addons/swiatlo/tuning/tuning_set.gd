@@ -54,7 +54,9 @@ enum ScatterStyle { SMOOTH, DITHER }
 		seam_pattern = value
 		emit_changed()
 ## `Y_ref`: where the level grid sits, in EV over the light of open sky on flat ground (sky +
-## ambient, × the Location's reference). 0 puts open sky in the middle of a level.
+## ambient, × the Location's reference). 0 puts open sky in the middle of a level. With the sky light
+## smooth or dithered (B, C) the sun's and lamps' grid sits instead at 1 lux × 2^this, fixed: a
+## lamp's pool keeps its bands while the sky darkens (human, 2026-11-16, ticket 13).
 @export_range(-1.0, 1.0, 0.05) var anchor_ev: float = 0.0:
 	set(value):
 		anchor_ev = value

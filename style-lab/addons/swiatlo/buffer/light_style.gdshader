@@ -1,5 +1,6 @@
 // A′ stylisation: light in lux per pixel (natural, and artificial when there is any) → styled light
-// after exposure, which multiplies the albedo. Levels in EV anchored to `anchor` (open sky); at
+// after exposure, which multiplies the albedo. Levels in EV anchored to `anchor` (open sky), or with
+// smooth or dithered sky light the sun's and lamps' levels to `hard_anchor` (fixed lux); at
 // each level boundary a dither seam `seam_px` pixels wide whatever the slope (research 84, §6); a
 // short step (a thing's soft halo) is dithered over its whole length instead (research 92, §4b).
 // The slope comes from the gentler one-sided difference per axis, so a jump between two surfaces
@@ -42,6 +43,9 @@ uniform int seam_pattern = 0;
 uniform float exposure = 1.0;
 // `Y_ref` in lux before exposure.
 uniform float anchor = 1.0;
+// Where the levels of light with hard edges (sun, lamps) sit in sky styles B and C: fixed lux, so a
+// lamp's pool keeps its bands while the sky darkens.
+uniform float hard_anchor = 1.0;
 
 float luma(vec3 light) {
 	return dot(light, vec3(0.2126, 0.7152, 0.0722));
@@ -72,12 +76,13 @@ vec3 fetch(int which, ivec2 px) {
 }
 
 // Level coordinate of an exposed luma: whole numbers are boundaries, the anchor sits at ½.
-float steps_of(float y) {
-	return log2(max(y, NO_LIGHT) / (anchor * exposure)) / level_stops + 0.5;
+// `grid`: the anchor in lux before exposure.
+float steps_of(float y, float grid) {
+	return log2(max(y, NO_LIGHT) / (grid * exposure)) / level_stops + 0.5;
 }
 
 // The gentler one-sided slope along `axis` (level steps per pixel); lit neighbours only.
-float slope(int which, ivec2 px, ivec2 axis, float s) {
+float slope(int which, ivec2 px, ivec2 axis, float s, float grid) {
 	float best = -1.0;
 	for (int side = -1; side <= 1; side += 2) {
 		ivec2 other = px + axis * side;
@@ -88,7 +93,7 @@ float slope(int which, ivec2 px, ivec2 axis, float s) {
 		if (y < NO_LIGHT) {
 			continue;
 		}
-		float d = abs(steps_of(y) - s);
+		float d = abs(steps_of(y, grid) - s);
 		best = best < 0.0 ? d : min(best, d);
 	}
 	return max(best, 0.0);
@@ -107,14 +112,14 @@ float pattern(ivec2 px) {
 
 // The light at `px`, styled: its luma moves to the middle of a level, its colour stays. `dithered`:
 // a dither between the two nearest levels however gentle the slope (no flat field).
-vec3 levels(int which, ivec2 px, float threshold, bool dithered) {
+vec3 levels(int which, ivec2 px, float threshold, bool dithered, float grid) {
 	vec3 light = fetch(which, px);
 	float y = luma(light);
 	if (y < NO_LIGHT) {
 		return light;
 	}
-	float s = steps_of(y);
-	float g = length(vec2(slope(which, px, ivec2(1, 0), s), slope(which, px, ivec2(0, 1), s)));
+	float s = steps_of(y, grid);
+	float g = length(vec2(slope(which, px, ivec2(1, 0), s, grid), slope(which, px, ivec2(0, 1), s, grid)));
 	// A step shorter than `full_dither_px` (1/g pixels) is dithered all along, one longer than twice
 	// that keeps the narrow seam (research 92 §4b).
 	float w = clamp(seam_px * g, 0.0, 1.0);
@@ -124,7 +129,7 @@ vec3 levels(int which, ivec2 px, float threshold, bool dithered) {
 		w = mix(w, 1.0, smoothstep(0.5 / full_dither_px, 1.0 / full_dither_px, g));
 	}
 	float k = floor(s + w * (threshold - 0.5));
-	return light * (anchor * exposure * exp2(k * level_stops)) / y;
+	return light * (grid * exposure * exp2(k * level_stops)) / y;
 }
 
 varying vec2 local_px;
@@ -141,21 +146,21 @@ void fragment() {
 		// Levels only for the light with hard shadow edges (the sun, the artificial channel): on
 		// their sum, or on each apart (mode); the rest is smooth or dithered.
 		if (mode == MODE_PER_CHANNEL) {
-			result = levels(SUN, px, threshold, false);
+			result = levels(SUN, px, threshold, false, hard_anchor);
 			if (has_artificial) {
-				result += levels(ARTIFICIAL, px, threshold, false);
+				result += levels(ARTIFICIAL, px, threshold, false, hard_anchor);
 			}
 		} else {
-			result = levels(HARD, px, threshold, false);
+			result = levels(HARD, px, threshold, false, hard_anchor);
 		}
-		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true);
+		result += sky_style == SKY_SMOOTH ? fetch(SOFT, px) : levels(SOFT, px, threshold, true, anchor);
 	} else if (mode == MODE_PER_CHANNEL) {
-		result = levels(NATURAL, px, threshold, false);
+		result = levels(NATURAL, px, threshold, false, anchor);
 		if (has_artificial) {
-			result += levels(ARTIFICIAL, px, threshold, false);
+			result += levels(ARTIFICIAL, px, threshold, false, anchor);
 		}
 	} else {
-		result = levels(BOTH, px, threshold, false);
+		result = levels(BOTH, px, threshold, false, anchor);
 	}
 	COLOR = vec4(result, 1.0);
 }
