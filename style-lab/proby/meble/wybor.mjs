@@ -1,9 +1,12 @@
-// PROTOTYP (ticket silnika 02): strona wyboru mebli. Z style-lab/: node proby/meble/wybor.mjs
+// PROTOTYP (ticket silnika 02): strona wyboru mebli. Z style-lab/: node proby/meble/wybor.mjs [mebel ...]
+// (bez argumentów wszystkie meble; ticket silnika 10: node proby/meble/wybor.mjs stall)
 // Czyta proby/meble/<mebel>/wynik/sito.jsonl (tools/meble/mebel_piksele.gd), pokazuje tylko wersje zgodne
 // z rzutem z Blendera (podstawa pokryta, dół na linii podłogi; dodatki wolno): duży obraz z konturami, sprite gry ×1 i ×4 obok bibliotekarki w tej samej skali.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const MEBLE = { lada: "Lada", stol: "Stół z nogami", fotel: "Fotel" };
+const WSZYSTKIE = { lada: "Lada", stol: "Stół z nogami", fotel: "Fotel", stall: "Stragan (ticket silnika 10)" };
+const wybrane = process.argv.slice(2);
+const MEBLE = Object.fromEntries(Object.entries(WSZYSTKIE).filter(([m]) => wybrane.length === 0 || wybrane.includes(m)));
 const OPIS = { a: "opis A", b: "opis B" };
 // Postać 72 px, stopy 7 px nad dołem płótna 80 px; mebel: punkt zaczepienia w wierszu z bryly.json.
 const POSTAC = "../bibliotekarka/sprite/przod_A.png";
@@ -32,7 +35,7 @@ h1{font-size:22px} h2{font-size:19px;margin-top:40px;border-bottom:1px solid #44
 .scena img{image-rendering:pixelated;display:block}
 .male{font-size:13px;color:#aaa}
 </style>
-<h1>Wybór mebli (ticket silnika 02)</h1>
+<h1>Wybór mebli</h1>
 <p>Każda wersja przeszła sito: stoi dokładnie na podstawie z Blendera (ten sam kąt, wielkość i linia podłogi), dodatki mogą wychodzić poza nią (czerwony kontur = Blender, turkusowy = obraz z generatora). Sprite ma 40 kolorów, jak klatki chodu z Pixellab.
 Pod obrazem sprite gry (40 px/m) obok bibliotekarki w tej samej skali: ×1 i ×4. Wybierz po jednej wersji każdego mebla (np. „lada b_s9000”).</p>`;
 

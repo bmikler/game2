@@ -1,6 +1,7 @@
 extends GutTest
 ## The new street Poligon: frame, F1 with the engine panel, a Location with its environment.
 
+const PoligonStreet := preload("res://engine_poligons/street/poligon_street.gd")
 const SCENE: String = "res://engine_poligons/street/poligon_street.tscn"
 
 
@@ -42,7 +43,8 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	var description: ShotDescription = shot.describe()
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
-	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe"})
+	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
+			"wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -129,3 +131,34 @@ func test_map_top_from_f1_reaches_the_engine_and_the_shot() -> void:
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_true((replay.get_node("%Engine") as LightEngine).state().north_at_top)
+
+
+func test_look_switch_gives_the_stall_each_look_and_the_engine_reads_it() -> void:
+	var poligon: Node = _poligon()
+	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
+	var choice: OptionButton = poligon.get_node("%LookChoice") as OptionButton
+	var sprite: AssetSprite = poligon.get_node("Frame/Street/Stall/Sprite") as AssetSprite
+	var looks: Array[AssetLook] = (poligon as PoligonStreet).asset_looks
+	assert_eq(choice.item_count, 3)
+	for index: int in choice.item_count:
+		choice.select(index)
+		choice.item_selected.emit(index)
+		var look: AssetLook = looks[index]
+		assert_eq(sprite.texture, look.sprite)
+		var normal_maps: Array[Texture2D] = []
+		for entry: AssetEntry in engine.scene_description().assets:
+			normal_maps.append(entry.normal_map)
+		assert_has(normal_maps, look.normal_map, "the engine's scene has look %s" % look.look_name)
+	assert_true(engine.warnings().is_empty(), str(engine.warnings()))
+
+
+func test_replayed_shot_keeps_the_stall_look() -> void:
+	var original: Node = _poligon()
+	var choice: OptionButton = original.get_node("%LookChoice") as OptionButton
+	choice.select(2)
+	choice.item_selected.emit(2)
+	var description: ShotDescription = (original.get_node("%Shot") as EngineShot).describe()
+	assert_eq(description.switches["wygląd assetu"], "prosty sprite")
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%LookChoice") as OptionButton).selected, 2)

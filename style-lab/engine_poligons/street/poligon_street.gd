@@ -9,12 +9,19 @@ const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
 ## Camera panning speed, screen pixels per second (8 m/s along x).
 const PAN_SPEED_PX: float = 320.0
 
+## Looks of one asset compared in F1 (engine ticket 10: the stall from ComfyUI with its two add-on
+## normal maps, and the simple painted sprite); the first is the starting one.
+@export var asset_looks: Array[AssetLook] = []
+## The sprite whose look the switch changes.
+@export var looked_asset: AssetSprite
+
 @onready var _frame: SubViewport = %Frame
 @onready var _picture: TextureRect = %Picture
 @onready var _engine: LightEngine = %Engine
 @onready var _f1: CanvasLayer = %F1
 @onready var _engine_panel: EnginePanel = %EnginePanel
 @onready var _frame_choice: OptionButton = %FrameChoice
+@onready var _look_choice: OptionButton = %LookChoice
 @onready var _shot: EngineShot = %Shot
 @onready var _camera: Camera2D = %Camera
 
@@ -39,12 +46,20 @@ func _ready() -> void:
 	_set_frame(0)
 	get_viewport().size_changed.connect(_fit_picture)
 
+	for look: AssetLook in asset_looks:
+		_look_choice.add_item(look.look_name)
+	_look_choice.item_selected.connect(_set_look)
+	if not asset_looks.is_empty():
+		_set_look(0)
+
 	_engine_panel.shot_requested.connect(func() -> void: _shot.take())
 	_shot.taken.connect(_engine_panel.show_shot)
 	_shot.add_switch("kadr", _frame_name, _select_frame)
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("kamera", _camera_name, _place_camera)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
+	if not asset_looks.is_empty():
+		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
 
 func _process(delta: float) -> void:
@@ -77,6 +92,27 @@ func _select_frame(frame_name: String) -> void:
 			_set_frame(index)
 			return
 	push_warning("Unknown frame in the shot: %s" % frame_name)
+
+
+## Gives the looked-at asset the chosen look; the engine reads sprites when it builds the scene.
+func _set_look(index: int) -> void:
+	var look: AssetLook = asset_looks[index]
+	looked_asset.texture = look.sprite
+	looked_asset.normal_map = look.normal_map
+	_engine.rebuild_scene()
+
+
+func _look_name() -> String:
+	return asset_looks[_look_choice.selected].look_name
+
+
+func _select_look(look_name: String) -> void:
+	for index: int in asset_looks.size():
+		if asset_looks[index].look_name == look_name:
+			_look_choice.select(index)
+			_set_look(index)
+			return
+	push_warning("Unknown asset look in the shot: %s" % look_name)
 
 
 func _camera_name() -> String:

@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://engine_poligons/street/facades.gd" id="7"]
 [ext_resource type="PackedScene" path="res://engine_poligons/street/props/crate/crate.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://engine_poligons/street/props/bench/bench.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://engine_poligons/street/props/stall/stall.tscn" id="10"]
 
 [node name="Street" type="Node2D"]
 
@@ -186,3 +187,7 @@ position_m = Vector3(-2, 3.5, 0)
 [node name="Bench" parent="." instance=ExtResource("9")]
 position = Vector2(-280, 84)
 position_m = Vector3(-7, 3.5, 0)
+
+[node name="Stall" parent="." instance=ExtResource("10")]
+position = Vector2(120, 84)
+position_m = Vector3(3, 3.5, 0)

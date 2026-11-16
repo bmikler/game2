@@ -5,9 +5,15 @@
 [ext_resource type="Script" path="res://addons/swiatlo/light_engine.gd" id="3"]
 [ext_resource type="Script" path="res://addons/swiatlo/panel/engine_panel.gd" id="4"]
 [ext_resource type="Script" path="res://addons/swiatlo/shot/engine_shot.gd" id="5"]
+[ext_resource type="Resource" path="res://engine_poligons/street/props/stall/look_comfy_inflated.tres" id="6"]
+[ext_resource type="Resource" path="res://engine_poligons/street/props/stall/look_comfy_flat.tres" id="7"]
+[ext_resource type="Resource" path="res://engine_poligons/street/props/stall/look_simple.tres" id="8"]
+[ext_resource type="Script" path="res://engine_poligons/asset_look.gd" id="9"]
 
-[node name="PoligonStreet" type="Node"]
+[node name="PoligonStreet" type="Node" node_paths=PackedStringArray("looked_asset")]
 script = ExtResource("1")
+asset_looks = Array[ExtResource("9")]([ExtResource("6"), ExtResource("7"), ExtResource("8")])
+looked_asset = NodePath("Frame/Street/Stall/Sprite")
 
 [node name="Frame" type="SubViewport" parent="."]
 unique_name_in_owner = true
@@ -60,6 +66,16 @@ size_flags_horizontal = 3
 text = "Kadr"
 
 [node name="FrameChoice" type="OptionButton" parent="F1/Panel/Box/FrameRow"]
+unique_name_in_owner = true
+focus_mode = 0
+
+[node name="LookRow" type="HBoxContainer" parent="F1/Panel/Box"]
+
+[node name="LookLabel" type="Label" parent="F1/Panel/Box/LookRow"]
+size_flags_horizontal = 3
+text = "Stragan (ticket 10)"
+
+[node name="LookChoice" type="OptionButton" parent="F1/Panel/Box/LookRow"]
 unique_name_in_owner = true
 focus_mode = 0
 

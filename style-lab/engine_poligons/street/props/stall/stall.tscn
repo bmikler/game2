@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://addons/swiatlo/contract/occluder.gd" id="1_bua73"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/solid.gd" id="2_cfpvw"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/stall/sprite.png" id="3_akurh"]
+[ext_resource type="Script" path="res://addons/swiatlo/contract/asset_sprite.gd" id="4_bq87p"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/stall/normals_inflated.png" id="5_u6m83"]
+
+[node name="Stall" type="Node2D" unique_id=1965229512]
+script = ExtResource("1_bua73")
+
+[node name="table" type="Node2D" parent="." unique_id=1093671921]
+script = ExtResource("2_cfpvw")
+size_m = Vector3(1.6, 0.7, 0.86)
+shape = 4
+clearance_m = 0.72
+
+[node name="leg_0" type="Node2D" parent="." unique_id=1015901241]
+position = Vector2(-29.6, -1.4399999)
+script = ExtResource("2_cfpvw")
+position_m = Vector3(-0.74, -0.06, 0)
+size_m = Vector3(0.060000002, 0.06, 0.72)
+
+[node name="leg_1" type="Node2D" parent="." unique_id=2098214035]
+position = Vector2(29.6, -1.4399999)
+script = ExtResource("2_cfpvw")
+position_m = Vector3(0.74, -0.06, 0)
+size_m = Vector3(0.060000002, 0.06, 0.72)
+
+[node name="leg_2" type="Node2D" parent="." unique_id=833082849]
+position = Vector2(-29.6, -14.400001)
+script = ExtResource("2_cfpvw")
+position_m = Vector3(-0.74, -0.6, 0)
+size_m = Vector3(0.060000002, 0.060000002, 0.72)
+
+[node name="leg_3" type="Node2D" parent="." unique_id=443205040]
+position = Vector2(29.6, -14.400001)
+script = ExtResource("2_cfpvw")
+position_m = Vector3(0.74, -0.6, 0)
+size_m = Vector3(0.060000002, 0.060000002, 0.72)
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1259490008]
+texture = ExtResource("3_akurh")
+centered = false
+offset = Vector2(-48, -74)
+script = ExtResource("4_bq87p")
+normal_map = ExtResource("5_u6m83")
+anchor_px = Vector2i(48, 74)

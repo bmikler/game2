@@ -3,7 +3,7 @@ extends SceneTree
 ## props from a Blender guides export (mask and normals in game pixels), until the furniture recipe
 ## makes real ones. Run from style-lab:
 ##   Godot_..._console.exe --headless --path . -s res://tools/light_engine/paint_street_prop.gd -- \
-##       <guides export folder> <crate|bench> <output png>
+##       <guides export folder> <crate|bench|stall> <output png>
 
 const MASK_FILE: String = "maska_gra.png"
 const NORMALS_FILE: String = "normalne_gra.png"
@@ -21,13 +21,17 @@ const CRATE_BATTEN_PX: int = 3
 const BENCH_WOOD: Color = Color("#a8743f")
 const BENCH_GRAIN: Color = Color("#956535")
 const BENCH_IRON: Color = Color("#3d4147")
+const STALL_TOP: Color = Color("#b08a5c")
+const STALL_GAP: Color = Color("#7a5634")
+const STALL_FRAME: Color = Color("#8a6440")
+const STALL_PLANK_PX: int = 5
 const RIM: Color = Color("#4a3220")
 
 
 func _init() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if args.size() != 3:
-		push_error("Usage: -- <guides export folder> <crate|bench> <output png>")
+		push_error("Usage: -- <guides export folder> <crate|bench|stall> <output png>")
 		quit(1)
 		return
 	var folder: String = args[0]
@@ -40,6 +44,8 @@ func _init() -> void:
 			sprite = _crate(mask, normals)
 		"bench":
 			sprite = _bench(mask, normals, anchor)
+		"stall":
+			sprite = _stall(mask, normals)
 		var unknown:
 			push_error("Unknown prop: %s" % unknown)
 			quit(1)
@@ -99,6 +105,20 @@ static func _bench(mask: Image, normals: Image, anchor: Vector2i) -> Image:
 				color = BENCH_IRON
 			elif _is_top(normals, x, y) and (x * 5) % 13 == 0:
 				color = BENCH_GRAIN
+			sprite.set_pixel(x, y, color)
+	return sprite
+
+
+## A plain table: a lighter top of planks along x, the apron and legs darker.
+static func _stall(mask: Image, normals: Image) -> Image:
+	var sprite: Image = Image.create_empty(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	for y: int in mask.get_height():
+		for x: int in mask.get_width():
+			if not _opaque(mask, x, y):
+				continue
+			var color: Color = STALL_FRAME
+			if _is_top(normals, x, y):
+				color = STALL_GAP if y % STALL_PLANK_PX == 0 else STALL_TOP
 			sprite.set_pixel(x, y, color)
 	return sprite
 

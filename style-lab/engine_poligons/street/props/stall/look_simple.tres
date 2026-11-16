@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AssetLook" format=3]
+
+[ext_resource type="Script" path="res://engine_poligons/asset_look.gd" id="1"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/stall/simple_sprite.png" id="2"]
+[ext_resource type="Texture2D" path="res://engine_poligons/street/props/stall/simple_normals.png" id="3"]
+
+[resource]
+script = ExtResource("1")
+look_name = "prosty sprite"
+sprite = ExtResource("2")
+normal_map = ExtResource("3")

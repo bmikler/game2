@@ -167,7 +167,19 @@ def bench():
         pudelko(f"leg_{x}", (0.06, 0.44, 0.4), (x, 0.02, 0), solids)
 
 
-MEBLE = {"lada": lada, "stol": stol, "fotel": fotel, "crate": crate, "bench": bench}
+def stall():
+    # A market stall table for the street (engine ticket 10: rich add-ons from the generator, goods on the
+    # top and a cloth over the front, lie outside these solids).
+    model, solids = kolekcja(MODEL), kolekcja(BRYLY)
+    pudelko("top", (1.6, 0.7, 0.04), (0, 0, 0.82), model, faza=0.01, segmenty=2)
+    pudelko("apron", (1.5, 0.6, 0.1), (0, 0.05, 0.72), model)
+    pudelko("table", (1.6, 0.7, 0.14), (0, 0, 0.72), solids)
+    for i, (x, y) in enumerate(((-0.74, 0.06), (0.74, 0.06), (-0.74, 0.6), (0.74, 0.6))):
+        pudelko(f"leg_model_{i}", (0.06, 0.06, 0.72), (x, y, 0), model, faza=0.006, segmenty=2)
+        pudelko(f"leg_{i}", (0.06, 0.06, 0.72), (x, y, 0), solids)
+
+
+MEBLE = {"lada": lada, "stol": stol, "fotel": fotel, "crate": crate, "bench": bench, "stall": stall}
 
 
 # --- rzut i układ płótna (czysta logika) ------------------------------------------------------------------
