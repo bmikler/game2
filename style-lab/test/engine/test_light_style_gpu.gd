@@ -38,14 +38,15 @@ func _tuning(level_stops: float, seam_px: float, mode: TuningSet.StyleMode = Tun
 
 ## Runs the pass once: anchor 1 lux, exposure 1 unless given.
 func _styled(natural: Image, tuning: TuningSet, artificial: Image = null, origin: Vector2i = Vector2i.ZERO,
-		exposure: float = 1.0, anchor_lux: float = 1.0, sun_light: Vector3 = Vector3.ZERO) -> Image:
+		exposure: float = 1.0, anchor_lux: float = 1.0, sun_light: Vector3 = Vector3.ZERO,
+		open_sky_light: Vector3 = Vector3.ZERO) -> Image:
 	var style: LightStyle = LightStyle.new()
 	add_child_autofree(style)
 	var artificial_texture: Texture2D = ImageTexture.create_from_image(artificial) if artificial != null else null
 	style.set_input(ImageTexture.create_from_image(natural), artificial_texture, natural.get_size(), origin)
 	style.set_tuning(tuning, tuning.style_mode, tuning.full_dither_px, tuning.sky_style)
 	style.set_exposure(exposure, anchor_lux)
-	style.set_sun(sun_light)
+	style.set_sun(sun_light, open_sky_light)
 	await RenderingServer.frame_post_draw
 	return style.image()
 
@@ -375,3 +376,27 @@ func test_without_the_sun_every_sky_style_keeps_the_sun_edge_sharp() -> void:
 				null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0))
 		assert_eq(_mixed_columns(styled), 0, "sky style %d" % style)
 		assert_gt(styled.get_pixel(WIDTH / 2 - 1, 0).r, styled.get_pixel(WIDTH / 2, 0).r * 4.0, "the edge in one pixel")
+
+
+
+func test_flat_sky_makes_a_sun_shadow_one_colour_with_the_sun_edge_in_levels() -> void:
+	# Sky shade sloping inside and outside a sun shadow (a wall's): it no longer shows; the shadow is
+	# one level (open ground's sky, 1 lux), the sunny side another (+ 4 lux), the edge one pixel.
+	var soft: Callable = func(x: int) -> float: return 0.4 + 0.003 * x
+	var light: Image = _sun_and_soft(soft, func(x: int) -> bool: return x < WIDTH / 2)
+	var styled: Image = await _styled(light, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.FLAT),
+			null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0), Vector3(1.0, 1.0, 1.0))
+	var sunny: float = styled.get_pixel(0, 0).r
+	var shade: float = styled.get_pixel(WIDTH - 1, 0).r
+	assert_almost_eq(shade, 1.0, 0.002, "the shadow: open ground's sky, the middle of its level")
+	assert_gt(sunny, shade * 2.0)
+	for x: int in WIDTH:
+		for row: int in HEIGHT:
+			assert_almost_eq(styled.get_pixel(x, row).r, sunny if x < WIDTH / 2 else shade, 0.002, "column %d" % x)
+
+
+func test_flat_sky_leaves_no_surface_dark() -> void:
+	var styled: Image = await _styled(_uniform(Color(0.0, 0.0, 0.0, 0.0)),
+			_tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.FLAT),
+			null, Vector2i.ZERO, 1.0, 1.0, Vector3(4.0, 4.0, 4.0), Vector3(1.0, 1.0, 1.0))
+	assert_eq(styled.get_pixel(10, 10).r, 0.0)

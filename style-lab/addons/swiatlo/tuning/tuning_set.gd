@@ -10,9 +10,11 @@ extends Resource
 ## artificial channel apart, then summed.
 enum StyleMode { SUM, PER_CHANNEL }
 ## How light without a hard edge (sky, ambient) is styled: in levels with the sun's light (A), or
-## the sun alone gets levels and the rest stays smooth (B) or is always dithered between levels (C).
-## A slow slope of sky light (beside a wall, round a corner) makes flat rings in levels.
-enum SkyStyle { LEVELS, SMOOTH, DITHER }
+## the sun alone gets levels and the rest stays smooth (B) or is always dithered between levels (C),
+## or the rest is the same everywhere (as on open ground) and the sum gets levels (D: each sun
+## shadow one flat colour, no darker sky shade inside it). A slow slope of sky light (beside a wall,
+## round a corner) makes flat rings in levels.
+enum SkyStyle { LEVELS, SMOOTH, DITHER, FLAT }
 ## The ordered pattern in the dither seam between two levels.
 enum SeamPattern { BAYER, CHECKER }
 ## How light shafts and dust are drawn (they get no A′ levels).
