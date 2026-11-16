@@ -23,3 +23,19 @@ Strojenie wyłącznie Wariantami krytyków: katalog z kopiami dowolnych plików 
 ## Jak sprawdzić
 
 Uliczka o 16:30: przełączaj bazowy / testowy A / testowy B, obraz zmienia się od razu. Skopiuj katalog Wariantu przy uruchomionej grze: pojawia się w F1.
+
+## Wzorce wyglądu dla krytyków
+
+Inspiracje człowieka (pixel art, GIF-y): `C:\Users\bartl\Desktop\pixel art\` (poza repo; człowiek może dorzucać obrazy, więc
+przy strojeniu przejrzeć folder na nowo). Krytycy biorą je za wzorzec przy Wariantach.
+
+Wnioski z pierwszego przeglądu (14 obrazów, 2026-11-16, ticket 11):
+- Prawie bez ostrego słońca: zmierzch, noc, pochmurno. Płaskie, chłodne niebo; ciepłe plamy lamp i okien.
+- Schodki (poziomy) głównie w plamach lamp: 3–4 płaskie pasy z brzegiem poszarpanym fakturą (śnieg, ślady), nie
+  geometryczne elipsy. Pomysł na Wariant przy lampach (ticket 13): „organiczna” granica poziomu sterowana szumem świata
+  lub fakturą podłoża.
+- Cień od nieba to wąski ciemny pas przy przedmiocie (pod autem, u stóp ściany), dalej nic: zgodne z gładkim niebem
+  (`sky_style` B, wybór człowieka w ticketcie 11).
+- Bryły cieniowane płaszczyznami (góra jaśniej, bok ciemniej, w obrębie płaszczyzny prawie płasko).
+- Cień różni się barwą (chłodny wobec ciepłego światła), nie jest czarny: kolory nieba i ambientu w krzywych doby.
+- Porównanie A′ na niebie (A) z gładkim (B) powtórzyć na teksturowanej ziemi: plamy A kłuły na gładkiej szarej ulicy.
