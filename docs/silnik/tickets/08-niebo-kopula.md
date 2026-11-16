@@ -2,7 +2,7 @@
 id: 08
 title: Niebo jako kopuła
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [06]
 ---
@@ -48,3 +48,5 @@ Uliczka o zmierzchu i w pochmurnej godzinie: cień kamienic nie jest czarny, prz
 ### Plac (prośba człowieka, 2026-11-16)
 
 „Zrób na mapie przerwę w budynkach (jakiś plac), żeby więcej słońca wchodziło przy południu na górze.” Zachodnia kamienica skrócona do 15 m (x −16…−1), **plac** 20 m (x −36…−16), dalej nowa kamienica do brzegu mapy (x −50…−36, 9,5 m); plac zamyka od południa kamienica 22 m od ulicy (d −40…−32, 9 m). W południe słońce oświetla cały plac i ulicę przed nim; o 9:30 skośny cień sąsiedniej kamienicy. Kamera: w lewo do x ≈ −26 m.
+
+2026-11-16: „wszystko ok” (niebo, pasek wyjaśniony, plac).
