@@ -57,9 +57,9 @@ func test_the_start_profiles_light_at_night_and_the_street_lamps_switch_on_at_du
 		assert_gt(profile.reach_m(), 0.0, path)
 	var lamp: SourceProfile = load(STREET_LAMP) as SourceProfile
 	assert_eq(lamp.light_at(12.0).get_luminance(), 0.0, "street lamps are off by day")
-	var switching: float = lamp.light_at(17.7).get_luminance()
-	assert_gt(switching, 0.0, "half on as the sun goes")
-	assert_lt(switching, lamp.light_at(19.0).get_luminance())
+	assert_eq(lamp.light_at(17.8).get_luminance(), 0.0, "still off just before ten to six")
+	assert_almost_eq(lamp.light_at(17.85).get_luminance(), lamp.light_at(19.0).get_luminance(), 0.001,
+			"fully on a minute later: lamps switch, they do not fade")
 	assert_gt((load(WALL_LAMP) as SourceProfile).light_at(12.0).get_luminance(), 0.0, "the shop's lamp is on by day too")
 
 

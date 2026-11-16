@@ -162,9 +162,10 @@ func _tuning_set(label: String) -> TuningSet:
 
 
 ## Cheat sheet 4.4, street lamp: #ffa357, 60 lx on the ground under a bulb 4 m up, reaching 14 m; off
-## about 8:00, on gradually at dusk (the sun goes behind the roofs at 17:36, sets at 18:06).
+## at 7:40, on at 17:50 (the sun goes behind the roofs at 17:36, sets at 18:06), each within a game
+## minute: lamps switch, they do not fade (human, 2026-11-16).
 func _street_lamp() -> SourceProfile:
-	return _source_profile(Color("#ffa357"), _hours(60.0, [Vector2(7.6, 8.0), Vector2(17.3, 18.1)]),
+	return _source_profile(Color("#ffa357"), _hours(60.0, [Vector2(7.66, 7.68), Vector2(17.82, 17.84)]),
 			_inverse_square(4.0, 4.0, 14.0))
 
 

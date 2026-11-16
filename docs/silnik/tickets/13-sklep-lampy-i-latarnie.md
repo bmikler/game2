@@ -27,8 +27,9 @@ Sklep o 22:00: cienie słupów od trzech latarń krzyżują się, przecięcie ci
 ## Stan (2026-11-16, Claude) — do sprawdzenia przez człowieka
 
 **Zmiana godziny sprawdzenia:** przy obecnej krzywej słońce chowa się za dachy o 17:36 i zachodzi o 18:06, więc o
-16:30 niebo jest jeszcze jasne i latarnie nie byłoby widać. Latarnie zapalają się stopniowo 17:18–18:06 (profil
-`street_lamp.tres`), okna 16:48–17:36. Sprawdzać **o 17:45** (latarnie w połowie) i o 22:00.
+16:30 niebo jest jeszcze jasne i latarnie nie byłoby widać. Latarnie zapalają się nagle o 17:50 i gasną o 7:40 (profil
+`street_lamp.tres`; człowiek: „powinny zapalić się nagle”), okna stopniowo 16:48–17:36. Po zapaleniu lampy jaśnieją
+jeszcze do ok. 19:00: to ekspozycja automatyczna otwiera się, gdy niebo ciemnieje. Sprawdzać o 17:50 i o 22:00.
 
 - **Węzeł `LightSource`** (kula albo prostokąt świecący jedną stroną, metry) i **`SourceProfile`** (kanał, kolor i
   natężenie od godziny, zanik jako krzywa od odległości, koniec krzywej = zasięg). Profile startowe ze Ściągi w
