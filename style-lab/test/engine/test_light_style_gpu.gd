@@ -5,6 +5,8 @@ extends GutTest
 const WIDTH: int = 256
 ## Four periods of the 4×4 pattern.
 const HEIGHT: int = 16
+## The `full_dither_px` values compared live in ticket 11 (0: A′ without it); the gates hold for each.
+const FULL_DITHER_VALUES_PX: Array[float] = [0.0, 16.0, 24.0, 40.0]
 
 
 ## Light in lux per pixel: `ev(x)` gives log2 of a grey light in column x.
@@ -43,7 +45,7 @@ func _styled(natural: Image, tuning: TuningSet, artificial: Image = null, origin
 	add_child_autofree(style)
 	var artificial_texture: Texture2D = ImageTexture.create_from_image(artificial) if artificial != null else null
 	style.set_input(ImageTexture.create_from_image(natural), artificial_texture, natural.get_size(), origin)
-	style.set_tuning(tuning, tuning.style_mode, tuning.full_dither_px, tuning.sky_style)
+	style.set_tuning(tuning)
 	style.set_exposure(exposure, anchor_lux)
 	style.set_sun(sun_light)
 	await RenderingServer.frame_post_draw
@@ -166,7 +168,7 @@ func test_without_artificial_light_both_modes_agree() -> void:
 	assert_eq(on_sum.get_data(), apart.get_data())
 
 
-# Gates from research 92 §5c, run for every F1 variant of `full_dither_px` (the critic may change the
+# Gates from research 92 §5c, run for each value of `full_dither_px` compared (the critic may change the
 # look, not bring back edges from gradients or the grid on the street). Light is given in level
 # steps (`s`, the anchor in the middle of level 0 at s = 0.5, level centres at n + 0.5).
 
@@ -220,7 +222,7 @@ func _styled_steps(steps: Callable, tuning: TuningSet) -> Image:
 func test_gate_short_steps_leave_no_edge() -> void:
 	# A thing's halo: 1–2 levels down over a step 8 px … `full_dither_px` long. Between two level
 	# centres, so the flat light around it is a level of its own.
-	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+	for full: float in FULL_DITHER_VALUES_PX:
 		if full <= 0.0:
 			continue # today's A′, kept in F1 for comparison: it makes the edges (the next test)
 		for step_px: float in [8.0, full * 0.5, full]:
@@ -243,7 +245,7 @@ func test_gate_short_steps_catch_the_old_flat_rings() -> void:
 
 func test_gate_a_sharp_edge_stays_sharp() -> void:
 	# 2 EV (4 levels) over 1 or 2 px, between two level centres: the edge is at most a seam wide.
-	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+	for full: float in FULL_DITHER_VALUES_PX:
 		for edge_px: float in [1.0, 2.0]:
 			var steps: Callable = _steps_ramp(0.5, -3.5, 128, edge_px)
 			var styled: Image = await _styled_steps(steps, _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full))
@@ -265,7 +267,7 @@ func test_gate_a_sharp_edge_stays_sharp() -> void:
 func test_gate_the_street_keeps_flat_fields_with_a_narrow_seam() -> void:
 	# The slope along a facade: a step 85–285 px long. Away from each boundary the light is the
 	# plain posterisation; dithered pixels lie within half the seam (+ a pixel) of a boundary.
-	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+	for full: float in FULL_DITHER_VALUES_PX:
 		for step_px: float in [85.0, 285.0]:
 			# Starts 0.3 steps below a boundary, so each ramp crosses at least one.
 			var steps: Callable = func(x: int) -> float: return 0.7 + x / step_px
@@ -288,7 +290,7 @@ func test_gate_brighter_sky_moves_no_level_boundary() -> void:
 	for x: int in WIDTH:
 		for row: int in HEIGHT:
 			brighter.set_pixel(x, row, ramp.get_pixel(x, row) * 3.0)
-	for full: float in EnginePanel.FULL_DITHER_VARIANTS_PX:
+	for full: float in FULL_DITHER_VALUES_PX:
 		var tuning: TuningSet = _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, full)
 		var styled: Image = await _styled(ramp, tuning)
 		var scaled: Image = await _styled(brighter, tuning, null, Vector2i.ZERO, 1.0, 3.0)

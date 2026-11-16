@@ -44,7 +44,7 @@ enum ScatterStyle { SMOOTH, DITHER }
 	set(value):
 		full_dither_px = value
 		emit_changed()
-@export var sky_style: SkyStyle = SkyStyle.LEVELS:
+@export var sky_style: SkyStyle = SkyStyle.SMOOTH:
 	set(value):
 		sky_style = value
 		emit_changed()

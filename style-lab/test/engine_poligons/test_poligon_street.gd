@@ -44,7 +44,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
 	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
-			"dither krótkich kroków": "24 px", "światło nieba": "B: gładkie", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
+			"wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
@@ -162,34 +162,3 @@ func test_replayed_shot_keeps_the_stall_look() -> void:
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_eq((replay.get_node("%LookChoice") as OptionButton).selected, 2)
-
-
-func test_short_step_dither_variant_from_f1_reaches_the_engine_and_the_shot() -> void:
-	var poligon: Node = _poligon()
-	var choice: OptionButton = (poligon.get_node("%EnginePanel") as EnginePanel).full_dither_choice()
-	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
-	assert_eq(EnginePanel.FULL_DITHER_VARIANTS_PX[choice.selected], engine.tuning_set().full_dither_px,
-			"F1 starts at the tuning set's value")
-	choice.select(3)
-	choice.item_selected.emit(3)
-	assert_eq(engine.full_dither_px(), 40.0)
-	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
-	assert_eq(description.switches["dither krótkich kroków"], "40 px")
-	var replay: Node = _poligon()
-	(replay.get_node("%Shot") as EngineShot).apply(description)
-	assert_eq((replay.get_node("%Engine") as LightEngine).full_dither_px(), 40.0)
-
-
-func test_sky_style_variant_from_f1_reaches_the_engine_and_the_shot() -> void:
-	var poligon: Node = _poligon()
-	var choice: OptionButton = (poligon.get_node("%EnginePanel") as EnginePanel).sky_style_choice()
-	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
-	assert_eq(choice.selected, engine.tuning_set().sky_style, "F1 starts at the tuning set's style")
-	choice.select(2)
-	choice.item_selected.emit(2)
-	assert_eq(engine.sky_style(), TuningSet.SkyStyle.DITHER)
-	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
-	assert_eq(description.switches["światło nieba"], "C: dither")
-	var replay: Node = _poligon()
-	(replay.get_node("%Shot") as EngineShot).apply(description)
-	assert_eq((replay.get_node("%Engine") as LightEngine).sky_style(), TuningSet.SkyStyle.DITHER)

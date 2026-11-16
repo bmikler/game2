@@ -62,19 +62,6 @@ func test_engine_takes_the_exposure_reference_from_the_environment() -> void:
 	assert_gt(engine.state().exposure, outside)
 
 
-func test_short_step_dither_comes_from_the_tuning_set_until_a_variant_is_picked() -> void:
-	var environment: LocationEnvironment = LocationEnvironment.new()
-	environment.tuning_set = TuningSet.new()
-	environment.tuning_set.full_dither_px = 16.0
-	add_child_autofree(environment)
-	var engine: LightEngine = LightEngine.new()
-	add_child_autofree(engine)
-	assert_eq(engine.full_dither_px(), 16.0)
-	engine.set_full_dither_px(0.0)
-	assert_eq(engine.full_dither_px(), 0.0, "0 is a variant too (A′ without it)")
-	assert_eq(environment.tuning_set.full_dither_px, 16.0, "the set itself stays")
-
-
 func test_a_short_step_dither_under_twice_the_seam_is_a_warning() -> void:
 	var tuning: TuningSet = TuningSet.new()
 	assert_true(tuning.warnings().is_empty(), "the defaults are sound")

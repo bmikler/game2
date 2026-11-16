@@ -11,8 +11,6 @@ signal rate_set(minutes_per_second: float)
 signal shot_requested
 signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
-signal full_dither_set(px: float)
-signal sky_style_set(style: TuningSet.SkyStyle)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -24,10 +22,6 @@ const DEBUG_HINTS: PackedStringArray = ["", "", "",
 		"czerwony: słońce (kąt × widoczność), niebieski: udział nieba (1 = całe niebo), zielony: kanał sztuczny"]
 ## Map top names: index 1 is north at the top.
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
-## Variants of the short-step dither length (research 92) compared in F1; 0 is the A′ before it.
-const FULL_DITHER_VARIANTS_PX: PackedFloat32Array = [0.0, 16.0, 24.0, 40.0]
-## Sky style names in TuningSet.SkyStyle order (critic variants A, B, C).
-const SKY_STYLES: PackedStringArray = ["A: poziomy", "B: gładkie", "C: dither"]
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -43,8 +37,6 @@ var _shot_label: Label
 var _debug_view: OptionButton
 var _debug_hint: Label
 var _map_top: OptionButton
-var _full_dither: OptionButton
-var _sky_style: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -114,10 +106,6 @@ func _ready() -> void:
 
 	_map_top = _choice("Góra mapy", MAP_TOPS)
 	_map_top.item_selected.connect(func(index: int) -> void: north_at_top_set.emit(index == 1))
-	_full_dither = _choice("Dither krótkich kroków", full_dither_names())
-	_full_dither.item_selected.connect(func(index: int) -> void: full_dither_set.emit(FULL_DITHER_VARIANTS_PX[index]))
-	_sky_style = _choice("Światło nieba", SKY_STYLES)
-	_sky_style.item_selected.connect(func(index: int) -> void: sky_style_set.emit(index as TuningSet.SkyStyle))
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -142,25 +130,6 @@ func set_rate(minutes_per_second: float) -> void:
 ## The map top choice (the embedder may set it without a signal, e.g. after a replayed shot).
 func map_top_choice() -> OptionButton:
 	return _map_top
-
-
-## The short-step dither choice, in FULL_DITHER_VARIANTS_PX order (the embedder may set it without a
-## signal, e.g. from the tuning set).
-func full_dither_choice() -> OptionButton:
-	return _full_dither
-
-
-## The sky style choice, in TuningSet.SkyStyle order (the embedder may set it without a signal).
-func sky_style_choice() -> OptionButton:
-	return _sky_style
-
-
-## Names of the short-step dither variants, in FULL_DITHER_VARIANTS_PX order.
-static func full_dither_names() -> PackedStringArray:
-	var names: PackedStringArray = PackedStringArray()
-	for px: float in FULL_DITHER_VARIANTS_PX:
-		names.append("%d px" % roundi(px))
-	return names
 
 
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).

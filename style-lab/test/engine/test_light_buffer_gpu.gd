@@ -438,9 +438,9 @@ func test_gate_a_crate_by_a_wall_takes_no_sky_the_wall_took() -> void:
 
 
 func test_the_buffers_alpha_is_the_suns_share_and_smooth_sky_keeps_the_shade_as_it_is() -> void:
+	# The outdoor tuning set styles sky light smooth (the human's pick, ticket 11).
 	var engine: LightEngine = await _location(10.0)
 	engine.set_debug_view(LightEngine.DebugView.NONE)
-	engine.set_sky_style(TuningSet.SkyStyle.SMOOTH)
 	await RenderingServer.frame_post_draw
 	var sunny: Color = _pixel(engine, Vector3(-6.0, 6.0, 0.0))
 	assert_almost_eq(sunny.a, engine.state().sun_direction.z, 0.002, "open ground: the sun's cosine")

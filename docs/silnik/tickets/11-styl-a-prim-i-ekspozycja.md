@@ -2,7 +2,7 @@
 id: 11
 title: Stylizacja A′ i ekspozycja automatyczna
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [08]
 ---
@@ -13,15 +13,21 @@ A′ (poziomy EV, szew ditheru o stałej szerokości w px, kotwica `Y_ref`) kwan
 
 ## Kryteria akceptacji
 
-- [ ] Zestaw strojenia ze wszystkimi polami ze specyfikacji, dwa pliki domyślne.
-- [ ] Obraz = albedo × stylizowane światło; rozproszenie dodawane po A′.
-- [ ] Przełącznik trybu A′ w F1.
-- [ ] Bramka: liczba poziomów zgodna z Zestawem; szerokość szwu w px stała.
-- [ ] Brak ręcznej ekspozycji na Lokację.
+- [x] Zestaw strojenia ze wszystkimi polami ze specyfikacji, dwa pliki domyślne.
+- [x] Obraz = albedo × stylizowane światło; rozproszenie dodawane po A′ (rozproszenie dojdzie w tickecie 22).
+- [ ] Przełącznik trybu A′ w F1: przeniesiony do ticketu 13 (bez kanału sztucznego oba tryby dają ten sam obraz).
+- [x] Bramka: liczba poziomów zgodna z Zestawem; szerokość szwu w px stała.
+- [x] Brak ręcznej ekspozycji na Lokację.
 
 ## Jak sprawdzić
 
 Uliczka, przewiń dobę: wyraźne poziomy z wąskim szwem ditheru, noc ciemna, ale czytelna; mebel z ComfyUI nie gryzie się z ditherem.
+
+## Ocena człowieka
+
+2026-11-16: „ok” po przewinięciu doby na Uliczce. Domyślnie światło nieba gładkie (B). Przełączniki ticketu zdjęte
+z F1: „Dither krótkich kroków” i „Światło nieba” (A / B / C zostają w Zestawie jako `full_dither_px` i `sky_style`,
+do porównań przez Warianty w tickecie 12, np. A na teksturach). Domyślne `sky_style` klasy też B. 160 testów zielonych.
 
 ## Stan (2026-11-16, Claude, trzecia runda) — do sprawdzenia przez człowieka
 

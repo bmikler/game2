@@ -36,10 +36,6 @@ func _ready() -> void:
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
 	_engine_panel.debug_view_set.connect(_engine.set_debug_view)
 	_engine_panel.north_at_top_set.connect(_engine.set_north_at_top)
-	_engine_panel.full_dither_set.connect(_engine.set_full_dither_px)
-	_engine_panel.sky_style_set.connect(_engine.set_sky_style)
-	_engine_panel.sky_style_choice().select(_engine.sky_style())
-	_engine_panel.full_dither_choice().select(EnginePanel.FULL_DITHER_VARIANTS_PX.find(_engine.full_dither_px()))
 	_engine.state_changed.connect(_engine_panel.show_state)
 	_engine_panel.set_rate(_engine.rate)
 	_engine_panel.show_state(_engine.state())
@@ -62,8 +58,6 @@ func _ready() -> void:
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("kamera", _camera_name, _place_camera)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
-	_shot.add_switch("dither krótkich kroków", _full_dither_name, _select_full_dither)
-	_shot.add_switch("światło nieba", _sky_style_name, _select_sky_style)
 	if not asset_looks.is_empty():
 		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
@@ -145,32 +139,6 @@ func _select_map_top(top_name: String) -> void:
 		return
 	_engine_panel.map_top_choice().select(index)
 	_engine.set_north_at_top(index == 1)
-
-
-func _full_dither_name() -> String:
-	return "%d px" % roundi(_engine.full_dither_px())
-
-
-func _select_full_dither(variant_name: String) -> void:
-	var index: int = EnginePanel.full_dither_names().find(variant_name)
-	if index < 0:
-		push_warning("Unknown short-step dither in the shot: %s" % variant_name)
-		return
-	_engine_panel.full_dither_choice().select(index)
-	_engine.set_full_dither_px(EnginePanel.FULL_DITHER_VARIANTS_PX[index])
-
-
-func _sky_style_name() -> String:
-	return EnginePanel.SKY_STYLES[_engine.sky_style()]
-
-
-func _select_sky_style(style_name: String) -> void:
-	var index: int = EnginePanel.SKY_STYLES.find(style_name)
-	if index < 0:
-		push_warning("Unknown sky style in the shot: %s" % style_name)
-		return
-	_engine_panel.sky_style_choice().select(index)
-	_engine.set_sky_style(index as TuningSet.SkyStyle)
 
 
 func _debug_view_name() -> String:
