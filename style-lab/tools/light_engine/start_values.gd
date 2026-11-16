@@ -140,6 +140,8 @@ func _tuning_set(label: String) -> TuningSet:
 	tuning_set.level_stops = 0.5
 	tuning_set.seam_px = 3.0
 	tuning_set.full_dither_px = 24.0
+	# Human, 2026-11-16: sky light smooth (B); levels on it (A) made rings without logic, dither (C) looked weak.
+	tuning_set.sky_style = TuningSet.SkyStyle.SMOOTH
 	tuning_set.seam_pattern = TuningSet.SeamPattern.BAYER
 	tuning_set.anchor_ev = 0.0
 	tuning_set.penumbra_gain = 1.0

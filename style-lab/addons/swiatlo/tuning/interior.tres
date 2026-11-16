@@ -5,5 +5,6 @@
 [resource]
 script = ExtResource("1_nnble")
 label = "interior"
+sky_style = 1
 penumbra_max_px = 8.0
 window_patch_strength = 0.5

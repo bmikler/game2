@@ -44,7 +44,12 @@ krawędź w kształcie linii równego udziału nieba. `full_dither_px` tego nie 
   sztucznego oba tryby dają ten sam obraz; przełącznik wraca w tickecie 13, pole `style_mode` w Zestawie zostaje) i
   długie opisy pod przełącznikami. Kryterium „Przełącznik trybu A′ w F1” przechodzi więc do ticketu 13.
 
-**Do oceny w grze:** te same miejsca, F1 „Światło nieba” A / B / C. Ryzyko B: gładki cień jak „HD” (t37). Ryzyko C:
+**Ocena człowieka (2026-11-16):** domyślnie **B: gładkie** („jedyne, co wygląda normalnie”). C (dither) „wygląda mega
+słabo”. A′ na niebie „wygląda nawet ładnie artystycznie, ale cienie nie mają sensu logicznego”. Możliwy powrót
+później: ręczne globalne metody nadpisujące fizykę dla ładniejszego wyglądu. `sky_style = SMOOTH` w `outdoor.tres` i
+`interior.tres` (generator `start_values.gd`); A i C zostają w F1 do porównań.
+
+**Do oceny w grze (przed decyzją):** te same miejsca, F1 „Światło nieba” A / B / C. Ryzyko B: gładki cień jak „HD” (t37). Ryzyko C:
 drobny dither na całym cieniu jak faktura. Wybrany wariant wpiszę jako domyślny w `outdoor.tres`.
 
 ## Stan (2026-11-16, Claude, druga sesja)

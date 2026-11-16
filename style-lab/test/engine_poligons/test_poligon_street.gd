@@ -44,7 +44,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
 	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
-			"dither krótkich kroków": "24 px", "światło nieba": "A: poziomy", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
+			"dither krótkich kroków": "24 px", "światło nieba": "B: gładkie", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
 func test_replayed_shot_matches_its_description() -> void:
