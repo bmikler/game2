@@ -2,7 +2,7 @@
 id: 14
 title: Półcień z geometrii
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [06]
 ---
@@ -23,4 +23,4 @@ Uliczka, 8:00 i 13:00: cień komina ostry przy podstawie, miękki dalej. Rano s�
 
 ## Stan (2026-11-17)
 
-Zrobione na gałęzi `silnik-14-polcien`. F1 „Półcień”: „z geometrii (t14)” / „bez (przed t14)” (ostre cienie słońca, lampy z samego rozmiaru); przełącznik trafia do opisu zrzutu. Czeka na sprawdzenie człowieka w Poligonie Ulica.
+Zrobione na gałęzi `silnik-14-polcien`. F1 „Półcień”: „z geometrii (t14)” / „bez (przed t14)” (ostre cienie słońca, lampy z samego rozmiaru); przełącznik trafia do opisu zrzutu. Półcień liczony tylko przy krawędziach ostrego cienia (przebieg półcienia po buforze z ostrymi cieniami): 14,6 ms na klatkę wobec 10,7 ms bez. Lampa nad drzwiami sklepu świeci tylko nocą (jej krąg na słonecznym chodniku przeskakiwał poziom A′). Zamknięty 2026-11-17 po sprawdzeniu człowieka: „ładnie to wygląda, jest 60 fps”.
