@@ -175,10 +175,11 @@ func _street_lamp() -> SourceProfile:
 			_inverse_square(4.0, 4.0, 14.0))
 
 
-## Cheat sheet 4.4, wall sconce over the shop door: #ffa357, 100 lx 2.5 m below it; on all day (the
-## shop is open, its light adds to the sun's).
+## Cheat sheet 4.4, wall sconce over the shop door: #ffa357, 100 lx 2.5 m below it; switched with the
+## street lamps (by day its circle on the sunlit pavement crossed an A′ level, human 2026-11-17).
 func _wall_lamp() -> SourceProfile:
-	return _source_profile(Color("#ffa357"), _hours(100.0, []), _inverse_square(2.5, 4.0, 8.0))
+	return _source_profile(Color("#ffa357"), _hours(100.0, [Vector2(7.66, 7.68), Vector2(17.82, 17.84)]),
+			_inverse_square(2.5, 4.0, 8.0))
 
 
 ## Cheat sheet 4.4, a lit window seen from the street: warm, reaching 6 m; switched on at 5:45 and

@@ -12,8 +12,8 @@ point_count = 33
 
 [sub_resource type="Curve" id="Curve_d12cq"]
 _limits = [0.0, 100000.0, 0.0, 24.0]
-_data = [Vector2(0, 100), 0.0, 0.0, 1, 1, Vector2(24, 100), 0.0, 0.0, 1, 1]
-point_count = 2
+_data = [Vector2(0, 100), 0.0, 0.0, 1, 1, Vector2(7.66, 100), 0.0, -5000.0, 1, 1, Vector2(7.68, 0), -5000.0, 0.0, 1, 1, Vector2(17.82, 0), 0.0, 5000.0, 1, 1, Vector2(17.84, 100), 5000.0, 0.0, 1, 1, Vector2(24, 100), 0.0, 0.0, 1, 1]
+point_count = 6
 
 [resource]
 script = ExtResource("1_6iymc")

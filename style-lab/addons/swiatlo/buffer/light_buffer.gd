@@ -18,6 +18,11 @@ const SHADER_VIEWS: Dictionary[View, int] = { View.LIGHT: 0, View.RECEIVERS: 2, 
 var _view: SubViewport
 var _canvas: ColorRect
 var _material: ShaderMaterial
+## The penumbra pass (the same shader over the buffer with hard sun shadows): softens the sun only
+## near its edges; the buffer the rest reads.
+var _soft_view: SubViewport
+var _soft_canvas: ColorRect
+var _soft_material: ShaderMaterial
 var _display: Sprite2D
 var _display_material: ShaderMaterial
 var _debug_material: ShaderMaterial
@@ -52,6 +57,21 @@ func _init() -> void:
 	_canvas = ColorRect.new()
 	_canvas.material = _material
 	_view.add_child(_canvas)
+	# After the hard buffer: it reads it.
+	_soft_view = SubViewport.new()
+	_soft_view.use_hdr_2d = true
+	_soft_view.disable_3d = true
+	_soft_view.transparent_bg = true
+	_soft_view.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_soft_view.size = Vector2i.ONE
+	add_child(_soft_view)
+	_soft_material = ShaderMaterial.new()
+	_soft_material.shader = BUFFER_SHADER
+	_soft_material.set_shader_parameter(&"penumbra_pass", true)
+	_soft_material.set_shader_parameter(&"hard_buffer", _view.get_texture())
+	_soft_canvas = ColorRect.new()
+	_soft_canvas.material = _soft_material
+	_soft_view.add_child(_soft_canvas)
 	# After the buffer's viewport: it reads it.
 	_style = LightStyle.new()
 	add_child(_style)
@@ -59,8 +79,8 @@ func _init() -> void:
 	_sky = SkyLayer.new()
 	add_child(_sky)
 	_sky.pass_rendered.connect(_on_sky_pass)
-	_material.set_shader_parameter(&"sky_share", _sky.texture())
-	_material.set_shader_parameter(&"asset_layer", _assets.texture())
+	_set_param(&"sky_share", _sky.texture())
+	_set_param(&"asset_layer", _assets.texture())
 
 	_display_material = ShaderMaterial.new()
 	_display_material.shader = DISPLAY_SHADER
@@ -81,39 +101,41 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 	_display.visible = _area.has_area()
 	_view.size = _area.size if _area.has_area() else Vector2i.ONE
 	_canvas.size = Vector2(_view.size)
+	_soft_view.size = _view.size
+	_soft_canvas.size = _canvas.size
 	_display.position = Vector2(_area.position)
 	var solids: ImageTexture = ImageTexture.create_from_image(description.solid_data())
 	var receivers: ImageTexture = ImageTexture.create_from_image(description.receiver_data())
-	_material.set_shader_parameter(&"solids", solids)
-	_material.set_shader_parameter(&"solid_count", description.solids.size())
-	_material.set_shader_parameter(&"receivers", receivers)
-	_material.set_shader_parameter(&"receiver_count", description.receivers.size())
-	_material.set_shader_parameter(&"area_origin_px", Vector2(_area.position))
-	_material.set_shader_parameter(&"px_per_m", projection.px_per_m)
-	_material.set_shader_parameter(&"depth_factor", projection.depth_factor)
+	_set_param(&"solids", solids)
+	_set_param(&"solid_count", description.solids.size())
+	_set_param(&"receivers", receivers)
+	_set_param(&"receiver_count", description.receivers.size())
+	_set_param(&"area_origin_px", Vector2(_area.position))
+	_set_param(&"px_per_m", projection.px_per_m)
+	_set_param(&"depth_factor", projection.depth_factor)
 	var assets: ImageTexture = ImageTexture.create_from_image(description.asset_data())
-	_material.set_shader_parameter(&"assets", assets)
+	_set_param(&"assets", assets)
 	_assets.build(description)
 	_sky.build(_area, solids, description.solids.size(), receivers, description.receivers.size(), _assets.texture(),
 			assets, projection)
-	_material.set_shader_parameter(&"sky_share_scale", _sky.share_scale())
+	_set_param(&"sky_share_scale", _sky.share_scale())
 	_sources.build(description, solids, receivers, assets, _assets.texture(), projection, maxf(_modelling, 0.0))
-	_material.set_shader_parameter(&"natural_sources", _sources.texture(SourceProfile.Channel.NATURAL))
-	_material.set_shader_parameter(&"has_natural_sources", _sources.has_channel(SourceProfile.Channel.NATURAL))
+	_set_param(&"natural_sources", _sources.texture(SourceProfile.Channel.NATURAL))
+	_set_param(&"has_natural_sources", _sources.has_channel(SourceProfile.Channel.NATURAL))
 	var artificial: Texture2D = _sources.texture(SourceProfile.Channel.ARTIFICIAL)
-	_material.set_shader_parameter(&"artificial_sources", artificial)
+	_set_param(&"artificial_sources", artificial)
 	var has_artificial: bool = _sources.has_channel(SourceProfile.Channel.ARTIFICIAL)
-	_style.set_input(_view.get_texture(), artificial if has_artificial else null, _view.size, _area.position)
+	_style.set_input(_soft_view.get_texture(), artificial if has_artificial else null, _view.size, _area.position)
 	_redraw()
 
 
 ## Takes the day state of this frame.
 func set_state(state: DayState) -> void:
-	_material.set_shader_parameter(&"sun_direction", state.sun_direction)
-	_material.set_shader_parameter(&"sun_tan_disc", tan(deg_to_rad(state.sun_disc)))
-	_material.set_shader_parameter(&"sun_light", _rgb(state.sun_color) * state.sun_intensity)
-	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
-	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
+	_set_param(&"sun_direction", state.sun_direction)
+	_set_param(&"sun_tan_disc", tan(deg_to_rad(state.sun_disc)))
+	_set_param(&"sun_light", _rgb(state.sun_color) * state.sun_intensity)
+	_set_param(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
+	_set_param(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_style.set_exposure(state.exposure, state.level_anchor)
 	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity)
 	_sources.set_state(state)
@@ -124,12 +146,12 @@ func set_state(state: DayState) -> void:
 ## off: the F1 comparison); a new modelling or penumbra rebuilds the source layers.
 func set_tuning(tuning: TuningSet, style_mode: TuningSet.StyleMode, penumbra_on: bool = true) -> void:
 	_style.set_tuning(tuning, style_mode)
-	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
-	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
-	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
-	_material.set_shader_parameter(&"penumbra_on", penumbra_on)
-	_material.set_shader_parameter(&"penumbra_gain", tuning.penumbra_gain)
-	_material.set_shader_parameter(&"penumbra_max_px", tuning.penumbra_max_px)
+	_set_param(&"modelling", tuning.receiver_modelling)
+	_set_param(&"rim", tuning.receiver_rim)
+	_set_param(&"fill", tuning.receiver_fill)
+	_set_param(&"penumbra_on", penumbra_on)
+	_set_param(&"penumbra_gain", tuning.penumbra_gain)
+	_set_param(&"penumbra_max_px", tuning.penumbra_max_px)
 	var penumbra: Vector3 = Vector3(1.0 if penumbra_on else 0.0, tuning.penumbra_gain, tuning.penumbra_max_px)
 	if penumbra != _penumbra:
 		_penumbra = penumbra
@@ -143,9 +165,9 @@ func set_tuning(tuning: TuningSet, style_mode: TuningSet.StyleMode, penumbra_on:
 
 
 func set_view(view: View) -> void:
-	_material.set_shader_parameter(&"debug_view", SHADER_VIEWS[view])
+	_set_param(&"debug_view", SHADER_VIEWS[view])
 	_display.material = _display_material if view == View.LIGHT else _debug_material
-	_display.texture = _style.texture() if view == View.LIGHT else _view.get_texture()
+	_display.texture = _style.texture() if view == View.LIGHT else _soft_view.get_texture()
 	_redraw()
 
 
@@ -156,7 +178,7 @@ func area() -> Rect2i:
 
 ## The buffer as last rendered (lux per pixel, HDR).
 func image() -> Image:
-	return _view.get_texture().get_image()
+	return _soft_view.get_texture().get_image()
 
 
 ## The artificial channel as last rendered (lux per pixel, HDR).
@@ -185,13 +207,20 @@ func sources() -> SourceLight:
 
 
 func _on_sky_pass(_passes_done: int) -> void:
-	_material.set_shader_parameter(&"sky_share_scale", _sky.share_scale())
+	_set_param(&"sky_share_scale", _sky.share_scale())
 	_redraw()
 
 
 func _redraw() -> void:
 	_view.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_soft_view.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_style.redraw()
+
+
+## Sets a parameter of the buffer and of its penumbra pass alike.
+func _set_param(param: StringName, value: Variant) -> void:
+	_material.set_shader_parameter(param, value)
+	_soft_material.set_shader_parameter(param, value)
 
 
 static func _rgb(color: Color) -> Vector3:

@@ -131,7 +131,7 @@ uniform float penumbra_gain = 1.0;
 uniform float penumbra_max_px = 8.0;
 
 // Rays sent to find the occluders a source's penumbra starts from (besides the central one).
-const int PENUMBRA_SEARCH = 8;
+const int PENUMBRA_SEARCH = 4;
 // The R2 sequence (plastic number): evenly covers the unit area for any count.
 const vec2 R2 = vec2(0.7548776662, 0.5698402910);
 
@@ -159,7 +159,8 @@ vec2 disc_sample(int i, int count) {
 	return vec2(cos(TAU * u.y), sin(TAU * u.y)) * r;
 }
 
-const int SUN_SAMPLES = 16;
+// As many as the widest penumbra's pixels by default: A′ steps show no finer sampling.
+const int SUN_SAMPLES = 8;
 
 // The share of the sun's disc (radius `tan_disc`, as a tangent) seen from `point` around the unit
 // `direction`. The disc is scaled so its penumbra takes the formula's width at the occluders found;
@@ -171,7 +172,7 @@ float sun_visibility(vec3 point, vec3 direction, float tan_disc) {
 	vec3 helper = abs(direction.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 	vec3 u = normalize(cross(helper, direction));
 	vec3 v = cross(direction, u);
-	// Occluders over the widest disc the penumbra can take: none, the whole disc is seen.
+	// Occluders over the widest disc the penumbra can take.
 	float search = tan_disc * max(penumbra_gain, 1.0);
 	float total = 0.0;
 	int hits = 0;
@@ -183,8 +184,13 @@ float sun_visibility(vec3 point, vec3 direction, float tan_disc) {
 			hits++;
 		}
 	}
+	// None blocked: the whole disc is seen; all blocked: the umbra (the final disc lies inside the
+	// searched one). Only pixels near a shadow's edge sample the disc.
 	if (hits == 0) {
 		return 1.0;
+	}
+	if (hits == PENUMBRA_SEARCH + 1) {
+		return 0.0;
 	}
 	// The sun as a disc FAR_M away: size 2 · tan_disc · FAR_M.
 	float radius = tan_disc * penumbra_scale(2.0 * tan_disc * FAR_M, FAR_M, total / float(hits));
