@@ -1,7 +1,7 @@
 // The light buffer: one pixel per game pixel over the whole Location. Each pixel finds the surface
 // the projection shows there (an asset's sprite pixel on its solids, or the scene receiver nearest the
 // camera), then sums the natural light reaching that point in lux (HDR):
-// ambient + sky × sky share + sun × visibility (+ natural sources); sprite pixels add rim light and
+// ambient + sky × sky share + sun × the share of its disc seen (+ natural sources); sprite pixels add rim light and
 // keep a fill minimum.
 // Alpha holds the sun's share (its cosine × visibility, with rim light): × the sun's light it is the
 // sun's part of the pixel's lux (the A′ pass tells the sun from the sky by it). No surface: all 0.
@@ -26,6 +26,8 @@ uniform bool has_natural_sources = false;
 uniform sampler2D artificial_sources : filter_nearest;
 
 uniform vec3 sun_direction = vec3(0.0, 0.0, 1.0);
+// The sun disc's radius as a tangent (its penumbra).
+uniform float sun_tan_disc = 0.0;
 // Colour × lux.
 uniform vec3 sun_light = vec3(0.0);
 uniform vec3 sky_light = vec3(0.0);
@@ -63,7 +65,7 @@ void fragment() {
 		vec3 start = point + face_normal * RAY_OFFSET_M;
 		float sun = max(dot(normal, sun_direction), 0.0);
 		if (sun > 0.0) {
-			sun *= visibility(start, sun_direction, FAR_M);
+			sun *= sun_visibility(start, sun_direction, sun_tan_disc);
 		}
 		float back = 0.0;
 		if (found > 0 && rim > 0.0 && sun_direction.z > 0.0) {

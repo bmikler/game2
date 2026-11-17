@@ -27,6 +27,8 @@ var _style: LightStyle
 var _assets: AssetLayer
 var _sources: SourceLight
 var _modelling: float = -1.0
+## The penumbra last set: on (1 or 0), gain, widest in screen pixels (−1: none yet).
+var _penumbra: Vector3 = -Vector3.ONE
 
 
 func _init() -> void:
@@ -108,6 +110,7 @@ func set_scene(description: SceneDescription, projection: LightProjection) -> vo
 ## Takes the day state of this frame.
 func set_state(state: DayState) -> void:
 	_material.set_shader_parameter(&"sun_direction", state.sun_direction)
+	_material.set_shader_parameter(&"sun_tan_disc", tan(deg_to_rad(state.sun_disc)))
 	_material.set_shader_parameter(&"sun_light", _rgb(state.sun_color) * state.sun_intensity)
 	_material.set_shader_parameter(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_material.set_shader_parameter(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
@@ -117,13 +120,20 @@ func set_state(state: DayState) -> void:
 	_redraw()
 
 
-## Takes the Location's tuning set (receivers, A′ in `style_mode`); a new modelling rebuilds the sky
-## and the source layers.
-func set_tuning(tuning: TuningSet, style_mode: TuningSet.StyleMode) -> void:
+## Takes the Location's tuning set (receivers, A′ in `style_mode`, penumbra unless `penumbra_on` is
+## off: the F1 comparison); a new modelling or penumbra rebuilds the source layers.
+func set_tuning(tuning: TuningSet, style_mode: TuningSet.StyleMode, penumbra_on: bool = true) -> void:
 	_style.set_tuning(tuning, style_mode)
 	_material.set_shader_parameter(&"modelling", tuning.receiver_modelling)
 	_material.set_shader_parameter(&"rim", tuning.receiver_rim)
 	_material.set_shader_parameter(&"fill", tuning.receiver_fill)
+	_material.set_shader_parameter(&"penumbra_on", penumbra_on)
+	_material.set_shader_parameter(&"penumbra_gain", tuning.penumbra_gain)
+	_material.set_shader_parameter(&"penumbra_max_px", tuning.penumbra_max_px)
+	var penumbra: Vector3 = Vector3(1.0 if penumbra_on else 0.0, tuning.penumbra_gain, tuning.penumbra_max_px)
+	if penumbra != _penumbra:
+		_penumbra = penumbra
+		_sources.set_penumbra(penumbra_on, tuning.penumbra_gain, tuning.penumbra_max_px)
 	if tuning.receiver_modelling != _modelling:
 		_modelling = tuning.receiver_modelling
 		_sky.set_modelling(_modelling)

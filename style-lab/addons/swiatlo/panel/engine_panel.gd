@@ -12,6 +12,7 @@ signal shot_requested
 signal debug_view_set(view: LightEngine.DebugView)
 signal north_at_top_set(north: bool)
 signal style_mode_set(mode: TuningSet.StyleMode)
+signal penumbra_set(on: bool)
 
 const WIDTH: float = 300.0
 const RATE_MAX: float = 60.0
@@ -25,6 +26,8 @@ const DEBUG_HINTS: PackedStringArray = ["", "", "",
 const MAP_TOPS: PackedStringArray = ["południe", "północ"]
 ## A′ mode names in TuningSet.StyleMode order: levels on the sum of sun and lamps, or on each apart.
 const STYLE_MODES: PackedStringArray = ["na sumie", "na kanałach"]
+## Penumbra names: index 0 is on (ticket 14), 1 off (hard sun shadows, as before it).
+const PENUMBRAS: PackedStringArray = ["z geometrii (t14)", "bez (przed t14)"]
 ## Swatch rows: key → Polish label shown in F1.
 const SOURCE_LABELS: Dictionary[String, String] = {
 	"sun": "słońce", "sky": "niebo", "ambient": "ambient", "ground": "podłoga",
@@ -41,6 +44,7 @@ var _debug_view: OptionButton
 var _debug_hint: Label
 var _map_top: OptionButton
 var _style_mode: OptionButton
+var _penumbra: OptionButton
 var _compass: Control
 var _swatches: Dictionary[String, ColorRect] = {}
 var _swatch_labels: Dictionary[String, Label] = {}
@@ -112,6 +116,8 @@ func _ready() -> void:
 	_map_top.item_selected.connect(func(index: int) -> void: north_at_top_set.emit(index == 1))
 	_style_mode = _choice("Tryb A′", STYLE_MODES)
 	_style_mode.item_selected.connect(func(index: int) -> void: style_mode_set.emit(index as TuningSet.StyleMode))
+	_penumbra = _choice("Półcień", PENUMBRAS)
+	_penumbra.item_selected.connect(func(index: int) -> void: penumbra_set.emit(index == 0))
 	_debug_view = _choice("Widok debug", DEBUG_VIEWS)
 	_debug_hint = Label.new()
 	_debug_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -150,6 +156,10 @@ func style_mode_choice() -> OptionButton:
 
 
 ## The debug view choice (the embedder may set it without a signal, e.g. after a replayed shot).
+func penumbra_choice() -> OptionButton:
+	return _penumbra
+
+
 func debug_view_choice() -> OptionButton:
 	return _debug_view
 

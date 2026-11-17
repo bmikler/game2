@@ -153,6 +153,9 @@ func test_the_invisible_solids_cast_shadow_and_transparent_pixels_show_the_groun
 	var table: Occluder = _asset(at, [top, _solid(Vector3(0.0, -0.45, 0.0), Vector3(0.1, 0.1, 0.9))],
 			AABB(Vector3(-0.5, -1.0, 0.9), Vector3(1.0, 1.0, 0.1)))
 	var engine: LightEngine = await _scene(12.5, [table])
+	# "Beside the shadow" is 10 cm off its edge: the hard shadow (the penumbra has its own gates).
+	engine.set_penumbra_on(false)
+	await RenderingServer.frame_post_draw
 	var sun: Vector3 = engine.state().sun_direction
 	var open: float = _pixel(engine, Vector3(-6.0, 6.0, 0.0)).r
 	assert_gt(open, 0.3)

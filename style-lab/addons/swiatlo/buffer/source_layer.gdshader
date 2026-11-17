@@ -1,7 +1,8 @@
 // A source layer: the light of one group of light sources (one profile) at intensity 1, without
 // colour: falloff × the cosine at the receiver × visibility, averaged over each source's area (a
 // rectangle also × its own cosine), summed over the group's sources. The same visibility function
-// as the sun and the sky; the penumbra follows from the sources' size. Pixels that show a source
+// as the sun and the sky; the penumbra follows from the sources' size through the one penumbra
+// formula (visibility.gdshaderinc). Pixels that show a source
 // itself (its sphere or its rectangle before the surface) glow with the falloff at 0. A rectangle's
 // pixels (a lit pane) take no light from other groups: glass reflects other light as a mirror, not
 // diffusely, and its own glow outshines that reflection.
@@ -20,8 +21,6 @@ const int SOURCE_RECTANGLE = 1;
 // A source's surface glows where it lies at most this far behind the surface the pixel shows (a
 // window's rectangle on its wall).
 const float GLOW_TOLERANCE_M = 0.05;
-// The R2 sequence (plastic number): evenly covers the unit area for any count.
-const vec2 R2 = vec2(0.7548776662, 0.5698402910);
 
 // Sources, four texels each: (centre, kind), (half_u, radius), (half_v, group), (normal, 0).
 uniform sampler2D sources : filter_nearest;
@@ -88,6 +87,17 @@ bool shows_other_groups_pane(vec3 origin, vec3 sight, float surface_t) {
 	return false;
 }
 
+// A point of the source's area at `u` (0 … 1 each), the area scaled by `scale` about its centre:
+// over a rectangle, or over a sphere's outline seen from the point (the disc across the way to it).
+vec3 source_point(int kind, vec3 centre, vec4 b, vec4 c, vec3 across_u, vec3 across_v, float scale, vec2 u) {
+	if (kind == SOURCE_RECTANGLE) {
+		return centre + (b.xyz * (u.x * 2.0 - 1.0) + c.xyz * (u.y * 2.0 - 1.0)) * scale;
+	}
+	float r = b.w * sqrt(u.x) * scale;
+	float angle = TAU * u.y;
+	return centre + (across_u * cos(angle) + across_v * sin(angle)) * r;
+}
+
 void fragment() {
 	vec3 point;
 	vec3 normal;
@@ -130,19 +140,35 @@ void fragment() {
 		vec3 helper = abs(toward.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 		vec3 across_u = normalize(cross(helper, toward));
 		vec3 across_v = cross(toward, across_u);
+		// Penumbra: occluders over the widest area the penumbra can take give the distances of the one
+		// formula; the source's area is scaled so its own penumbra takes the formula's width.
+		float scale = 1.0;
+		if (penumbra_on) {
+			float search = max(penumbra_gain, 1.0);
+			float to_receiver = 0.0;
+			float to_source = 0.0;
+			int hits = 0;
+			for (int k = -1; k < PENUMBRA_SEARCH; k++) {
+				vec3 at = k < 0 ? centre
+						: source_point(kind, centre, b, c, across_u, across_v, search, fract(0.5 + float(k) * R2));
+				vec3 way = at - start;
+				float length_m = length(way);
+				float t = occluder_distance(start, way / length_m, length_m - RAY_OFFSET_M);
+				if (t >= 0.0) {
+					to_receiver += t;
+					to_source += length_m - t;
+					hits++;
+				}
+			}
+			if (hits > 0) {
+				scale = penumbra_scale(2.0 * extent, to_source / float(hits), to_receiver / float(hits));
+			}
+		}
 		float sum = 0.0;
 		for (int k = 0; k < samples_per_pass; k++) {
 			// Passes interleave, so each one spreads over the whole area (a usable picture early).
 			int i = k * pass_count + pass_index;
-			vec2 u = fract(0.5 + float(i) * R2);
-			vec3 at;
-			if (kind == SOURCE_RECTANGLE) {
-				at = centre + b.xyz * (u.x * 2.0 - 1.0) + c.xyz * (u.y * 2.0 - 1.0);
-			} else {
-				float r = b.w * sqrt(u.x);
-				float angle = TAU * u.y;
-				at = centre + (across_u * cos(angle) + across_v * sin(angle)) * r;
-			}
+			vec3 at = source_point(kind, centre, b, c, across_u, across_v, scale, fract(0.5 + float(i) * R2));
 			vec3 way = at - start;
 			float length_m = length(way);
 			vec3 direction = way / length_m;

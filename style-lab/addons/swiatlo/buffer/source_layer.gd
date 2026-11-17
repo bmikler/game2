@@ -25,6 +25,14 @@ func set_group(group: int, profile: SourceProfile, sources: Texture2D, source_co
 	_material.set_shader_parameter(&"reach_m", maxf(profile.reach_m(), 0.001))
 
 
+## The penumbra of ticket 14 (on: the one formula with the tuning set's gain and widest penumbra in
+## screen pixels; off: each source's own size alone).
+func set_penumbra(on: bool, gain: float, max_px: float) -> void:
+	_material.set_shader_parameter(&"penumbra_on", on)
+	_material.set_shader_parameter(&"penumbra_gain", gain)
+	_material.set_shader_parameter(&"penumbra_max_px", max_px)
+
+
 ## What the texture's red + green + blue must be multiplied by for the light at intensity 1: one over
 ## the passes done (each pass covers the whole area, so the light is usable before the last one); 0
 ## before the first pass.

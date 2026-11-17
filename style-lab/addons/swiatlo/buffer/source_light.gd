@@ -15,6 +15,9 @@ var _artificial: SubViewport
 var _layers: Array[SourceLayer] = []
 var _groups: Array[ShaderMaterial] = []
 var _channels: Array[SourceProfile.Channel] = []
+var _penumbra_on: bool = true
+var _penumbra_gain: float = 1.0
+var _penumbra_max_px: float = 8.0
 
 
 func _init() -> void:
@@ -45,6 +48,7 @@ func build(description: SceneDescription, solids: Texture2D, receivers: Texture2
 		move_child(layer, _layers.size())
 		layer.set_group(group, profile, sources, description.sources.size())
 		layer.set_modelling(modelling)
+		layer.set_penumbra(_penumbra_on, _penumbra_gain, _penumbra_max_px)
 		layer.build(description.area, solids, description.solids.size(), receivers, description.receivers.size(),
 				asset_layer, assets, projection)
 		layer.pass_rendered.connect(_on_pass)
@@ -74,6 +78,16 @@ func set_state(state: DayState) -> void:
 func set_modelling(value: float) -> void:
 	for layer: SourceLayer in _layers:
 		layer.set_modelling(value)
+		layer.restart()
+
+
+## The penumbra changed (LightBuffer.set_tuning): every layer builds again.
+func set_penumbra(on: bool, gain: float, max_px: float) -> void:
+	_penumbra_on = on
+	_penumbra_gain = gain
+	_penumbra_max_px = max_px
+	for layer: SourceLayer in _layers:
+		layer.set_penumbra(on, gain, max_px)
 		layer.restart()
 
 

@@ -110,3 +110,88 @@ float visibility_skipping(vec3 point, vec3 direction, float reach, int skip_firs
 float visibility(vec3 point, vec3 direction, float reach) {
 	return visibility_skipping(point, direction, reach, 0, 0);
 }
+
+// Distance along the ray to the nearest solid that blocks it within `reach` metres (−1: none).
+float occluder_distance(vec3 point, vec3 direction, float reach) {
+	float nearest = -1.0;
+	for (int index = 0; index < solid_count; index++) {
+		vec2 span = solid_span(index, point, direction);
+		if (span.y > max(span.x, 0.0) && span.x < reach) {
+			float t = max(span.x, 0.0);
+			nearest = nearest < 0.0 ? t : min(nearest, t);
+		}
+	}
+	return nearest;
+}
+
+// Penumbra (engine ticket 14): the tuning set's gain and widest penumbra in screen pixels. Off (the
+// F1 comparison): the sun casts hard shadows and a source's penumbra follows its size alone.
+uniform bool penumbra_on = true;
+uniform float penumbra_gain = 1.0;
+uniform float penumbra_max_px = 8.0;
+
+// Rays sent to find the occluders a source's penumbra starts from (besides the central one).
+const int PENUMBRA_SEARCH = 8;
+// The R2 sequence (plastic number): evenly covers the unit area for any count.
+const vec2 R2 = vec2(0.7548776662, 0.5698402910);
+
+// The one penumbra formula: its width at the receiver (metres) from the source's size and the
+// distances source → occluder → receiver, × the gain, at most the widest penumbra.
+float penumbra_width(float source_size, float source_to_occluder, float occluder_to_receiver) {
+	float width = source_size * occluder_to_receiver / max(source_to_occluder, 1e-4) * penumbra_gain;
+	return min(width, penumbra_max_px / px_per_m);
+}
+
+// What a source's size is multiplied by so that its own penumbra (sampled over its area) takes the
+// formula's width; 1 when the penumbra is off.
+float penumbra_scale(float source_size, float source_to_occluder, float occluder_to_receiver) {
+	float physical = source_size * occluder_to_receiver / max(source_to_occluder, 1e-4);
+	if (!penumbra_on || physical < 1e-6) {
+		return 1.0;
+	}
+	return penumbra_width(source_size, source_to_occluder, occluder_to_receiver) / physical;
+}
+
+// Sample `i` of a fixed even set over the unit disc.
+vec2 disc_sample(int i, int count) {
+	vec2 u = fract(0.5 + float(i) * R2);
+	float r = sqrt((float(i) + 0.5) / float(count));
+	return vec2(cos(TAU * u.y), sin(TAU * u.y)) * r;
+}
+
+const int SUN_SAMPLES = 16;
+
+// The share of the sun's disc (radius `tan_disc`, as a tangent) seen from `point` around the unit
+// `direction`. The disc is scaled so its penumbra takes the formula's width at the occluders found;
+// hard (one ray) when the penumbra is off.
+float sun_visibility(vec3 point, vec3 direction, float tan_disc) {
+	if (!penumbra_on || tan_disc <= 0.0) {
+		return visibility(point, direction, FAR_M);
+	}
+	vec3 helper = abs(direction.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+	vec3 u = normalize(cross(helper, direction));
+	vec3 v = cross(direction, u);
+	// Occluders over the widest disc the penumbra can take: none, the whole disc is seen.
+	float search = tan_disc * max(penumbra_gain, 1.0);
+	float total = 0.0;
+	int hits = 0;
+	for (int k = -1; k < PENUMBRA_SEARCH; k++) {
+		vec2 s = k < 0 ? vec2(0.0) : disc_sample(k, PENUMBRA_SEARCH);
+		float t = occluder_distance(point, normalize(direction + (u * s.x + v * s.y) * search), FAR_M);
+		if (t >= 0.0) {
+			total += t;
+			hits++;
+		}
+	}
+	if (hits == 0) {
+		return 1.0;
+	}
+	// The sun as a disc FAR_M away: size 2 · tan_disc · FAR_M.
+	float radius = tan_disc * penumbra_scale(2.0 * tan_disc * FAR_M, FAR_M, total / float(hits));
+	float seen = 0.0;
+	for (int k = 0; k < SUN_SAMPLES; k++) {
+		vec2 s = disc_sample(k, SUN_SAMPLES);
+		seen += visibility(point, normalize(direction + (u * s.x + v * s.y) * radius), FAR_M);
+	}
+	return seen / float(SUN_SAMPLES);
+}

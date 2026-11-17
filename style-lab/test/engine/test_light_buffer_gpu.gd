@@ -178,6 +178,9 @@ func test_a_cylinder_casts_a_shadow_as_wide_as_its_diameter_at_any_azimuth() -> 
 	for hour: float in [10.0, 14.0]:
 		var post: Solid = _shaped(Vector3(0.0, 0.5, 0.0), Vector3(1.0, 1.0, 3.0), Solid.Shape.CYLINDER)
 		var engine: LightEngine = await _scene(hour, [post])
+		# The circle's edge 7.5 cm either side: the hard shadow (the penumbra has its own gates).
+		engine.set_penumbra_on(false)
+		await RenderingServer.frame_post_draw
 		var sun: float = _sun_on_ground(engine)
 		var toward_sun: Vector2 = Vector2(engine.state().sun_direction.x, engine.state().sun_direction.y).normalized()
 		var across: Vector2 = toward_sun.orthogonal()
@@ -451,3 +454,82 @@ func test_the_buffers_alpha_is_the_suns_share_and_smooth_sky_keeps_the_shade_as_
 	var styled: Color = engine.styled_image().get_pixelv(at)
 	var expected: float = shade.get_luminance() * engine.state().exposure
 	assert_almost_eq(styled.get_luminance(), expected, expected * 0.01, "the shade's sky light, unstyled")
+
+
+## A Location for the penumbra gates: ground and a tall post 1×1×6 m at x, d = 0; the sun's disc
+## `disc_deg` (radius) all day, a widest penumbra wide enough not to cut the gates' widths, and the
+## penumbra of ticket 14 on or off.
+func _penumbra_scene(hour: float, disc_deg: float, on: bool = true) -> LightEngine:
+	var view: SubViewport = SubViewport.new()
+	view.size = Vector2i(8, 8)
+	var environment: LocationEnvironment = LocationEnvironment.new()
+	environment.tuning_set = environment.tuning_set.duplicate() as TuningSet
+	environment.tuning_set.penumbra_gain = 1.0
+	environment.tuning_set.penumbra_max_px = 32.0
+	view.add_child(environment)
+	var ground: Occluder = Occluder.new()
+	ground.add_child(_solid(Vector3(0.0, 20.0, -0.1), Vector3(40.0, 40.0, 0.1)))
+	view.add_child(ground)
+	var post: Occluder = Occluder.new()
+	post.add_child(_solid(Vector3(0.0, 0.5, 0.0), Vector3(1.0, 1.0, 6.0)))
+	view.add_child(post)
+	var engine: LightEngine = LightEngine.new()
+	engine.rate = 0.0
+	engine.curves = engine.curves.duplicate() as DayCurves
+	engine.curves.sun_disc = Curve.new()
+	engine.curves.sun_disc.max_value = 45.0
+	engine.curves.sun_disc.max_domain = 24.0
+	engine.curves.sun_disc.add_point(Vector2(0.0, disc_deg))
+	engine.curves.sun_disc.add_point(Vector2(24.0, disc_deg))
+	view.add_child(engine)
+	add_child_autofree(view)
+	engine.set_penumbra_on(on)
+	engine.set_hour(hour)
+	await _channels_view(engine)
+	return engine
+
+
+## Pixels of the post's noon shadow edge at depth d (neither full sun nor full shade), scanning the
+## ground row from the post's axis 3 m to the east (right).
+func _penumbra_px(engine: LightEngine, d: float) -> int:
+	var image: Image = engine.buffer_image()
+	var start: Vector2i = Vector2i(PROJECTION.to_screen(Vector3(0.0, d, 0.0)).floor()) - engine.buffer_area().position
+	var steps: int = int(3.0 * PROJECTION.px_per_m)
+	var full: float = image.get_pixel(start.x + steps, start.y).r
+	var count: int = 0
+	for step: int in steps:
+		var share: float = image.get_pixel(start.x + step, start.y).r / full
+		if share > 0.02 and share < 0.98:
+			count += 1
+	return count
+
+
+func test_gate_penumbra_widens_away_from_the_occluder() -> void:
+	var engine: LightEngine = await _penumbra_scene(12.0, 2.4)
+	var near: int = _penumbra_px(engine, 1.2)
+	var far: int = _penumbra_px(engine, 7.0)
+	assert_gt(near, 0, "soft even at the base")
+	assert_gt(far, near * 2, "the far end of the shadow is softer: near %d px, far %d px" % [near, far])
+
+
+func test_gate_penumbra_widens_with_the_sun_disc() -> void:
+	var small: LightEngine = await _penumbra_scene(12.0, 1.2)
+	var small_px: int = _penumbra_px(small, 5.0)
+	small.get_parent().queue_free()
+	await RenderingServer.frame_post_draw
+	var large: LightEngine = await _penumbra_scene(12.0, 3.6)
+	var large_px: int = _penumbra_px(large, 5.0)
+	assert_gt(large_px, small_px * 2, "a larger disc, a wider penumbra: %d px vs %d px" % [large_px, small_px])
+
+
+func test_gate_penumbra_stops_at_the_tuning_sets_widest() -> void:
+	var engine: LightEngine = await _penumbra_scene(12.0, 3.6)
+	engine.tuning_set().penumbra_max_px = 4.0
+	engine.set_penumbra_on(true)
+	await RenderingServer.frame_post_draw
+	assert_lte(_penumbra_px(engine, 7.0), 5, "at most the widest penumbra (+1 px of rounding)")
+
+
+func test_penumbra_off_casts_the_hard_shadow_of_before() -> void:
+	var engine: LightEngine = await _penumbra_scene(12.0, 3.6, false)
+	assert_lte(_penumbra_px(engine, 7.0), 1, "one ray: no penumbra")

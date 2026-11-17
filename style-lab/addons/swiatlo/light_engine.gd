@@ -29,6 +29,8 @@ var _description: SceneDescription = SceneDescription.new()
 var _debug_view: DebugView = DebugView.NONE
 ## The A′ mode switched in F1 (−1: the tuning set's own).
 var _style_mode_override: int = -1
+## The penumbra of ticket 14, switched off in F1 to compare (hard sun shadows, sources' own size).
+var _penumbra_on: bool = true
 # Helper nodes without an owner: never saved into the scene.
 var _buffer: LightBuffer
 var _solids_overlay: SolidsOverlay
@@ -178,6 +180,17 @@ func style_mode() -> TuningSet.StyleMode:
 	return tuning_set().style_mode
 
 
+## Compares the penumbra of ticket 14 with none (F1): off, the sun casts hard shadows and each source
+## its own size's penumbra.
+func set_penumbra_on(on: bool) -> void:
+	_penumbra_on = on
+	_recompute()
+
+
+func is_penumbra_on() -> bool:
+	return _penumbra_on
+
+
 func sky() -> SkyProfile:
 	if is_instance_valid(_environment) and _environment.sky != null:
 		return _environment.sky
@@ -201,6 +214,6 @@ func exposure_reference() -> float:
 func _recompute() -> void:
 	_state.compute(curves, sky(), hour, _north_at_top, exposure_reference(), _description.source_groups)
 	if is_instance_valid(_buffer):
-		_buffer.set_tuning(tuning_set(), style_mode())
+		_buffer.set_tuning(tuning_set(), style_mode(), _penumbra_on)
 		_buffer.set_state(_state)
 	state_changed.emit(_state)
