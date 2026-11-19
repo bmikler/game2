@@ -27,7 +27,7 @@ func _init() -> void:
 
 ## Takes a new scene description: one layer per source group, built over the next frames.
 func build(description: SceneDescription, solids: Texture2D, receivers: Texture2D, assets: Texture2D,
-		asset_layer: Texture2D, projection: LightProjection, modelling: float) -> void:
+		asset_layer: Texture2D, projection: LightProjection, modelling: float, silhouettes: Texture2D = null) -> void:
 	for layer: SourceLayer in _layers:
 		remove_child(layer)
 		layer.queue_free()
@@ -49,6 +49,7 @@ func build(description: SceneDescription, solids: Texture2D, receivers: Texture2
 		layer.set_group(group, profile, sources, description.sources.size())
 		layer.set_modelling(modelling)
 		layer.set_penumbra(_penumbra_on, _penumbra_gain, _penumbra_max_px)
+		layer.set_silhouettes(silhouettes)
 		layer.build(description.area, solids, description.solids.size(), receivers, description.receivers.size(),
 				asset_layer, assets, projection)
 		layer.pass_rendered.connect(_on_pass)

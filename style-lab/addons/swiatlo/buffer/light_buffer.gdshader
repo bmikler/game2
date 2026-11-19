@@ -15,12 +15,11 @@ render_mode unshaded, blend_disabled;
 const int VIEW_RECEIVERS = 2;
 const int VIEW_CHANNELS = 3;
 
-// The sky layer (counts of open dome directions in red + green + blue) and one over the directions
-// counted so far.
+// The sky share in alpha (1: the whole sky; the moving layer's artificial pass).
 uniform sampler2D sky_share : filter_nearest;
-uniform float sky_share_scale = 0.0;
-// The light sources' channels in lux (SourceLight): natural ones join this buffer's light; the
-// artificial one is only read for the channels view.
+// The light sources' channels in lux (the moving layer: the layers built once with the moving
+// Occluders in them): natural ones join this buffer's light; the artificial one is only read for
+// the channels view.
 uniform sampler2D natural_sources : filter_nearest;
 uniform bool has_natural_sources = false;
 uniform sampler2D artificial_sources : filter_nearest;
@@ -92,8 +91,7 @@ vec4 light_at(vec2 px, bool soft) {
 		}
 		return vec4(hue * (found % 2 == 0 ? 1.0 : 0.7), 1.0);
 	}
-	vec3 counts = texelFetch(sky_share, ivec2(px), 0).rgb;
-	float sky = (counts.r + counts.g + counts.b) * sky_share_scale;
+	float sky = texelFetch(sky_share, ivec2(px), 0).a;
 	vec3 start = point + face_normal * RAY_OFFSET_M;
 	float sun = max(dot(normal, sun_direction), 0.0);
 	if (sun > 0.0) {

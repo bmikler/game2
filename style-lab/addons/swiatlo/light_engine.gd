@@ -13,12 +13,21 @@ enum DebugView { NONE, SOLIDS, RECEIVERS, CHANNELS }
 
 ## The one projection of the engine, shared with the contract nodes.
 const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/projection.tres")
+## How far around a moving Occluder its hidden sky is computed: at 4 m a person (0.5 m wide, 1.8 m
+## tall) hides under 0.5 % of the sky, below the A′ steps (engine constant, not tuning).
+const MOVING_SKY_REACH_M: float = 4.0
+## Pixels added round a moving window beyond the widest penumbra.
+const MOVING_MARGIN_PX: float = 2.0
+const PROCESS_PRIORITY_LAST: int = 1000
 
 @export var curves: DayCurves = preload("res://addons/swiatlo/tuning/day_curves.tres")
 ## Hour of the day, 0–24.
 @export_range(0.0, 24.0, 0.01) var hour: float = 12.0
 ## Game minutes per real second (0 stops time).
 @export var rate: float = 1.0
+## Moving Occluders are computed only where their windows meet the viewport's visible rect (the
+## frame); off: wherever they are (tests without a camera).
+@export var moving_in_view_only: bool = true
 
 var _state: DayState = DayState.new()
 var _north_at_top: bool = false
@@ -37,6 +46,8 @@ var _solids_overlay: SolidsOverlay
 
 
 func _ready() -> void:
+	# After the nodes that move Occluders in their _process: the light of a frame sees where they are.
+	process_priority = PROCESS_PRIORITY_LAST
 	refresh_environment()
 	_buffer = LightBuffer.new()
 	add_child(_buffer)
@@ -49,7 +60,26 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	refresh_moving()
 	advance(delta)
+
+
+## Reads the moving Occluders again (where they stand, which frame) and recomputes the light around
+## them when they or the view changed. Called every frame; tests call it after moving one.
+func refresh_moving(force: bool = false) -> void:
+	if not _description.has_moving() or not is_instance_valid(_buffer):
+		return
+	var moved: bool = _description.refresh_moving()
+	var windows: Array[Rect2i] = _description.moving_windows(PROJECTION, MOVING_SKY_REACH_M,
+			tuning_set().penumbra_max_px + MOVING_MARGIN_PX, _view_rect() if moving_in_view_only else Rect2())
+	if moved or force or windows != _buffer.moving_windows():
+		_buffer.set_moving(_description, windows)
+
+
+## The viewport's visible rect in the Location's screen pixels.
+func _view_rect() -> Rect2:
+	var viewport: Viewport = get_viewport()
+	return viewport.get_canvas_transform().affine_inverse() * viewport.get_visible_rect()
 
 
 ## Finds the LocationEnvironment in the tree (after loading or changing the Location).
@@ -70,6 +100,7 @@ func rebuild_scene() -> void:
 	_description = SceneDescription.from_tree(get_tree(), PROJECTION)
 	_buffer.set_scene(_description, PROJECTION)
 	_solids_overlay.shapes = _description.solids
+	refresh_moving(true)
 	_recompute()
 
 

@@ -1,11 +1,12 @@
 class_name SolidShape
 extends RefCounted
 ## One solid in the Location's metres, as the light engine sees it (pure data, no node): a box, a box
-## with a gable roof whose slopes fall along x or along d, or an upright cylinder. A raised box is a
-## box that starts above the floor. Every shape is convex and fills its bounding box's footprint.
+## with a gable roof whose slopes fall along x or along d, an upright cylinder, or a silhouette (a
+## stack of elliptic slabs from a sprite frame, SilhouetteStack). A raised box is a box that starts
+## above the floor. Every shape but the silhouette is convex and fills its bounding box's footprint.
 
 ## The numbers go to the shaders as they are (`visibility.gdshaderinc`, SOLID_*).
-enum Kind { BOX, ROOF_X, ROOF_D, CYLINDER }
+enum Kind { BOX, ROOF_X, ROOF_D, CYLINDER, SILHOUETTE }
 
 ## Segments of a cylinder's outline in the wireframe and the stand-in drawing (a half circle).
 const OUTLINE_SEGMENTS: int = 12
@@ -15,6 +16,9 @@ var kind: Kind = Kind.BOX
 var box: AABB = AABB()
 ## Roofs: the height where the walls end and the slopes start (absolute z).
 var eave: float = 0.0
+## Silhouette only: its stack and the frame shown.
+var silhouette: SilhouetteStack
+var frame: int = 0
 
 
 static func make_box(bounds: AABB) -> SolidShape:
@@ -34,13 +38,28 @@ static func make_cylinder(bounds: AABB) -> SolidShape:
 	return _make(Kind.CYLINDER, bounds, bounds.end.z)
 
 
+## The stack's frame standing on `anchor` (the middle of the feet, metres).
+static func make_silhouette(stack: SilhouetteStack, stack_frame: int, anchor: Vector3) -> SolidShape:
+	var bounds: AABB = stack.frame_bounds(stack_frame)
+	var shape: SolidShape = _make(Kind.SILHOUETTE, AABB(bounds.position + anchor, bounds.size), bounds.end.z + anchor.z)
+	shape.silhouette = stack
+	shape.frame = stack_frame
+	return shape
+
+
 func moved(offset: Vector3) -> SolidShape:
-	return _make(kind, AABB(box.position + offset, box.size), eave + offset.z)
+	var shape: SolidShape = _make(kind, AABB(box.position + offset, box.size), eave + offset.z)
+	shape.silhouette = silhouette
+	shape.frame = frame
+	return shape
 
 
 ## Every flat or curved face, normals outwards (the scene description keeps those the camera sees).
 func faces(solid: int) -> Array[Receiver]:
 	match kind:
+		Kind.SILHOUETTE:
+			# Only an asset's (invisible) solid: its sprite takes the light.
+			return []
 		Kind.CYLINDER:
 			return _cylinder_faces(solid)
 		Kind.ROOF_X, Kind.ROOF_D:
@@ -64,7 +83,7 @@ func edges() -> PackedVector3Array:
 			var foot: Vector3 = side.origin + side.edge_u * x_sign
 			points.append_array([foot, foot + lift])
 		return points
-	for face: Receiver in faces(0):
+	for face: Receiver in (_box_faces(box, 0) if kind == Kind.SILHOUETTE else faces(0)):
 		var outline: Array[Vector3] = face.outline()
 		for index: int in outline.size():
 			points.append_array([outline[index], outline[(index + 1) % outline.size()]])

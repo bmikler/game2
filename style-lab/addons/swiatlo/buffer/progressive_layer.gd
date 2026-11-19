@@ -65,6 +65,11 @@ func build(area: Rect2i, solids: Texture2D, solid_count: int, receivers: Texture
 	restart()
 
 
+## The frames of the scene's silhouette solids (SceneDescription.silhouette_data).
+func set_silhouettes(silhouettes: Texture2D) -> void:
+	_material.set_shader_parameter(&"silhouettes", silhouettes)
+
+
 ## Builds the layer again from the start (e.g. the receivers' modelling changed the normals).
 func restart() -> void:
 	_passes_done = 0

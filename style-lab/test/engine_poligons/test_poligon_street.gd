@@ -43,7 +43,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	var description: ShotDescription = shot.describe()
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
-	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "kamera": "0;-200", "góra mapy": "południe",
+	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "cień postaci": "bryła z sylwetki", "góra mapy": "południe",
 			"tryb A′": "na sumie", "półcień": "z geometrii (t14)", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
@@ -100,23 +100,43 @@ func test_debug_view_from_f1_reaches_the_engine_and_the_shot() -> void:
 	assert_eq((replay.get_node("%Engine") as LightEngine).debug_view(), LightEngine.DebugView.SOLIDS)
 
 
-func test_move_actions_pan_the_camera_and_the_shot_keeps_it() -> void:
+func test_move_actions_walk_the_character_the_camera_follows_and_the_shot_keeps_it() -> void:
 	var poligon: Node = _poligon()
 	var camera: Camera2D = (poligon.get_node("%Frame") as SubViewport).get_camera_2d()
-	var start: Vector2 = camera.position
+	var body: Occluder = (poligon.get_node("%Walker") as PoligonWalker).body()
+	var start: Vector2 = body.position
 	Input.action_press(&"move_right")
 	Input.action_press(&"move_up")
 	for frame: int in 5:
 		await get_tree().process_frame
 	Input.action_release(&"move_right")
 	Input.action_release(&"move_up")
-	assert_gt(camera.position.x, start.x, "right")
-	assert_lt(camera.position.y, start.y, "up")
-	assert_eq(camera.position, camera.position.round(), "whole pixels")
+	await get_tree().process_frame
+	assert_gt(body.position.x, start.x, "right")
+	assert_lt(body.position.y, start.y, "up")
+	assert_eq(camera.position, (body.position - Vector2(0.0, 36.0)).round(), "the camera on the character, whole pixels")
 	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	assert_true(description.has_character)
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
+	await get_tree().process_frame
+	var replayed: PoligonWalker = replay.get_node("%Walker") as PoligonWalker
+	assert_almost_eq(replayed.position_m().x, (poligon.get_node("%Walker") as PoligonWalker).position_m().x, 0.03)
 	assert_eq((replay.get_node("%Frame") as SubViewport).get_camera_2d().position, camera.position)
+
+
+func test_character_shadow_shape_from_f1_reaches_the_walker_and_the_shot() -> void:
+	var poligon: Node = _poligon()
+	var choice: OptionButton = poligon.get_node("%ShadowChoice") as OptionButton
+	choice.select(0)
+	choice.item_selected.emit(0)
+	var walker: PoligonWalker = poligon.get_node("%Walker") as PoligonWalker
+	assert_eq(walker.shadow_shape, PoligonWalker.ShadowShape.CYLINDER)
+	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	assert_eq(description.switches["cień postaci"], "walec")
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_eq((replay.get_node("%Walker") as PoligonWalker).shadow_shape, PoligonWalker.ShadowShape.CYLINDER)
 
 
 func test_map_top_from_f1_reaches_the_engine_and_the_shot() -> void:

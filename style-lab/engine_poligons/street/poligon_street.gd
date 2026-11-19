@@ -1,13 +1,13 @@
 extends Node
 ## The new street Poligon (light engine): a Location built from contract nodes, rendered at the game
 ## frame and scaled to the window, with an F1 holding the engine panel and the frame switch. Shots
-## (F12 or the panel's button) record the frame switch too. Until the character comes, the move
-## actions pan the camera over the street.
+## (F12 or the panel's button) record the frame switch too. The move actions walk the character
+## (engine ticket 17); the camera follows it.
 
 ## 960×540 as in game2 (×2 on 1080p), or 640×360 as in the engine map's prototypes.
 const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
-## Camera panning speed, screen pixels per second (8 m/s along x).
-const PAN_SPEED_PX: float = 320.0
+## The camera looks at the character's middle: this far above its feet (half of 72 px).
+const CAMERA_ABOVE_FEET_PX: float = 36.0
 
 ## Looks of one asset compared in F1 (engine ticket 10: the stall from ComfyUI with its two add-on
 ## normal maps, and the simple painted sprite); the first is the starting one.
@@ -24,13 +24,14 @@ const PAN_SPEED_PX: float = 320.0
 @onready var _look_choice: OptionButton = %LookChoice
 @onready var _shot: EngineShot = %Shot
 @onready var _camera: Camera2D = %Camera
-
-## The camera's position before snapping to whole pixels.
-var _camera_at: Vector2 = Vector2.ZERO
+@onready var _walker: PoligonWalker = %Walker
+@onready var _shadow_choice: OptionButton = %ShadowChoice
 
 
 func _ready() -> void:
-	_camera_at = _camera.position
+	# After the walker moved (children process after this root otherwise): the camera follows the
+	# feet of this frame.
+	process_priority = 1
 	_picture.texture = _frame.get_texture()
 	_engine_panel.hour_set.connect(_engine.set_hour)
 	_engine_panel.rate_set.connect(func(rate: float) -> void: _engine.rate = rate)
@@ -56,11 +57,18 @@ func _ready() -> void:
 	if not asset_looks.is_empty():
 		_set_look(0)
 
+	for shape_name: String in PoligonWalker.SHADOW_SHAPES:
+		_shadow_choice.add_item(shape_name)
+	_shadow_choice.select(_walker.shadow_shape)
+	_shadow_choice.item_selected.connect(func(index: int) -> void: _walker.shadow_shape = index as PoligonWalker.ShadowShape)
+	_follow_walker()
+
 	_engine_panel.shot_requested.connect(func() -> void: _shot.take())
 	_shot.taken.connect(_engine_panel.show_shot)
+	_shot.character = _walker.body()
 	_shot.add_switch("kadr", _frame_name, _select_frame)
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
-	_shot.add_switch("kamera", _camera_name, _place_camera)
+	_shot.add_switch("cień postaci", _shadow_name, _select_shadow)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
 	_shot.add_switch("półcień", _penumbra_name, _select_penumbra)
@@ -68,11 +76,31 @@ func _ready() -> void:
 		_shot.add_switch("wygląd assetu", _look_name, _select_look)
 
 
-func _process(delta: float) -> void:
-	var direction: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	if direction != Vector2.ZERO:
-		_camera_at += direction * PAN_SPEED_PX * delta
-		_camera.position = _camera_at.round()
+func _process(_delta: float) -> void:
+	_follow_walker()
+	_sort_walker()
+
+
+## Draws the character before the assets standing nearer the camera than its feet (larger d), so
+## the stall in front hides its legs; after the rest of the street.
+func _sort_walker() -> void:
+	var street: Node = _walker.get_parent()
+	var feet_d: float = _walker.position_m().y
+	var target: int = 0
+	for child: Node in street.get_children():
+		if child == _walker:
+			continue
+		var occluder: Occluder = child as Occluder
+		if occluder != null and occluder.asset_sprite() != null and occluder.position_m.y > feet_d:
+			break
+		target += 1
+	if _walker.get_index() != target:
+		street.move_child(_walker, target)
+
+
+## The camera on the character, on whole pixels.
+func _follow_walker() -> void:
+	_camera.position = (_walker.body().position - Vector2(0.0, CAMERA_ABOVE_FEET_PX)).round()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -121,17 +149,17 @@ func _select_look(look_name: String) -> void:
 	push_warning("Unknown asset look in the shot: %s" % look_name)
 
 
-func _camera_name() -> String:
-	return "%d;%d" % [roundi(_camera.position.x), roundi(_camera.position.y)]
+func _shadow_name() -> String:
+	return PoligonWalker.SHADOW_SHAPES[_walker.shadow_shape]
 
 
-func _place_camera(camera_name: String) -> void:
-	var parts: PackedStringArray = camera_name.split(";")
-	if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
-		push_warning("Unknown camera in the shot: %s" % camera_name)
+func _select_shadow(shape_name: String) -> void:
+	var index: int = PoligonWalker.SHADOW_SHAPES.find(shape_name)
+	if index < 0:
+		push_warning("Unknown character shadow in the shot: %s" % shape_name)
 		return
-	_camera_at = Vector2(parts[0].to_int(), parts[1].to_int())
-	_camera.position = _camera_at
+	_shadow_choice.select(index)
+	_walker.shadow_shape = index as PoligonWalker.ShadowShape
 
 
 func _map_top_name() -> String:

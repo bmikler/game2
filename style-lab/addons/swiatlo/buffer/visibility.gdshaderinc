@@ -1,10 +1,16 @@
 // The one visibility function of the light engine: every source (sun, sky, lamps) asks it whether
 // a point sees the source along a direction. Occluders are the scene description's solids, two
 // texels each: (min, kind), (max, eave). Kinds: 0 box, 1 roof with slopes along x, 2 roof with slopes
-// along d, 3 upright cylinder (SolidShape.Kind). Every solid is convex and lies inside its box.
+// along d, 3 upright cylinder, 4 silhouette (SolidShape.Kind). Every solid lies inside its box; all but
+// the silhouette are convex. A silhouette's max.w is its frame's row in `silhouettes`
+// (SilhouetteStack.data_of): texel 0 the anchor's x from the box's left edge, then per sprite pixel
+// row (1 / px_per_m tall, from the box's bottom) two elliptic spans (centre x from the anchor, half
+// width) and the row's half depth about the box's middle d.
+// Include after receivers.gdshaderinc (px_per_m).
 
 uniform sampler2D solids : filter_nearest;
 uniform int solid_count = 0;
+uniform sampler2D silhouettes : filter_nearest;
 
 // Rays start this far off the face along its normal, so they do not begin inside the solid; and
 // reach this far when nothing nearer stops them (sun, sky).
@@ -14,6 +20,95 @@ const float FAR_M = 1000.0;
 const int SOLID_ROOF_X = 1;
 const int SOLID_ROOF_D = 2;
 const int SOLID_CYLINDER = 3;
+const int SOLID_SILHOUETTE = 4;
+// The most sprite rows a ray crosses in one silhouette (the loop's bound; taller ones are cut).
+const int SILHOUETTE_MAX_ROWS = 160;
+
+// The span within `range` where the ray's footprint (xy) is inside the ellipse (centre, radius);
+// enter > leave: it misses.
+vec2 ellipse_span(vec2 point, vec2 direction, vec2 centre, vec2 radius, vec2 range) {
+	vec2 from_axis = (point - centre) / radius;
+	vec2 along = direction / radius;
+	float a = dot(along, along);
+	float b = dot(from_axis, along);
+	float c = dot(from_axis, from_axis) - 1.0;
+	if (a < 1e-12) {
+		return c > 0.0 ? vec2(1.0, 0.0) : range;
+	}
+	float discriminant = b * b - a * c;
+	if (discriminant < 0.0) {
+		return vec2(1.0, 0.0);
+	}
+	float root = sqrt(discriminant);
+	return vec2(max(range.x, (-b - root) / a), min(range.y, (-b + root) / a));
+}
+
+// The ray through a silhouette inside its box span `box_span`, slab by slab in the order the ray
+// meets them. `last` false: the first span the ray is still in or meets ahead (leave > 0), for
+// visibility; true: from the first enter to the last leave, with the outward normal where it
+// leaves (the side of that slab's ellipse), for the surface a sprite pixel lies on.
+vec2 silhouette_span(vec4 low, vec4 high, vec2 box_span, vec3 point, vec3 direction, bool last,
+		inout vec3 exit_normal) {
+	int frame = int(round(high.w));
+	int rows = (textureSize(silhouettes, 0).x - 1) / 2;
+	float row_m = 1.0 / px_per_m;
+	float anchor_x = low.x + texelFetch(silhouettes, ivec2(0, frame), 0).x;
+	float middle_d = (low.y + high.y) * 0.5;
+	float z_a = point.z + direction.z * box_span.x;
+	float z_b = point.z + direction.z * box_span.y;
+	int row_a = clamp(int(floor((z_a - low.z) / row_m)), 0, rows - 1);
+	int row_b = clamp(int(floor((z_b - low.z) / row_m)), 0, rows - 1);
+	int step_row = row_b >= row_a ? 1 : -1;
+	int count = min(abs(row_b - row_a) + 1, SILHOUETTE_MAX_ROWS);
+	vec2 result = vec2(1.0, 0.0);
+	for (int k = 0; k < SILHOUETTE_MAX_ROWS; k++) {
+		if (k >= count) {
+			break;
+		}
+		int row = row_a + k * step_row;
+		vec2 range = box_span;
+		if (abs(direction.z) > 1e-9) {
+			float t0 = (low.z + float(row) * row_m - point.z) / direction.z;
+			float t1 = (low.z + float(row + 1) * row_m - point.z) / direction.z;
+			range = vec2(max(range.x, min(t0, t1)), min(range.y, max(t0, t1)));
+		}
+		if (range.y < range.x) {
+			continue;
+		}
+		vec4 spans = texelFetch(silhouettes, ivec2(1 + row * 2, frame), 0);
+		float depth = texelFetch(silhouettes, ivec2(2 + row * 2, frame), 0).x;
+		if (depth <= 0.0) {
+			continue;
+		}
+		for (int s = 0; s < 2; s++) {
+			vec2 span_x = s == 0 ? spans.xy : spans.zw;
+			if (span_x.y <= 0.0) {
+				continue;
+			}
+			vec2 centre = vec2(anchor_x + span_x.x, middle_d);
+			vec2 radius = vec2(span_x.y, depth);
+			vec2 hit = ellipse_span(point.xy, direction.xy, centre, radius, range);
+			if (hit.y < hit.x) {
+				continue;
+			}
+			if (!last) {
+				if (hit.y > 0.0 && (result.y < result.x || hit.x < result.x)) {
+					result = hit;
+				}
+			} else {
+				if (result.y < result.x || hit.y > result.y) {
+					vec2 at = point.xy + direction.xy * hit.y - centre;
+					exit_normal = normalize(vec3(at / (radius * radius) + vec2(0.0, 1e-6), 0.0));
+				}
+				result = result.y < result.x ? hit : vec2(min(result.x, hit.x), max(result.y, hit.y));
+			}
+		}
+		if (!last && result.y >= result.x) {
+			break;
+		}
+	}
+	return result;
+}
 
 // Cuts the ray's span [enter, leave] to the half-space dot(n, p) <= k; when the plane cuts the
 // leaving end, `exit_normal` becomes the plane's.
@@ -34,8 +129,9 @@ vec2 clip_to_plane(vec2 span, vec3 point, vec3 direction, vec3 n, float k, inout
 }
 
 // Distances along the ray where it enters and leaves the solid (enter > leave: it misses), and the
-// outward normal of the face where it leaves.
-vec2 solid_span_exit(int index, vec3 point, vec3 direction, out vec3 exit_normal) {
+// outward normal of the face where it leaves. A silhouette (not convex): `last` picks which span
+// (silhouette_span).
+vec2 solid_span_of(int index, vec3 point, vec3 direction, bool last, out vec3 exit_normal) {
 	vec4 low = texelFetch(solids, ivec2(index * 2, 0), 0);
 	vec4 high = texelFetch(solids, ivec2(index * 2 + 1, 0), 0);
 	// Axis-parallel rays: a tiny component instead of zero (1 / 0 is not reliably infinite on GPUs).
@@ -48,7 +144,11 @@ vec2 solid_span_exit(int index, vec3 point, vec3 direction, out vec3 exit_normal
 	exit_normal = far.x == span.y ? vec3(sign(direction.x), 0.0, 0.0)
 			: (far.y == span.y ? vec3(0.0, sign(direction.y), 0.0) : vec3(0.0, 0.0, sign(direction.z)));
 	int kind = int(round(low.w));
-	if (kind == SOLID_ROOF_X || kind == SOLID_ROOF_D) {
+	if (kind == SOLID_SILHOUETTE) {
+		if (span.y >= span.x) {
+			span = silhouette_span(low, high, span, point, direction, last, exit_normal);
+		}
+	} else if (kind == SOLID_ROOF_X || kind == SOLID_ROOF_D) {
 		// Two slopes from the eave (high.w) at the walls up to the ridge at the top of the box.
 		int a = kind == SOLID_ROOF_X ? 0 : 1;
 		float gradient = (high.z - high.w) / ((high[a] - low[a]) * 0.5);
@@ -86,9 +186,15 @@ vec2 solid_span_exit(int index, vec3 point, vec3 direction, out vec3 exit_normal
 	return span;
 }
 
+// The surface a line of sight shows: the whole way through the solid, leaving nearest the camera.
+vec2 solid_span_exit(int index, vec3 point, vec3 direction, out vec3 exit_normal) {
+	return solid_span_of(index, point, direction, true, exit_normal);
+}
+
+// For visibility: the first span the ray is in or meets ahead.
 vec2 solid_span(int index, vec3 point, vec3 direction) {
 	vec3 unused;
-	return solid_span_exit(index, point, direction, unused);
+	return solid_span_of(index, point, direction, false, unused);
 }
 
 // 1 when nothing blocks the ray from `point` along the unit `direction` within `reach` metres,
@@ -109,6 +215,17 @@ float visibility_skipping(vec3 point, vec3 direction, float reach, int skip_firs
 // The same with every solid blocking.
 float visibility(vec3 point, vec3 direction, float reach) {
 	return visibility_skipping(point, direction, reach, 0, 0);
+}
+
+// The same with only the solids `first` … `last − 1` blocking.
+float visibility_between(vec3 point, vec3 direction, float reach, int first, int last) {
+	for (int index = first; index < last; index++) {
+		vec2 span = solid_span(index, point, direction);
+		if (span.y > max(span.x, 0.0) && span.x < reach) {
+			return 0.0;
+		}
+	}
+	return 1.0;
 }
 
 // Distance along the ray to the nearest solid that blocks it within `reach` metres (−1: none).

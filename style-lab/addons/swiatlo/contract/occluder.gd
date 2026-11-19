@@ -18,6 +18,12 @@ const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/pro
 		position = PROJECTION.to_screen(value)
 		_snap_sprite()
 		changed.emit()
+## A moving Occluder (a character, an NPC, a car): its shadow and its sprite's light are computed
+## every frame around it; the layers built once per scene leave it out.
+@export var moving: bool = false:
+	set(value):
+		moving = value
+		changed.emit()
 
 
 func _enter_tree() -> void:
@@ -53,7 +59,8 @@ func asset_warnings() -> PackedStringArray:
 	if sprite == null:
 		return PackedStringArray()
 	var found: PackedStringArray = sprite.warnings()
-	if sprite.texture != null:
+	# A moving asset's sprite changes with its animation, and a silhouette is built from it.
+	if sprite.texture != null and not moving:
 		var shapes: Array[SolidShape] = []
 		for child: Node in get_children():
 			var solid: Solid = child as Solid

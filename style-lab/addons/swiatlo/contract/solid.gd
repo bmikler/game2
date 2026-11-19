@@ -4,11 +4,13 @@ extends Node2D
 ## Scene contract node: an invisible, simplified solid of its parent Occluder, in metres. The light
 ## engine casts its shadow and lights the faces the projection shows; colour comes from sprites.
 ## Shapes: a box, a box with a gable roof (slopes falling along x or along d), an upright cylinder,
-## or a raised box (empty below, e.g. an awning or a table top).
+## a raised box (empty below, e.g. an awning or a table top), or a silhouette (a sprite's animated
+## silhouette, SilhouetteStack: set `silhouette` and `frame` from code; its anchor is the middle of the
+## feet, not a front edge).
 
 signal changed
 
-enum Shape { BOX, ROOF_X, ROOF_D, CYLINDER, RAISED_BOX }
+enum Shape { BOX, ROOF_X, ROOF_D, CYLINDER, RAISED_BOX, SILHOUETTE }
 
 const PROJECTION: LightProjection = preload("res://addons/swiatlo/projection/projection.tres")
 ## Wireframe colour in the editor.
@@ -42,6 +44,17 @@ const EDITOR_COLOR: Color = Color(0.3, 0.9, 1.0, 0.8)
 		clearance_m = value
 		_changed()
 
+## Silhouette: the stack of frames (built from the sprites when the scene loads) and the frame shown.
+var silhouette: SilhouetteStack:
+	set(value):
+		silhouette = value
+		_changed()
+var frame: int = 0:
+	set(value):
+		if value != frame:
+			frame = value
+			_changed()
+
 
 func _draw() -> void:
 	if Engine.is_editor_hint():
@@ -52,7 +65,12 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var warnings: PackedStringArray = PackedStringArray()
 	if not get_parent() is Occluder:
 		warnings.append("A Solid must be a child of an Occluder.")
-	if size_m.x <= 0.0 or size_m.y <= 0.0 or size_m.z <= 0.0:
+	if shape == Shape.SILHOUETTE:
+		if silhouette == null or silhouette.frame_count() == 0:
+			warnings.append("A silhouette Solid needs its stack of frames (set from code).")
+		elif not (get_parent() is Occluder and (get_parent() as Occluder).asset_sprite() != null):
+			warnings.append("A silhouette Solid belongs to an asset (its sprite takes the light).")
+	elif size_m.x <= 0.0 or size_m.y <= 0.0 or size_m.z <= 0.0:
 		warnings.append("Every dimension of a Solid must be above zero.")
 	if (shape == Shape.ROOF_X or shape == Shape.ROOF_D) and (eave_m <= 0.0 or eave_m >= size_m.z):
 		warnings.append("A roof's eave must lie between the floor and the ridge (height).")
@@ -65,6 +83,9 @@ func _get_configuration_warnings() -> PackedStringArray:
 func local_shape() -> SolidShape:
 	var bounds: AABB = AABB(Vector3(-size_m.x * 0.5, -size_m.y, 0.0), size_m)
 	match shape:
+		Shape.SILHOUETTE:
+			if silhouette != null and silhouette.frame_count() > 0:
+				return SolidShape.make_silhouette(silhouette, frame, Vector3.ZERO)
 		Shape.ROOF_X, Shape.ROOF_D:
 			return SolidShape.make_roof(shape == Shape.ROOF_D, bounds, eave_m)
 		Shape.CYLINDER:
