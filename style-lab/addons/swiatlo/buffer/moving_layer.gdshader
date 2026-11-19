@@ -1,6 +1,6 @@
 // The moving layer: the light buffer's source channel (natural or artificial, lux) and sky share
-// with the moving Occluders in them, drawn every frame. Outside the moving windows it copies the
-// layers built once (SourceLight's channel, the sky layer). Inside them:
+// with the moving Occluders in them, drawn over the rect round the moving windows (MovingLayer).
+// Outside the moving windows it copies the layers built once (SourceLight's channel, the sky layer). Inside them:
 // - a pixel of a moving asset's sprite (it moves, the layers built once never saw it) takes the light
 //   of every source in the channel the way a source layer computes it, and the sky share from a
 //   fixed set of directions, with every solid blocking;
@@ -50,7 +50,8 @@ uniform int sky_samples = 64;
 varying vec2 local_px;
 
 void vertex() {
-	local_px = VERTEX;
+	// The rect drawn this frame may be a part of the area: its pixels in the whole area's.
+	local_px = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 }
 
 float falloff_of(int group, float distance) {
@@ -106,7 +107,8 @@ vec3 source_light(vec3 point, vec3 normal, vec3 face_normal, vec3 origin, vec3 s
 		vec4 b = texelFetch(sources, ivec2(index * 4 + 1, 0), 0);
 		vec4 c = texelFetch(sources, ivec2(index * 4 + 2, 0), 0);
 		int group = int(round(c.w));
-		if (group >= MAX_GROUPS || group_channel[group] != channel) {
+		// Groups off at this hour add nothing.
+		if (group >= MAX_GROUPS || group_channel[group] != channel || group_light[group] == vec3(0.0)) {
 			continue;
 		}
 		vec3 n = texelFetch(sources, ivec2(index * 4 + 3, 0), 0).xyz;

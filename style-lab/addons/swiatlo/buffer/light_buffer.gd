@@ -54,7 +54,7 @@ func _init() -> void:
 	# read the moving layer.
 	_sources = SourceLight.new()
 	add_child(_sources)
-	_sources.changed.connect(_redraw)
+	_sources.changed.connect(_on_sources_changed)
 	_moving = MovingLayer.new()
 	add_child(_moving)
 	_view = SubViewport.new()
@@ -261,8 +261,15 @@ func _on_sky_pass(_passes_done: int) -> void:
 	_redraw()
 
 
-func _redraw() -> void:
+## The source layers made progress: the moving layer copies them again.
+func _on_sources_changed() -> void:
 	_moving.redraw()
+	_redraw()
+
+
+## Draws the buffer, its penumbra pass and A′ again. The moving layer draws itself when its inputs
+## change (MovingLayer).
+func _redraw() -> void:
 	_view.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_soft_view.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_style.redraw()

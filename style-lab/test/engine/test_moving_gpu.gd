@@ -117,6 +117,61 @@ func test_gate_moving_body_casts_the_lamps_shadow_of_the_body_standing_still() -
 		assert_gt(shaded, 2, "the body shades some of the ground points from the lamp at %s" % lamp)
 
 
+## Pixels where `with` is brighter than `without` by more than half-float noise, as "(x, y) a > b".
+static func _brighter(with: Image, without: Image) -> PackedStringArray:
+	var found: PackedStringArray = PackedStringArray()
+	for y: int in with.get_height():
+		for x: int in with.get_width():
+			var a: float = with.get_pixel(x, y).get_luminance()
+			var b: float = without.get_pixel(x, y).get_luminance()
+			if a > b * 1.002 + 0.002:
+				found.append("(%d, %d) %.3f > %.3f" % [x, y, a, b])
+	return found
+
+
+func test_gate_moving_shadow_never_brightens_the_lamps_light() -> void:
+	# Review of engine ticket 17: a bright ring round the character's shadow by a lamp. The moving
+	# layer only takes light away, so no pixel may be brighter with the body than without it.
+	for lamp: Vector3 in [Vector3(-2.0, 0.3, 3.0), Vector3(1.5, -0.5, 2.0)]:
+		var free: LightEngine = await _scene(22.0, lamp, Vector3.INF, false)
+		var without: Image = free.artificial_image()
+		_done(free)
+		var engine: LightEngine = await _scene(22.0, lamp, Vector3.ZERO, true)
+		var brighter: PackedStringArray = _brighter(engine.artificial_image(), without)
+		assert_eq(brighter.size(), 0, "lamp %s, brighter with the body: %s" % [lamp, ", ".join(brighter.slice(0, 5))])
+		_done(engine)
+
+
+func test_body_walked_out_of_the_view_leaves_no_shadow_behind() -> void:
+	# The moving layer redraws only round this frame's and the last frame's windows: what it drew
+	# before must be copied back once the body is gone.
+	var lamp: Vector3 = Vector3(-2.0, 0.3, 3.0)
+	var free: LightEngine = await _scene(22.0, lamp, Vector3.INF, false)
+	var without: Image = free.artificial_image()
+	_done(free)
+	var engine: LightEngine = await _scene(22.0, lamp, Vector3.ZERO, true)
+	var body: Occluder
+	for node: Node in engine.get_tree().get_nodes_in_group(Occluder.GROUP):
+		if (node as Occluder).moving:
+			body = node as Occluder
+	for step: int in 4:
+		body.position_m = Vector3(1.0 + step, 0.5 * step, 0.0)
+		engine.refresh_moving()
+		await RenderingServer.frame_post_draw
+	body.position_m = Vector3(0.0, 60.0, 0.0)
+	engine.refresh_moving()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var with: Image = engine.artificial_image()
+	var darker: int = 0
+	for y: int in with.get_height():
+		for x: int in with.get_width():
+			if with.get_pixel(x, y).get_luminance() < without.get_pixel(x, y).get_luminance() * 0.98 - 0.002:
+				darker += 1
+	assert_eq(darker, 0, "pixels still darkened after the body left")
+	_done(engine)
+
+
 ## The sun (red) and sky (blue) shares of the channels view at each point.
 func _natural_at(points: Array[Vector3], moving: bool, hour: float) -> Array[Vector2]:
 	var engine: LightEngine = await _scene(hour, Vector3.INF, Vector3.ZERO, moving)

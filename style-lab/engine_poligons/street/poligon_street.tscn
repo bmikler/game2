@@ -15,6 +15,8 @@
 script = ExtResource("1")
 asset_looks = Array[ExtResource("9")]([ExtResource("6"), ExtResource("7"), ExtResource("8")])
 looked_asset = NodePath("Frame/Street/Stall/Sprite")
+npc_routes = Array[PackedVector2Array]([PackedVector2Array(-1, 0.5, -9, 0.5), PackedVector2Array(-8, -0.5, -2, 4)])
+npc_speeds_m_s = PackedFloat32Array(1.2, 1.4)
 
 [node name="Frame" type="SubViewport" parent="."]
 unique_name_in_owner = true
@@ -92,6 +94,16 @@ size_flags_horizontal = 3
 text = "Cień postaci (ticket 17)"
 
 [node name="ShadowChoice" type="OptionButton" parent="F1/Panel/Box/ShadowRow"]
+unique_name_in_owner = true
+focus_mode = 0
+
+[node name="NpcRow" type="HBoxContainer" parent="F1/Panel/Box"]
+
+[node name="NpcLabel" type="Label" parent="F1/Panel/Box/NpcRow"]
+size_flags_horizontal = 3
+text = "2 NPC na rutynie (test wydajności)"
+
+[node name="NpcCheck" type="CheckBox" parent="F1/Panel/Box/NpcRow"]
 unique_name_in_owner = true
 focus_mode = 0
 

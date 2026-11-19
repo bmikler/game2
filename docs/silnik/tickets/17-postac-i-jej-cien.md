@@ -49,7 +49,7 @@ spec (kontrakt assetu, rodzaje Brył) zmieniamy dopiero, gdy człowiek ją przyj
 Znane ograniczenie: przy chodzie do kamery / od kamery krok jest w głąb ekranu, sylwetka przodu go nie pokazuje, więc
 cień z boku pokaże nogi obok siebie, nie krok. Wydajność (8 postaci na Skwerze) dopiero w tickecie 19.
 
-## Przekazanie (2026-11-19, koniec sesji 1) — AKTUALNE
+## Przekazanie (2026-11-19, koniec sesji 1)
 
 Gałąź `silnik-17-postac` (od `silnik-14-polcien`, nie od `main`: gałęzie silnika idą łańcuchem), commit `ca41bd6`.
 201/201 testów zielonych. Niezacommitowane zmiany spoza ticketu (GLOSSARY, mapa wayfindera, `project.godot`, ticket
@@ -101,3 +101,50 @@ wayfindera 40, `reference/nastroj/`) zostały nietknięte — nie dołączać do
 każda postać dostaje cień (bryłę z sylwetki z klatek chodu albo wybrany wariant uproszczony) — wejścia (klatki
 każdego kierunku, sprite stania z przodu i z boku), sprawdzenie; dopisać rodzaj Bryły do spec (krok 5 planu);
 `/code-review` na całość ticketu.
+
+## Przekazanie (2026-11-19, koniec sesji 2) — AKTUALNE
+
+Uwagi człowieka 1–7 z sesji 1:
+
+1. **Wydajność — zmierzona i poprawiona.** Nowy pomiar w Poligonie Ulica: `-- --bench=godzina [--chod] [--npc]
+   [--cien=walec] [--bez-postaci] [--at=x,y]` (kl./s bez vsync, 6 s po 2 s rozgrzewki, liczby z każdej sekundy).
+   Przed sesją postać kosztowała ok. +2,5 ms także stojąc. Rozkład: oświetlenie pikseli sprite'a ~1 ms, odejmowanie
+   cienia ~0,9 ms, pętla sylwetki ~0,6 ms, kopia całego obszaru ×2 ~0,3 ms. Poprawki w `MovingLayer`: cel nie jest
+   czyszczony, rysowany jest tylko prostokąt wokół okien tej i poprzedniej klatki; cały obszar tylko przy zmianie
+   wejść (warstwy Źródeł, światło grup, strojenie). `LightBuffer._redraw()` nie wymusza już przerysowania warstwy
+   ruchomej co klatkę. Kanał naturalny nie jest rysowany bez naturalnych Źródeł; zgaszone grupy są pomijane. Efekt:
+   stojąca postać nocą ≈ 0 ms, w dzień ok. 1 ms (bufor słońca co klatkę sprawdza każdy promień także z nią).
+   Pętla sylwetki w warstwach budowanych raz nic nie kosztuje (warstwa ruchoma bez okien = scena bez postaci, w
+   granicach szumu), więc została. Podstawa (cały bufor co klatkę) była taka już przed ticketem — notatki w tickecie 19.
+2. **3 postacie:** F1 „2 NPC na rutynie (test wydajności)” (domyślnie wyłączone; trasy `npc_routes` w scenie,
+   `PoligonWalker.route_m`), `--npc` w benchu, przełącznik w zrzutach. Pomiar (ms na klatkę, zasilanie laptopa
+   zmieniało wyniki o ±1–2 ms, punkt odniesienia w tym samym przebiegu):
+
+   | | 12:00 | 22:00 |
+   |---|---|---|
+   | przed ticketem 17 | 15,7–17,3 | 12,1–13,2 |
+   | bez postaci | 16,2–18,0 | 11,2–12,3 |
+   | postać stoi | 17,2–18,6 | 10,9–11,8 |
+   | postać idzie | 18,5–20,4 | 14,5 |
+   | 3 idą | 20,5 | 17,9–18,4 |
+
+   W dzień mniej kl./s przez droższą podstawę (słońce z półcieniem na całym buforze); same postacie kosztują w dzień
+   mniej niż w nocy (w nocy wiele Źródeł w zasięgu sprite'a).
+3. **Uproszczone bryły — odłożone** (decyzja człowieka): opis jako możliwa optymalizacja w tickecie 19.
+4. **„Chodzi nad cieniem” — naprawione.** Klatki chodu bokiem kończą się 2–4 px wyżej niż sprite stania, a kotwica
+   była ze stania. Teraz klatka boczna stoi na swoim najniższym pikselu (przód i tył zostają na kotwicy stania:
+   stopa wysunięta do kamery jest niżej, bo bliżej). Grubość bryły bokiem (głębia w d z szerokości przodu, ok. ±0,3 m
+   w barkach z rękami) jest zgodna z ciałem, nie powodowała przesunięcia. Uwaga do grafiki: klatki boczne mają ~67 px
+   wzrostu, stanie 72.
+5. **Jasna obwódka:** odtworzony kadr 04:53 z postacią i bez niej — żaden piksel podłogi nie jest jaśniejszy z postacią
+   (poza pojedynczymi przeskokami ditheru A′). Nowa bramka `test_gate_moving_shadow_never_brightens_the_lamps_light`
+   (kanał sztuczny z ruchomą ≤ bez niej wszędzie) i `test_body_walked_out_of_the_view_leaves_no_shadow_behind`
+   (częściowe przerysowanie nie zostawia śladu). Obwódkę widać więc najpewniej jako kontrast półcienia i ditheru
+   wokół ciemnego cienia, nie dodatkowe światło — do obejrzenia przez człowieka na żywo.
+6. **Cień głowy poza cieniem kamienicy — fizycznie poprawny.** 12:18, słońce ~30°, krawędź cienia ok. 1,46 m przed
+   stopami: linia słońce–dach ma tam 1,46·tan 30° ≈ 0,84 m, więc ciało powyżej 0,84 m jest w słońcu; czubek głowy
+   (1,8 m) rzuca cień 3,1 m od stóp, ok. 1,7 m (~40 px) poza krawędzią cienia budynku.
+7. Bez zmian (jasna „czapka” walca, latarnie nie sortowane z postacią, ciemny przód nocą).
+
+**Dalej:** ocena człowieka na żywo (chód bokiem, 3 postacie, obwódka przy lampie); po zatwierdzeniu cienia kroki
+z sesji 1 (Przepis postaci, spec, `/code-review` całości).

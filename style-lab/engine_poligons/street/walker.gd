@@ -30,6 +30,9 @@ const CYLINDER_SIZE_M: Vector3 = Vector3(0.54, 0.54, 1.8)
 @export var start_m: Vector3 = Vector3.ZERO
 ## Where it may walk: x and d (metres).
 @export var walk_area_m: Rect2 = Rect2(-50.0, -9.6, 100.0, 24.6)
+## A routine instead of the move actions (an NPC): it walks from point to point (x, d in metres) and
+## round again. Empty: the player walks it.
+@export var route_m: PackedVector2Array = PackedVector2Array()
 
 var shadow_shape: ShadowShape = ShadowShape.SILHOUETTE:
 	set(value):
@@ -40,10 +43,11 @@ var _occluder: Occluder
 var _solid: Solid
 var _sprite: AssetSprite
 var _stack: SilhouetteStack
-## Per view and mirror (index view * 2 + mirrored): the standing texture, its anchor, the walk frames
-## and the stack frame of each (standing first).
+## Per view and mirror (index view * 2 + mirrored): the standing texture, its anchor, the walk frames,
+## and per frame (standing first) its anchor's y and stack frame.
 var _stand: Array[Texture2D] = []
 var _anchors: Array[Vector2i] = []
+var _anchor_ys: Array[PackedInt32Array] = []
 var _walks: Array[Array] = []
 var _stack_frames: Array[PackedInt32Array] = []
 var _position_m: Vector3 = Vector3.ZERO
@@ -51,6 +55,7 @@ var _position_m: Vector3 = Vector3.ZERO
 var _facing: int = 2
 var _walk_time: float = 0.0
 var _walking: bool = false
+var _route_next: int = 0
 ## The Occluder's screen position last set here (a shot may set it itself).
 var _shown_at: Vector2 = Vector2.INF
 
@@ -76,7 +81,8 @@ func _process(delta: float) -> void:
 		var projection: LightProjection = Occluder.PROJECTION
 		var at: Vector2 = _occluder.position
 		_position_m = Vector3(at.x / projection.px_per_m, at.y / (projection.px_per_m * projection.depth_factor), 0.0)
-	var input: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	var input: Vector2 = _route_step(delta) if not route_m.is_empty() \
+			else Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	_walking = input != Vector2.ZERO
 	if _walking:
 		_facing = posmod(roundi(input.angle() / (PI / 4.0)), 8)
@@ -99,6 +105,17 @@ func position_m() -> Vector3:
 	return _position_m
 
 
+## The routine's way this frame (unit, like the move actions; shorter on arrival at a point, which
+## turns it to the next one).
+func _route_step(delta: float) -> Vector2:
+	var to_next: Vector2 = route_m[_route_next] - Vector2(_position_m.x, _position_m.y)
+	var step: float = speed_m_s * delta
+	if to_next.length() <= step:
+		_route_next = (_route_next + 1) % route_m.size()
+		return to_next / maxf(step, 1e-6)
+	return to_next.normalized()
+
+
 func _show() -> void:
 	if _occluder == null:
 		return
@@ -111,7 +128,7 @@ func _show() -> void:
 	if _walking and not walk.is_empty():
 		frame = floori(_walk_time * WALK_FPS) % walk.size()
 	_sprite.texture = walk[frame] if frame >= 0 else _stand[key]
-	_sprite.anchor_px = _anchors[key]
+	_sprite.anchor_px = Vector2i(_anchors[key].x, _anchor_ys[key][frame + 1])
 	if shadow_shape == ShadowShape.SILHOUETTE:
 		_solid.shape = Solid.Shape.SILHOUETTE
 		_solid.position_m = Vector3.ZERO
@@ -125,7 +142,10 @@ func _show() -> void:
 
 
 ## Reads every frame, mirrors the side view and builds the silhouette stack: side frames get their
-## depth from the front standing sprite, front and back frames from the side one.
+## depth from the front standing sprite, front and back frames from the side one. A side walk frame
+## stands on its own lowest pixel (both feet at the body's depth, the lower one on the floor; the
+## walk frames end 2–4 px above the standing sprite); a front or back one on the standing sprite's
+## (the foot stepping toward the camera reaches lower on screen because it is nearer).
 func _load_frames() -> void:
 	_stack = SilhouetteStack.new(1.0 / Occluder.PROJECTION.px_per_m)
 	var stand_images: Array[Image] = []
@@ -144,7 +164,9 @@ func _load_frames() -> void:
 				stand.flip_x()
 				anchor.x = stand.get_width() - anchor.x
 			var frames: PackedInt32Array = PackedInt32Array()
+			var anchor_ys: PackedInt32Array = PackedInt32Array()
 			frames.append(_stack.add_frame(stand, anchor, stand_images[across], stand_anchors[across]))
+			anchor_ys.append(anchor.y)
 			var walk: Array[Texture2D] = []
 			for index: int in WALK_FRAMES:
 				var path: String = WALK % [WALK_VIEWS[view], index]
@@ -154,11 +176,16 @@ func _load_frames() -> void:
 				if mirrored:
 					image.flip_x()
 				walk.append(ImageTexture.create_from_image(image))
-				frames.append(_stack.add_frame(image, anchor, stand_images[across], stand_anchors[across]))
+				var frame_anchor: Vector2i = anchor
+				if view == View.SIDE:
+					frame_anchor.y = image.get_used_rect().end.y
+				frames.append(_stack.add_frame(image, frame_anchor, stand_images[across], stand_anchors[across]))
+				anchor_ys.append(frame_anchor.y)
 			_stand.append(ImageTexture.create_from_image(stand))
 			_anchors.append(anchor)
 			_walks.append(walk)
 			_stack_frames.append(frames)
+			_anchor_ys.append(anchor_ys)
 
 
 static func _image(res_path: String) -> Image:

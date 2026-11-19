@@ -43,7 +43,7 @@ func test_shot_describes_the_scene_hour_and_frame_switch() -> void:
 	var description: ShotDescription = shot.describe()
 	assert_eq(description.scene, SCENE)
 	assert_almost_eq(description.hour, 7.5, 0.05)
-	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "cień postaci": "bryła z sylwetki", "góra mapy": "południe",
+	assert_eq(description.switches, {"kadr": "960×540", "widok debug": "brak", "cień postaci": "bryła z sylwetki", "NPC": "brak", "góra mapy": "południe",
 			"tryb A′": "na sumie", "półcień": "z geometrii (t14)", "wygląd assetu": "ComfyUI, dodatki nadmuchane"})
 
 
@@ -137,6 +137,27 @@ func test_character_shadow_shape_from_f1_reaches_the_walker_and_the_shot() -> vo
 	var replay: Node = _poligon()
 	(replay.get_node("%Shot") as EngineShot).apply(description)
 	assert_eq((replay.get_node("%Walker") as PoligonWalker).shadow_shape, PoligonWalker.ShadowShape.CYLINDER)
+
+
+func test_npcs_from_f1_walk_as_moving_occluders_and_reach_the_shot() -> void:
+	var poligon: Node = _poligon()
+	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
+	assert_eq(engine.scene_description().moving_assets.size(), 1, "only the player without NPCs")
+	var check: CheckBox = poligon.get_node("%NpcCheck") as CheckBox
+	check.button_pressed = true
+	assert_eq(engine.scene_description().moving_assets.size(), 3, "the player and two NPCs")
+	var npc: PoligonWalker = poligon.get_node("Frame/Street/Npc1") as PoligonWalker
+	var start: Vector3 = npc.position_m()
+	for _frame: int in 10:
+		await get_tree().process_frame
+	assert_ne(npc.position_m(), start, "an NPC walks its routine")
+	var description: ShotDescription = (poligon.get_node("%Shot") as EngineShot).describe()
+	assert_eq(description.switches["NPC"], "2 na rutynie")
+	check.button_pressed = false
+	assert_eq(engine.scene_description().moving_assets.size(), 1, "the NPCs leave")
+	var replay: Node = _poligon()
+	(replay.get_node("%Shot") as EngineShot).apply(description)
+	assert_true((replay.get_node("%NpcCheck") as CheckBox).button_pressed)
 
 
 func test_map_top_from_f1_reaches_the_engine_and_the_shot() -> void:

@@ -2,18 +2,28 @@ extends Node
 ## The new street Poligon (light engine): a Location built from contract nodes, rendered at the game
 ## frame and scaled to the window, with an F1 holding the engine panel and the frame switch. Shots
 ## (F12 or the panel's button) record the frame switch too. The move actions walk the character
-## (engine ticket 17); the camera follows it.
+## (engine ticket 17); the camera follows it. Two NPCs on a routine join it when F1 asks (the cost of
+## three walking characters).
 
 ## 960×540 as in game2 (×2 on 1080p), or 640×360 as in the engine map's prototypes.
 const FRAMES: Array[Vector2i] = [Vector2i(960, 540), Vector2i(640, 360)]
 ## The camera looks at the character's middle: this far above its feet (half of 72 px).
 const CAMERA_ABOVE_FEET_PX: float = 36.0
+## The bench's warm-up and measured time (seconds).
+const WARM_UP_S: float = 2.0
+const MEASURE_S: float = 6.0
 
 ## Looks of one asset compared in F1 (engine ticket 10: the stall from ComfyUI with its two add-on
 ## normal maps, and the simple painted sprite); the first is the starting one.
 @export var asset_looks: Array[AssetLook] = []
 ## The sprite whose look the switch changes.
 @export var looked_asset: AssetSprite
+## The NPCs' routines (x, d in metres; each starts at its last point) and speeds, when F1 adds them.
+@export var npc_routes: Array[PackedVector2Array] = []
+@export var npc_speeds_m_s: PackedFloat32Array = PackedFloat32Array()
+
+## The NPCs on the street now (none until F1 adds them).
+var _npcs: Array[PoligonWalker] = []
 
 @onready var _frame: SubViewport = %Frame
 @onready var _picture: TextureRect = %Picture
@@ -26,6 +36,7 @@ const CAMERA_ABOVE_FEET_PX: float = 36.0
 @onready var _camera: Camera2D = %Camera
 @onready var _walker: PoligonWalker = %Walker
 @onready var _shadow_choice: OptionButton = %ShadowChoice
+@onready var _npc_check: CheckBox = %NpcCheck
 
 
 func _ready() -> void:
@@ -60,8 +71,13 @@ func _ready() -> void:
 	for shape_name: String in PoligonWalker.SHADOW_SHAPES:
 		_shadow_choice.add_item(shape_name)
 	_shadow_choice.select(_walker.shadow_shape)
-	_shadow_choice.item_selected.connect(func(index: int) -> void: _walker.shadow_shape = index as PoligonWalker.ShadowShape)
+	_shadow_choice.item_selected.connect(func(index: int) -> void: _set_shadow_shape(index as PoligonWalker.ShadowShape))
+	_npc_check.toggled.connect(_set_npcs)
 	_follow_walker()
+
+	var bench: String = _user_arg("bench")
+	if not bench.is_empty():
+		_bench.call_deferred(bench.to_float())
 
 	_engine_panel.shot_requested.connect(func() -> void: _shot.take())
 	_shot.taken.connect(_engine_panel.show_shot)
@@ -69,6 +85,7 @@ func _ready() -> void:
 	_shot.add_switch("kadr", _frame_name, _select_frame)
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("cień postaci", _shadow_name, _select_shadow)
+	_shot.add_switch("NPC", _npc_name, _select_npc)
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
 	_shot.add_switch("półcień", _penumbra_name, _select_penumbra)
@@ -77,25 +94,79 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if not _walker.is_inside_tree():
+		return
 	_follow_walker()
-	_sort_walker()
+	_sort_walkers()
 
 
-## Draws the character before the assets standing nearer the camera than its feet (larger d), so
-## the stall in front hides its legs; after the rest of the street.
-func _sort_walker() -> void:
+## Draws each character before the assets and characters standing nearer the camera than its feet
+## (larger d), so the stall in front hides its legs; after the rest of the street. Far ones first.
+func _sort_walkers() -> void:
 	var street: Node = _walker.get_parent()
-	var feet_d: float = _walker.position_m().y
-	var target: int = 0
-	for child: Node in street.get_children():
-		if child == _walker:
-			continue
-		var occluder: Occluder = child as Occluder
-		if occluder != null and occluder.asset_sprite() != null and occluder.position_m.y > feet_d:
-			break
-		target += 1
-	if _walker.get_index() != target:
-		street.move_child(_walker, target)
+	var walkers: Array[PoligonWalker] = [_walker]
+	walkers.append_array(_npcs)
+	walkers.sort_custom(func(a: PoligonWalker, b: PoligonWalker) -> bool: return a.position_m().y < b.position_m().y)
+	for walker: PoligonWalker in walkers:
+		var feet_d: float = walker.position_m().y
+		var target: int = 0
+		for child: Node in street.get_children():
+			if child == walker:
+				continue
+			if _feet_d(child) > feet_d:
+				break
+			target += 1
+		if walker.get_index() != target:
+			street.move_child(walker, target)
+
+
+## The d of a street child drawn in depth order: an asset's or a character's feet (−INF: the rest).
+static func _feet_d(child: Node) -> float:
+	var walker: PoligonWalker = child as PoligonWalker
+	if walker != null:
+		return walker.position_m().y
+	var occluder: Occluder = child as Occluder
+	if occluder != null and occluder.asset_sprite() != null:
+		return occluder.position_m.y
+	return -INF
+
+
+## Puts the NPCs on the street or takes them off; the engine reads its Occluders again.
+func _set_npcs(on: bool) -> void:
+	var street: Node = _walker.get_parent()
+	for npc: PoligonWalker in _npcs:
+		street.remove_child(npc)
+		npc.queue_free()
+	_npcs.clear()
+	if on:
+		for index: int in npc_routes.size():
+			var npc: PoligonWalker = PoligonWalker.new()
+			npc.name = "Npc%d" % (index + 1)
+			npc.route_m = npc_routes[index]
+			npc.speed_m_s = npc_speeds_m_s[index] if index < npc_speeds_m_s.size() else npc.speed_m_s
+			var start: Vector2 = npc_routes[index][-1]
+			npc.start_m = Vector3(start.x, start.y, 0.0)
+			street.add_child(npc)
+			npc.shadow_shape = _walker.shadow_shape
+			_npcs.append(npc)
+	_engine.rebuild_scene()
+
+
+## The shadow shape of every character (F1, shots).
+func _set_shadow_shape(shape: PoligonWalker.ShadowShape) -> void:
+	_walker.shadow_shape = shape
+	for npc: PoligonWalker in _npcs:
+		npc.shadow_shape = shape
+
+
+## The NPC switch as shots record it.
+func _npc_name() -> String:
+	return "2 na rutynie" if _npc_check.button_pressed else "brak"
+
+
+## Sets the NPC switch from a shot.
+func _select_npc(npc_name: String) -> void:
+	_npc_check.button_pressed = npc_name != "brak"
 
 
 ## The camera on the character, on whole pixels.
@@ -159,7 +230,7 @@ func _select_shadow(shape_name: String) -> void:
 		push_warning("Unknown character shadow in the shot: %s" % shape_name)
 		return
 	_shadow_choice.select(index)
-	_walker.shadow_shape = index as PoligonWalker.ShadowShape
+	_set_shadow_shape(index as PoligonWalker.ShadowShape)
 
 
 func _map_top_name() -> String:
@@ -213,6 +284,71 @@ func _select_debug_view(view_name: String) -> void:
 	_engine_panel.debug_view_choice().select(index)
 	_engine_panel.show_debug_hint(index)
 	_engine.set_debug_view(index as LightEngine.DebugView)
+
+
+## PROTOTYPE (engine ticket 17): `-- --bench=22 [--chod] [--npc] [--cien=walec] [--bez-postaci] [--at=x,y]`:
+## frames per second without vsync (MEASURE_S after WARM_UP_S, time stopped), printed as a BENCH line
+## with the count of each second, then quit. `--chod` walks the character left and right (1 s each
+## way); `--cien` picks the shadow shape by its F1 name; `--at` puts the feet there (screen px).
+func _bench(hour: float) -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	_engine.rate = 0.0
+	_engine.set_hour(hour)
+	var shadow: String = _user_arg("cien")
+	if not shadow.is_empty():
+		_select_shadow(shadow)
+	var at: PackedFloat64Array = _user_arg("at").split_floats(",")
+	if at.size() == 2:
+		_walker.body().position = Vector2(at[0], at[1])
+	if _user_arg("bez-postaci") == "1":
+		_walker.get_parent().remove_child(_walker)
+		_engine.rebuild_scene()
+	var walking: bool = _user_arg("chod") == "1"
+	if _user_arg("npc") == "1":
+		_npc_check.button_pressed = true
+	while not _engine.is_complete():
+		await RenderingServer.frame_post_draw
+	var start: int = Time.get_ticks_usec()
+	var second_start: int = start
+	var frames: int = 0
+	var second_frames: int = 0
+	var per_second: PackedStringArray = PackedStringArray()
+	var measured: int = 0
+	while true:
+		var clock: float = (Time.get_ticks_usec() - start) / 1e6
+		if clock >= WARM_UP_S + MEASURE_S:
+			break
+		if walking:
+			var right: bool = fmod(clock, 2.0) < 1.0
+			Input.action_release(&"move_left" if right else &"move_right")
+			Input.action_press(&"move_right" if right else &"move_left")
+		await RenderingServer.frame_post_draw
+		second_frames += 1
+		var now: int = Time.get_ticks_usec()
+		if now - second_start >= 1000000:
+			per_second.append(str(second_frames))
+			second_frames = 0
+			second_start = now
+		if clock < WARM_UP_S:
+			measured = now
+			frames = 0
+		else:
+			frames += 1
+	var seconds: float = (Time.get_ticks_usec() - measured) / 1e6
+	print("BENCH %.1f%s%s: %.0f fps (%.2f ms); per second: %s" % [hour, " chód" if walking else "",
+			" +2 NPC" if _npc_check.button_pressed else "", frames / seconds,
+			seconds * 1000.0 / frames, " ".join(per_second)])
+	get_tree().quit()
+
+
+## The value of `--key=value` after `--` on the command line ("1" for a bare `--key`, "" without it).
+static func _user_arg(key: String) -> String:
+	for argument: String in OS.get_cmdline_user_args():
+		if argument == "--" + key:
+			return "1"
+		if argument.begins_with("--%s=" % key):
+			return argument.trim_prefix("--%s=" % key)
+	return ""
 
 
 ## The whole frame as large as the window allows, centred. The scale need not be whole (a maximised
