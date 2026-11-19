@@ -148,7 +148,7 @@ Uwagi człowieka 1–7 z sesji 1:
 
 Po drugim obejrzeniu (zrzuty 08:11, 08:23, 10:31): **stanie bokiem — cień od palców, pięty nad cieniem.** W
 rzucie widać podeszwę buta, więc pięta (i dalsza stopa) kończy się kilka pikseli nad najniższym pikselem sprite'a, a
-stos brał każdy rząd za wysokość. Teraz  (0,12 m): w pasie stopy każdy rząd bierze kolumny z
+stos brał każdy rząd za wysokość. Teraz `SilhouetteStack.FOOT_M` (0,12 m): w pasie stopy każdy rząd bierze kolumny z
 rzędów pasa nad nim (tak samo głębia z widoku prostopadłego), cała stopa stoi na podłodze. Zrzuty zapisują też
 kierunek postaci (przełącznik „kierunek postaci”), więc odtworzenie pokazuje ją tak samo.
 
