@@ -2,7 +2,7 @@
 id: 17
 title: Postać i jej cień
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [09, 13]
 ---
@@ -13,15 +13,34 @@ Chodząca postać jako ruchoma Przesłona (walec): cień od wszystkich Źródeł
 
 ## Kryteria akceptacji
 
-- [ ] Flaga „ruchoma”, ścieżka ruchomych w Opisie sceny (testy).
-- [ ] Sterowanie postacią w Poligonie (Input Map), poza addonem.
-- [ ] Ten sam Stan doby dla okna postaci i reszty Bufora.
-- [ ] Bramka: cień ruchomej Bryły = cień tej samej Bryły nieruchomej.
-- [ ] Okno liczone tylko w kadrze.
+- [x] Flaga „ruchoma”, ścieżka ruchomych w Opisie sceny (testy).
+- [x] Sterowanie postacią w Poligonie (Input Map), poza addonem.
+- [x] Ten sam Stan doby dla okna postaci i reszty Bufora.
+- [x] Bramka: cień ruchomej Bryły = cień tej samej Bryły nieruchomej.
+- [x] Okno liczone tylko w kadrze.
 
 ## Jak sprawdzić
 
 Sklep o 22:00: przejdź między latarniami, kilka cieni obraca się i wydłuża, bok postaci jaśniejszy od latarni. W południe jeden cień i ciemniejsza plamka pod stopami.
+
+## Stan (2026-11-19) — zamknięty
+
+Zamknięty 2026-11-19 po dwóch sesjach i dwóch ocenach człowieka: „reszta wygląda super”; stanie bokiem „dalej nie jest
+idealnie, ale to będziemy szlifować już we właściwej grze przy tworzeniu postaci”. Gałąź `silnik-17-postac`.
+
+- **Ruchoma Przesłona:** `Occluder.moving`, ścieżka ruchomych w Opisie sceny; `MovingLayer` liczy cień ruchomych
+  tylko w oknach w kadrze (odejmowanie od warstw Źródeł, niebo analitycznie, sprite ruchomy oświetlony jak
+  nieruchomy), słońce w buforze. Rysuje tylko prostokąt wokół okien tej i poprzedniej klatki; cały obszar przy zmianie
+  wejść. Bramki: ruchoma = nieruchoma (lampa, słońce, niebo, sprite), cień nie rozjaśnia, brak śladu po odejściu.
+- **Bryła z sylwetki (przyjęta):** `SilhouetteStack` / `Solid.Shape.SILHOUETTE`: plaster na rząd pikseli klatki
+  (≤ 2 elipsy), głębia z sylwetki prostopadłej, pas stopy (`FOOT_M` 0,12 m) stoi na podłodze. Cień ma nogi i krok.
+  Walec zostaje jako Bryła ogólna i porównanie w F1. Reguła dopisana do spec i do Przepisu postaci (krok 10).
+- **Poligon Ulica:** `PoligonWalker` (detektyw, 8 kierunków; klatki boczne na własnym najniższym pikselu), F1 „Cień
+  postaci”, „2 NPC na rutynie”; zrzuty zapisują cień, NPC i kierunek postaci; `-- --bench=godzina [--chod] [--npc]`.
+- **Wydajność:** postać stojąca ≈ 0 ms nocą, ~1 ms w dzień; idąca +1,5–2,5 ms; 3 idące +3,5 ms w dzień, +6 ms nocą.
+  Podstawa (cały bufor co klatkę) i uproszczone Bryły jako możliwa optymalizacja: ticket 19.
+- **Do szlifu przy postaciach gry:** stanie bokiem (stopy w rzucie), klatki boczne niższe od stania (67 vs 72 px),
+  jasna „czapka” walca, latarnie nie sortowane z postacią.
 
 ## Plan (2026-11-18, czeka na „ruszamy” człowieka)
 

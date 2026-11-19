@@ -171,6 +171,21 @@ Jeszcze nieustalone. Ticket „Mapy normalnych postaci: Pixellab, Laigter czy w�
 
 W Godot mapę podpinamy jako `CanvasTexture.normal_texture`, żeby światła 2D cieniowały postać.
 
+## 10. Cień (bryła z sylwetki)
+
+Każda postać rzuca cień bryłą zbudowaną z jej klatek (silnik światła, ticket 17; reguła w `docs/silnik/spec.md`).
+Nic nie generujemy: bryłę liczy silnik przy wczytaniu (`SilhouetteStack`).
+
+- **Wejścia:** klatki chodu każdego kierunku (przód, bok, tył) i sprite stania z przodu i z boku (głębia bryły). Postać
+  w Poligonie: wzór `engine_poligons/street/walker.gd`.
+- **Kotwica:** stanie i chód przodem / tyłem stoją na dolnej krawędzi sprite'a stania; klatka boczna na swoim najniższym
+  pikselu (obie stopy na tej samej głębi).
+- **Sprawdzenie:** Poligon Ulica (`street_engine.bat`) rano (długie cienie), w południe i o 22:00 przy latarniach:
+  chód bokiem i do kamery, stanie w każdym kierunku; cień zaczyna się pod stopami, ma nogi i krok. Zrzut F12 zapisuje
+  kierunek postaci, więc uwagę można odtworzyć.
+- **Znane do szlifu:** przy staniu bokiem stopy w rzucie (podeszwa, dalsza stopa) wciąż nie siedzą idealnie na cieniu;
+  klatki chodu bokiem niższe od stania (67 vs 72 px) — do poprawy przy klatkach (krok 7).
+
 ## Koszt i czas na postać
 
 - **Lokalnie (0 zł):** ok. 15–25 obrazów Qwen (ok. 40 min pracy karty) i kilka konceptów FLUX.
