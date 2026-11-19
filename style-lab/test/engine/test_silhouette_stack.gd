@@ -17,6 +17,7 @@ func test_two_legs_make_two_spans_and_the_body_one() -> void:
 	var sprite: Image = _image(Vector2i(10, 8), [Rect2i(2, 4, 2, 4), Rect2i(6, 4, 2, 4), Rect2i(2, 0, 6, 4)])
 	var across: Image = _image(Vector2i(10, 8), [Rect2i(4, 0, 2, 8)])
 	var stack: SilhouetteStack = SilhouetteStack.new(PX)
+	stack.foot_m = 0.0
 	var frame: int = stack.add_frame(sprite, Vector2i(5, 8), across, Vector2i(5, 8))
 	var legs: PackedVector2Array = stack.spans(frame, 0)
 	assert_almost_eq(legs[0].x, -2.0 * PX, 1e-6, "left leg's centre: pixels 2–3 around anchor 5")
@@ -72,3 +73,20 @@ func test_data_has_a_row_per_frame_and_the_anchor_offset() -> void:
 	assert_eq(data.get_width(), 1 + 8 * 2)
 	assert_almost_eq(data.get_pixel(0, 0).r, 2.0 * PX, 1e-6, "anchor 2 px right of the bounds' left edge")
 	assert_almost_eq(data.get_pixel(2, 0).r, 2.0 * PX, 1e-6, "row 0's half depth")
+
+
+func test_the_foot_band_stands_on_the_floor() -> void:
+	# A shoe seen from the side in the projection: its sole shows, so the heel (x 4–6) ends 2 px above
+	# the toe's tip (x 1–3). Row by row the heel would float; in the foot band (3 px here) every row
+	# takes the columns of the band's rows above it, so heel and toe both reach the floor.
+	var sprite: Image = _image(Vector2i(8, 10), [Rect2i(1, 7, 3, 3), Rect2i(4, 5, 3, 3), Rect2i(4, 0, 3, 5)])
+	var across: Image = _image(Vector2i(8, 10), [Rect2i(3, 0, 2, 9), Rect2i(2, 7, 4, 2)])
+	var stack: SilhouetteStack = SilhouetteStack.new(PX)
+	stack.foot_m = 3.0 * PX
+	var frame: int = stack.add_frame(sprite, Vector2i(4, 10), across, Vector2i(4, 10))
+	var floor_row: PackedVector2Array = stack.spans(frame, 0)
+	assert_almost_eq(floor_row[0].x - floor_row[0].y, -3.0 * PX, 1e-6, "toe from x 1")
+	assert_almost_eq(floor_row[0].x + floor_row[0].y, 3.0 * PX, 1e-6, "heel to x 7")
+	assert_almost_eq(stack.half_depth(frame, 0), 2.0 * PX, 1e-6, "depth: the widest run in the band seen across (4 px)")
+	var above: PackedVector2Array = stack.spans(frame, 3)
+	assert_almost_eq(above[0].x - above[0].y, 0.0, 1e-6, "above the band row by row: the heel's column only")

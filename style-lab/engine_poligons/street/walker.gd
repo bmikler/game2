@@ -38,6 +38,13 @@ var shadow_shape: ShadowShape = ShadowShape.SILHOUETTE:
 	set(value):
 		shadow_shape = value
 		_show()
+## Where it faces: 0 right, then clockwise in 45° steps (2 down: front, 6 up: back). Shots record it.
+var facing: int:
+	get:
+		return _facing
+	set(value):
+		_facing = posmod(value, 8)
+		_show()
 
 var _occluder: Occluder
 var _solid: Solid

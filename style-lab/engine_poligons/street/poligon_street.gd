@@ -86,6 +86,8 @@ func _ready() -> void:
 	_shot.add_switch("widok debug", _debug_view_name, _select_debug_view)
 	_shot.add_switch("cień postaci", _shadow_name, _select_shadow)
 	_shot.add_switch("NPC", _npc_name, _select_npc)
+	_shot.add_switch("kierunek postaci", func() -> String: return str(_walker.facing),
+			func(value: String) -> void: _walker.facing = value.to_int())
 	_shot.add_switch("góra mapy", _map_top_name, _select_map_top)
 	_shot.add_switch("tryb A′", _style_mode_name, _select_style_mode)
 	_shot.add_switch("półcień", _penumbra_name, _select_penumbra)

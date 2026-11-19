@@ -146,5 +146,11 @@ Uwagi człowieka 1–7 z sesji 1:
    (1,8 m) rzuca cień 3,1 m od stóp, ok. 1,7 m (~40 px) poza krawędzią cienia budynku.
 7. Bez zmian (jasna „czapka” walca, latarnie nie sortowane z postacią, ciemny przód nocą).
 
+Po drugim obejrzeniu (zrzuty 08:11, 08:23, 10:31): **stanie bokiem — cień od palców, pięty nad cieniem.** W
+rzucie widać podeszwę buta, więc pięta (i dalsza stopa) kończy się kilka pikseli nad najniższym pikselem sprite'a, a
+stos brał każdy rząd za wysokość. Teraz  (0,12 m): w pasie stopy każdy rząd bierze kolumny z
+rzędów pasa nad nim (tak samo głębia z widoku prostopadłego), cała stopa stoi na podłodze. Zrzuty zapisują też
+kierunek postaci (przełącznik „kierunek postaci”), więc odtworzenie pokazuje ją tak samo.
+
 **Dalej:** ocena człowieka na żywo (chód bokiem, 3 postacie, obwódka przy lampie); po zatwierdzeniu cienia kroki
 z sesji 1 (Przepis postaci, spec, `/code-review` całości).

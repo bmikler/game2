@@ -6,12 +6,19 @@ extends RefCounted
 ## is half the widest run in the same row of a sprite seen across (the front view for a side frame,
 ## the side view for a front or back frame). Frames are added once; the light engine picks one per
 ## animation frame (Solid.frame), so the shadow walks with the sprite.
+## The feet stand on the floor: in the projection a shoe shows its sole, so its heel or the far foot
+## ends a few pixels above the sprite's lowest pixel. Within the foot band (the lowest `foot_m`) each
+## row takes every column opaque in the band's rows above it, so the whole foot reaches the floor.
 
 ## Elliptic spans per row (two legs); a row with more runs closes its narrowest gaps.
 const MAX_SPANS: int = 2
+## The foot band's height by default (a shoe up to the ankle).
+const FOOT_M: float = 0.12
 
 ## Metres per sprite pixel (the projection's 1 / px_per_m): a row's height and a pixel's width.
 var pixel_m: float = 0.025
+## The foot band's height (0: row by row from the floor up).
+var foot_m: float = FOOT_M
 ## Per frame: per row MAX_SPANS × (centre x, half width) in metres from the anchor, then half depth.
 var _rows: Array[PackedFloat32Array] = []
 ## Per frame: the bounds relative to the anchor (x, d centred on it, z from 0 up).
@@ -32,10 +39,13 @@ func add_frame(sprite: Image, anchor_px: Vector2i, across: Image, across_anchor_
 	var bounds: AABB = AABB()
 	var has_bounds: bool = false
 	var row_count: int = anchor_px.y
+	var foot_rows: int = ceili(foot_m / pixel_m - 1e-4)
 	for row: int in row_count:
+		# Rows of the foot band also take the band's rows above them.
+		var band_top: int = maxi(row, foot_rows - 1)
 		var y: int = anchor_px.y - 1 - row
-		var spans: Array[Vector2] = _merged(_runs(sprite, y), MAX_SPANS)
-		var depth: float = _half_depth(across, across_anchor_px.y - 1 - row)
+		var spans: Array[Vector2] = _merged(_runs(sprite, anchor_px.y - 1 - band_top, y), MAX_SPANS)
+		var depth: float = _half_depth(across, across_anchor_px.y - 1 - band_top, across_anchor_px.y - 1 - row)
 		for index: int in MAX_SPANS:
 			var centre: float = 0.0
 			var half: float = 0.0
@@ -122,14 +132,22 @@ static func data_of(stacks: Array[SilhouetteStack]) -> Image:
 	return image
 
 
-## Runs of opaque pixels in row `y` as (first x, x past the last) in pixels.
-static func _runs(image: Image, y: int) -> Array[Vector2]:
+## Runs of columns opaque in any row from `top_y` to `bottom_y`, as (first x, x past the last) in
+## pixels.
+static func _runs(image: Image, top_y: int, bottom_y: int) -> Array[Vector2]:
 	var runs: Array[Vector2] = []
-	if y < 0 or y >= image.get_height():
+	var first: int = maxi(top_y, 0)
+	var last: int = mini(bottom_y, image.get_height() - 1)
+	if first > last:
 		return runs
 	var start: int = -1
 	for x: int in image.get_width() + 1:
-		var opaque: bool = x < image.get_width() and image.get_pixel(x, y).a >= 0.5
+		var opaque: bool = false
+		if x < image.get_width():
+			for y: int in range(first, last + 1):
+				if image.get_pixel(x, y).a >= 0.5:
+					opaque = true
+					break
 		if opaque and start < 0:
 			start = x
 		elif not opaque and start >= 0:
@@ -151,9 +169,9 @@ static func _merged(runs: Array[Vector2], count: int) -> Array[Vector2]:
 	return merged
 
 
-## Half the widest run of `image` in row `y`, in metres (0: an empty row).
-func _half_depth(image: Image, y: int) -> float:
+## Half the widest run of `image` over rows `top_y` … `bottom_y`, in metres (0: empty rows).
+func _half_depth(image: Image, top_y: int, bottom_y: int) -> float:
 	var widest: float = 0.0
-	for run: Vector2 in _runs(image, y):
+	for run: Vector2 in _runs(image, top_y, bottom_y):
 		widest = maxf(widest, run.y - run.x)
 	return widest * 0.5 * pixel_m
