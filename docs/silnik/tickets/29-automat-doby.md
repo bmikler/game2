@@ -35,3 +35,15 @@ skoku między minutami, nie kierunek ani ruch pasów.
 
 Narzędzie: zamyka Claude po własnej weryfikacji końcowej (pamięć: tooling tickets bez sprawdzenia człowieka).
 `node tools/test.mjs` zielony; trzy wstrzyknięte błędy z ticketu 13 dają czerwony wynik z godziną i miejscem.
+
+## Stan (2026-11-21, gałąź `silnik-29-automat-doby`)
+
+Zrobione: `tools/light_engine/day_sweep.gd` (reguły), `day_sweep_sampler.gd` + `.gdshader` (próbka na GPU, co 4. piksel),
+bramka `test/engine_poligons/test_day_sweep_gpu.gd`, testy logiki `test/tools/test_day_sweep.gd` (15), plansza
+`node tools/day_sheet.mjs [liczba] [plik]` (24 miniatury, ok. 20 s). Trzy błędy z ticketu 13 wstrzyknięte i cofnięte:
+rampa okien → czerwono 5:40–6:00, pasy lamp na kotwicy nieba → czerwono całą noc, dołek nieba → czerwono 5:50.
+Znalezisko: skoki poziomów słońca → ticket 30, w bramce na liście `KNOWN`. `node tools/test.mjs`: 221 zielonych.
+
+**Otwarte:** czas bramki 36 s w pierwszym przebiegu, 101 s w ostatnim (laptop na baterii; sama analiza `check()` na
+zapisanym przebiegu 19 s → 81 s). Cel ≤ 1 min niepotwierdzony: zmierzyć na zasilaniu, ewentualnie przyspieszyć `check()`
+(np. lista aktywnych pikseli liczona raz). Przegląd kodu (`code-review`) jeszcze nie zrobiony.

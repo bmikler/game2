@@ -241,6 +241,15 @@ func styled_image() -> Image:
 	return _style.image()
 
 
+## The textures the images above are read from: natural light, artificial (null without artificial
+## sources) and styled, for tools that read them on the GPU (the day sweep).
+func textures() -> Array[Texture2D]:
+	var artificial: Texture2D = null
+	if _sources.has_channel(SourceProfile.Channel.ARTIFICIAL):
+		artificial = _moving.texture(SourceProfile.Channel.ARTIFICIAL)
+	return [_soft_view.get_texture(), artificial, _style.texture()]
+
+
 ## Whether the sky layer of the current scene is complete (it takes a few frames after `set_scene`).
 func is_sky_complete() -> bool:
 	return _sky.is_complete()

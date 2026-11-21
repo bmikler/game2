@@ -177,6 +177,12 @@ func styled_image() -> Image:
 	return _buffer.styled_image()
 
 
+## The buffer's natural, artificial (null without artificial sources) and styled textures, the
+## sources of the images above, for tools that read them on the GPU.
+func buffer_textures() -> Array[Texture2D]:
+	return _buffer.textures()
+
+
 ## Whether the sky layer is complete: it is built over a few frames after loading or changing the
 ## Location (until then the sky is already there, from fewer directions).
 func is_sky_complete() -> bool:
