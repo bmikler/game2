@@ -71,18 +71,6 @@ class Frame:
 	## the sun's light and the whole styled light (lux before exposure).
 	var data: PackedFloat32Array = PackedFloat32Array()
 
-	func levelled(index: int) -> float:
-		return data[index * 4]
-
-	func artificial(index: int) -> float:
-		return data[index * 4 + 1]
-
-	func sun(index: int) -> float:
-		return data[index * 4 + 2]
-
-	func total(index: int) -> float:
-		return data[index * 4 + 3]
-
 	func pixel_count() -> int:
 		return data.size() / 4
 
@@ -192,6 +180,8 @@ func check() -> Array[Finding]:
 		var step: Step = _scan(frames[index], frames[(index + 1) % count])
 		steps.append(step)
 		var sources: SourceChange = source_change(index)
+		# A step where any group switches is left out whole: the gate cannot tell which pixels
+		# that group lights apart from the others' (a known limit; pulsing still looks at it).
 		if sources == SourceChange.SWITCH:
 			continue
 		var standing: Finding = _sources_stand(step, sources == SourceChange.RAMP)
@@ -203,8 +193,6 @@ func check() -> Array[Finding]:
 				findings.append(large)
 	findings.append_array(_pulsing(steps))
 	return findings
-
-
 
 
 ## Exposure only falls from the darkest frame to the brightest and only rises after it, and the
@@ -244,16 +232,6 @@ func check_monotonic() -> Array[Finding]:
 		if (darkest + step) % frames.size() == brightest:
 			brightening = false
 	return findings
-
-
-## Per sampled pixel whether its levelled light went up a level, down, or stayed.
-func level_changes(first: Frame, second: Frame) -> PackedByteArray:
-	var changes: PackedByteArray = PackedByteArray()
-	changes.resize(first.pixel_count())
-	for index: int in changes.size():
-		changes[index] = _change(first.data[index * 4], second.data[index * 4],
-				maxf(first.data[index * 4 + 3], second.data[index * 4 + 3]))
-	return changes
 
 
 ## How the source groups' light changes between frame `index` and the next. A switch shorter than

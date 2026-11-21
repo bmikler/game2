@@ -21,6 +21,8 @@ func test_gate_the_street_day_has_no_waves_jumps_or_pulsing() -> void:
 	add_child_autofree(poligon)
 	var engine: LightEngine = poligon.get_node("%Engine") as LightEngine
 	engine.rate = 0.0
+	assert_eq(engine.tuning_set().sky_style, TuningSet.SkyStyle.SMOOTH,
+			"the sweep reads the levels under a smooth sky (B); other sky styles put the sky on levels too")
 	while not engine.is_complete():
 		await RenderingServer.frame_post_draw
 	var sampler: DaySweepSampler = DaySweepSampler.new()

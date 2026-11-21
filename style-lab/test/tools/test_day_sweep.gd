@@ -179,10 +179,10 @@ func test_a_thin_shadow_passing_is_not_pulsing() -> void:
 
 
 func test_changes_under_a_visible_share_of_the_pixels_light_are_no_level_change() -> void:
-	var sweep: DaySweep = _sweep(_constant(2), func(frame: int, _index: int) -> Vector4:
-		return Vector4(2.0 if frame == 0 else 3.0, 0.0, 0.0, 1000.0))
-	var changes: PackedByteArray = sweep.level_changes(sweep.frames[0], sweep.frames[1])
-	assert_eq(changes.count(DaySweep.Change.NONE), SIDE * SIDE, "1 lx of 1000 is not visible")
+	# The whole field moves 2 → 3 lx on its levels, but in 1000 lx of light: not a visible change.
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:
+		return Vector4(2.0 if frame < 3 else 3.0, 0.0, 0.0, 1000.0), 20.0)
+	assert_eq(sweep.check().size(), 0)
 
 
 func test_a_saved_sweep_loads_the_same() -> void:
