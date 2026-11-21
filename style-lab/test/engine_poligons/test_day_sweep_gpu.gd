@@ -10,9 +10,9 @@ const STEP_MIN: int = 10
 ## along a long edge, so both are still sampled.
 const STRIDE: int = 4
 ## Findings known and ticketed: reported, not failing. A rule leaves this list with its ticket.
-const KNOWN: Dictionary[String, String] = {
-	DaySweep.SUN_JUMP: "engine ticket 30 (the sun's A′ levels jump over the whole sunlit street)",
-}
+const KNOWN: Dictionary[String, String] = {}
+## The last sweep, to try the rules again without sweeping the day (DaySweep.load_from).
+const SAVED_SWEEP: String = "user://day_sweep_street.bin"
 
 
 func test_gate_the_street_day_has_no_waves_jumps_or_pulsing() -> void:
@@ -33,6 +33,7 @@ func test_gate_the_street_day_has_no_waves_jumps_or_pulsing() -> void:
 		engine.set_hour(minute / 60.0)
 		await RenderingServer.frame_post_draw
 		await sampler.sample(engine, sweep)
+	sweep.save(SAVED_SWEEP)
 	var report: PackedStringArray = PackedStringArray()
 	var known: Dictionary[String, int] = {}
 	for finding: DaySweep.Finding in sweep.check():

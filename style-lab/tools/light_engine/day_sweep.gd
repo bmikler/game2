@@ -7,29 +7,37 @@ extends RefCounted
 ## DaySweepSampler reads the frames on the GPU. Logic tests: test/tools/test_day_sweep.gd; the gate:
 ## test/engine_poligons/test_day_sweep_gpu.gd.
 
-## A pixel's levelled light changed level when it moved by more than this share: one A′ level is
-## 2^0.5 = +41 % (or −29 %), while the readback (half floats, the smooth sky subtracted) is off by
-## well under 1 %; a level always gives exactly the same value, so between levels nothing moves.
+## A pixel's levelled light changed level when, over its level grid, it moved by more than this
+## share: one A′ level is 2^0.5 = +41 % (or −29 %), while the readback (half floats, the smooth sky
+## subtracted) is off by well under 1 %; a level always sits at the same place on its grid, so
+## between levels nothing moves. The grid is the lamps' fixed lux and the sun's light on flat ground
+## (engine ticket 30), a sum of both in between by the sun's share (LightStyle).
 const LEVEL_CHANGE: float = 0.1
 ## ... and by more than this share of the pixel's whole light: less is not visible (under 1 % of a
 ## pixel's light, below 3 of 256 codes even at full white), and the readback's half floats (0.05 %
 ## of the styled light, again of the sky subtracted from it) stay well below.
 const VISIBLE_SHARE: float = 0.01
-## Below this the levelled light is noise of the smooth sky's subtraction (lux before exposure).
+## Below this the levelled light is noise of the smooth sky's subtraction (lux before exposure);
+## a pixel without levelled light in one of two frames has no level to compare (a shadow came or
+## went, the sun went out).
 const LEVELLED_MIN_LUX: float = 0.05
+## A pixel whose light with levels changed its mix by more than this (the sun's share of it) moved
+## to another grid (LightStyle): its level may change whatever its light did.
+const MIX_CHANGE: float = 0.1
 ## Pixels a source lights: at least this much artificial light (lux), and the sun under
 ## NO_SUN_SHARE of it (the sun on the same levels would move them by itself).
 const SOURCE_LIT_LUX: float = 1.0
 const NO_SUN_SHARE: float = 0.001
 ## A frame step outside source switching and twilight may change the level of at most this share of
-## the levelled pixels (see LARGE_AREA_MIN_PIXELS). Measured on the street: the sun's moving shadows
-## and surfaces of other slopes crossing their levels one after another change 2–14 % per 10 min; a
-## whole sunlit field crossing a level boundary at once, what the eye sees as a jump, 58–100 %.
+## the levelled pixels (see LARGE_AREA_MIN_PIXELS). Measured on the street: surfaces of other slopes
+## crossing their levels one after another change up to 8 % per 10 min (14 % with the sun's grid at
+## fixed lux); a whole sunlit field crossing a level boundary at once, what the eye sees as a jump,
+## 58–100 % (engine ticket 30, before its fix).
 const LARGE_AREA_SHARE: float = 0.25
 ## A large change whose pixels are this share lit mostly by the sun is a sun jump (rule SUN_JUMP).
 const SUN_JUMP_SHARE: float = 0.9
 ## The rule name of a large change made by the sun: its light crossing a level boundary over a whole
-## sunlit field at once (A′ grid at fixed lux, ticket 13). Known on the street, engine ticket 30.
+## sunlit field at once (the A′ grid of the sun at fixed lux, ticket 13, fixed in engine ticket 30).
 const SUN_JUMP: String = "sun jump"
 ## Fewer changed pixels than this are local whatever their share (a frame with few lit pixels).
 const LARGE_AREA_MIN_PIXELS: int = 200
@@ -67,6 +75,8 @@ class Frame:
 	var open_lux: float = 0.0
 	## Colour × lux of each source group.
 	var source_lights: Array[Color] = []
+	## The anchors of the level grids (lux before exposure): x the lamps', y the sun's.
+	var level_anchors: Vector2 = Vector2.ONE
 	## Per sampled pixel (row by row, `size`), four floats: the levelled light, the artificial light,
 	## the sun's light and the whole styled light (lux before exposure).
 	var data: PackedFloat32Array = PackedFloat32Array()
@@ -140,7 +150,7 @@ func save(path: String) -> Error:
 	var rows: Array = []
 	for frame: Frame in frames:
 		rows.append([frame.hour, frame.sun_elevation, frame.exposure, frame.open_lux, frame.source_lights,
-				frame.data])
+				frame.data, frame.level_anchors])
 	file.store_var([size, stride, origin_px, rows])
 	return OK
 
@@ -165,6 +175,7 @@ static func load_from(path: String) -> DaySweep:
 		var lights: Array = row[4]
 		frame.source_lights.assign(lights)
 		frame.data = row[5]
+		frame.level_anchors = row[6]
 		sweep.frames.append(frame)
 	return sweep
 
@@ -284,7 +295,9 @@ func _scan(first: Frame, second: Frame) -> Step:
 		var both_sources: bool = _source_lit(one[at + 1], one[at + 2]) and _source_lit(two[at + 1], two[at + 2])
 		if both_sources:
 			step.source_lit += 1
-		var change: Change = _change(a, b, maxf(one[at + 3], two[at + 3]))
+		var grid_a: float = _grid(first.level_anchors, one[at + 1], one[at + 2])
+		var grid_b: float = _grid(second.level_anchors, two[at + 1], two[at + 2])
+		var change: Change = _change(a, b, maxf(one[at + 3], two[at + 3]), grid_a, grid_b)
 		if change == Change.NONE:
 			continue
 		if both_sources:
@@ -293,7 +306,8 @@ func _scan(first: Frame, second: Frame) -> Step:
 		step.directions.append(change)
 		if maxf(one[at + 2], two[at + 2]) > maxf(one[at + 1], two[at + 1]):
 			step.sunlit += 1
-		if not _input_moved(one[at + 1] + one[at + 2], two[at + 1] + two[at + 2], change):
+		var mixed: bool = absf(_sun_share(one[at + 1], one[at + 2]) - _sun_share(two[at + 1], two[at + 2])) > MIX_CHANGE
+		if not mixed and not _input_moved((one[at + 1] + one[at + 2]) / grid_a, (two[at + 1] + two[at + 2]) / grid_b, change):
 			step.unexplained.append(index)
 			step.unexplained_directions.append(change)
 	return step
@@ -353,17 +367,31 @@ func _pulsing(steps: Array[Step]) -> Array[Finding]:
 	return findings
 
 
-## The level change from levelled light `a` to `b` in a pixel whose whole light is up to `total`.
-static func _change(a: float, b: float, total: float) -> Change:
-	var high: float = maxf(a, b)
-	var moved: float = absf(b - a)
-	if high < LEVELLED_MIN_LUX or moved <= LEVEL_CHANGE * high or moved <= VISIBLE_SHARE * total:
+## The level change from levelled light `a` to `b` (lux) in a pixel whose whole light is up to
+## `total`, on level grids anchored at `grid_a` and `grid_b`.
+static func _change(a: float, b: float, total: float, grid_a: float, grid_b: float) -> Change:
+	if minf(a, b) < LEVELLED_MIN_LUX or absf(b - a) <= VISIBLE_SHARE * total:
 		return Change.NONE
-	return Change.UP if b > a else Change.DOWN
+	var level_a: float = a / grid_a
+	var level_b: float = b / grid_b
+	if absf(level_b - level_a) <= LEVEL_CHANGE * maxf(level_a, level_b):
+		return Change.NONE
+	return Change.UP if level_b > level_a else Change.DOWN
 
 
-## Whether the light with levels (the sun and the artificial light) moved from `a` to `b` the way
-## the level did.
+## The anchor of a pixel's level grid (lux): between the lamps' and the sun's in EV by the sun's
+## share of its light with levels, as the A′ pass puts them (LightStyle).
+static func _grid(anchors: Vector2, artificial: float, sun: float) -> float:
+	return pow(2.0, lerpf(log(anchors.x), log(anchors.y), _sun_share(artificial, sun)) / log(2.0))
+
+
+## The sun's share of a pixel's light with levels (0 without light).
+static func _sun_share(artificial: float, sun: float) -> float:
+	return sun / (artificial + sun) if artificial + sun > 0.0 else 0.0
+
+
+## Whether the light with levels (the sun and the artificial light) over its grid moved from `a` to
+## `b` the way the level did.
 static func _input_moved(a: float, b: float, change: Change) -> bool:
 	if absf(b - a) <= VISIBLE_SHARE * maxf(a, b):
 		return false

@@ -24,11 +24,11 @@ zaczepiona o jego własne natężenie, a nie o stałe luksy), nie psując stoją
 
 ## Kryteria akceptacji
 
-- [ ] Reguła `sun jump` usunięta z listy `KNOWN` w `test/engine_poligons/test_day_sweep_gpu.gd`, a `node tools/test.mjs`
+- [x] Reguła `sun jump` usunięta z listy `KNOWN` w `test/engine_poligons/test_day_sweep_gpu.gd`, a `node tools/test.mjs`
   jest zielony (pasy lamp dalej stoją, bez nowych zgłoszeń automatu).
-- [ ] Po usunięciu z `KNOWN` reguła „sun jump” znów łapie każdą dużą zmianę z przewagą słońca (do tej pory
+- [x] Po usunięciu z `KNOWN` reguła „sun jump” znów łapie każdą dużą zmianę z przewagą słońca (do tej pory
   wyciszoną razem ze znanym skokiem).
-- [ ] Bramka `test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sky_darkens` dalej zielona.
+- [x] Bramka `test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sky_darkens` dalej zielona.
 - [ ] Człowiek ogląda poranek i popołudnie na Ulicy (przewijanie doby) i nie widzi błysków całej jezdni.
 
 ## Jak sprawdzić

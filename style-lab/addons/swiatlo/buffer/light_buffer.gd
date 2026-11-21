@@ -183,7 +183,7 @@ func set_state(state: DayState) -> void:
 	_set_param(&"sky_light", _rgb(state.sky_color) * state.sky_intensity)
 	_set_param(&"ambient_light", _rgb(state.ambient_color) * state.ambient_intensity)
 	_style.set_exposure(state.exposure, state.level_anchor)
-	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity)
+	_style.set_sun(_rgb(state.sun_color) * state.sun_intensity, state.sun_direction.z)
 	_sources.set_state(state)
 	_moving.set_state(state)
 	_redraw()

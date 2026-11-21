@@ -1,6 +1,8 @@
 // A′ stylisation: light in lux per pixel (natural, and artificial when there is any) → styled light
 // after exposure, which multiplies the albedo. Levels in EV anchored to `anchor` (open sky), or with
-// smooth or dithered sky light the sun's and lamps' levels to `hard_anchor` (fixed lux); at
+// smooth or dithered sky light the sun's to `sun_anchor` (the sun on flat ground, so sunny flat ground
+// keeps its level all day) and the lamps' to `hard_anchor` (fixed lux; their sum in between, by
+// the sun's share of each pixel); at
 // each level boundary a dither seam `seam_px` pixels wide whatever the slope (research 84, §6); a
 // short step (a thing's soft halo) is dithered over its whole length instead (research 92, §4b).
 // The slope comes from the gentler one-sided difference per axis, so a jump between two surfaces
@@ -46,6 +48,9 @@ uniform float anchor = 1.0;
 // Where the levels of light with hard edges (sun, lamps) sit in sky styles B and C: fixed lux, so a
 // lamp's pool keeps its bands while the sky darkens.
 uniform float hard_anchor = 1.0;
+// Where the sun's levels sit in sky styles B and C: its lux on flat open ground, so flat ground in
+// full sun keeps its level while the sun's strength changes over the day.
+uniform float sun_anchor = 1.0;
 
 float luma(vec3 light) {
 	return dot(light, vec3(0.2126, 0.7152, 0.0722));
@@ -75,10 +80,21 @@ vec3 fetch(int which, ivec2 px) {
 	return light * exposure;
 }
 
-// Level coordinate of an exposed luma: whole numbers are boundaries, the anchor sits at ½.
-// `grid`: the anchor in lux before exposure.
-float steps_of(float y, float grid) {
-	return log2(max(y, NO_LIGHT) / (grid * exposure)) / level_stops + 0.5;
+// The anchor (lux before exposure) of `which` at a pixel of exposed luma `y`: `grid`, but for the
+// sun with the lamps between the sun's and the lamps' anchors in EV by the sun's share of the light,
+// so the sun's part keeps its level as the sun changes and a lamp's pool keeps its bands.
+float grid_at(int which, ivec2 px, float y, float grid) {
+	if (which != HARD) {
+		return grid;
+	}
+	float share = clamp(luma(sun_light * texelFetch(natural, px, 0).a) * exposure / max(y, NO_LIGHT), 0.0, 1.0);
+	return exp2(mix(log2(grid), log2(sun_anchor), share));
+}
+
+// Level coordinate of an exposed luma at a pixel: whole numbers are boundaries, the anchor sits at ½.
+// `grid`: the anchor in lux before exposure (see `grid_at`).
+float steps_of(int which, ivec2 px, float y, float grid) {
+	return log2(max(y, NO_LIGHT) / (grid_at(which, px, y, grid) * exposure)) / level_stops + 0.5;
 }
 
 // The gentler one-sided slope along `axis` (level steps per pixel); lit neighbours only.
@@ -93,7 +109,7 @@ float slope(int which, ivec2 px, ivec2 axis, float s, float grid) {
 		if (y < NO_LIGHT) {
 			continue;
 		}
-		float d = abs(steps_of(y, grid) - s);
+		float d = abs(steps_of(which, other, y, grid) - s);
 		best = best < 0.0 ? d : min(best, d);
 	}
 	return max(best, 0.0);
@@ -118,7 +134,7 @@ vec3 levels(int which, ivec2 px, float threshold, bool dithered, float grid) {
 	if (y < NO_LIGHT) {
 		return light;
 	}
-	float s = steps_of(y, grid);
+	float s = steps_of(which, px, y, grid);
 	float g = length(vec2(slope(which, px, ivec2(1, 0), s, grid), slope(which, px, ivec2(0, 1), s, grid)));
 	// A step shorter than `full_dither_px` (1/g pixels) is dithered all along, one longer than twice
 	// that keeps the narrow seam (research 92 §4b).
@@ -129,7 +145,7 @@ vec3 levels(int which, ivec2 px, float threshold, bool dithered, float grid) {
 		w = mix(w, 1.0, smoothstep(0.5 / full_dither_px, 1.0 / full_dither_px, g));
 	}
 	float k = floor(s + w * (threshold - 0.5));
-	return light * (grid * exposure * exp2(k * level_stops)) / y;
+	return light * (grid_at(which, px, y, grid) * exposure * exp2(k * level_stops)) / y;
 }
 
 varying vec2 local_px;
@@ -146,7 +162,7 @@ void fragment() {
 		// Levels only for the light with hard shadow edges (the sun, the artificial channel): on
 		// their sum, or on each apart (mode); the rest is smooth or dithered.
 		if (mode == MODE_PER_CHANNEL) {
-			result = levels(SUN, px, threshold, false, hard_anchor);
+			result = levels(SUN, px, threshold, false, sun_anchor);
 			if (has_artificial) {
 				result += levels(ARTIFICIAL, px, threshold, false, hard_anchor);
 			}

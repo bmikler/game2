@@ -148,6 +148,62 @@ func test_the_whole_sunlit_field_crossing_a_level_is_a_sun_jump() -> void:
 	assert_eq(_at("00:30", sweep.check()), PackedStringArray([DaySweep.SUN_JUMP]))
 
 
+func test_a_sunlit_field_following_the_suns_light_changes_no_level() -> void:
+	# Ticket 30: the sun's levels sit on its own strength; its light on the field rises 20 % a step
+	# and the levelled light with it, on the same level all along.
+	var sun_at: Callable = func(frame: int) -> float: return 1000.0 * pow(1.2, frame)
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:
+		var sun: float = sun_at.call(frame)
+		return Vector4(sun * 1.1, 0.0, sun, sun + 100.0), 20.0)
+	for index: int in sweep.frames.size():
+		var sun: float = sun_at.call(index)
+		sweep.frames[index].level_anchors = Vector2(1.0, sun * 0.5)
+	assert_eq(sweep.check().size(), 0)
+
+
+func test_a_wall_crossing_its_level_on_the_suns_grid_and_back_pulses() -> void:
+	# The sun's grid follows the sun; a wall's sun rises with it, yet its level goes up and down.
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:
+		var sun: float = 1000.0 * pow(1.2, frame)
+		return Vector4(sun * (1.4 if frame == 2 else 1.0), 0.0, sun, sun + 100.0), 20.0)
+	for index: int in sweep.frames.size():
+		sweep.frames[index].level_anchors = Vector2(1.0, 500.0 * pow(1.2, index))
+	assert_has(_rules(sweep.check()), "pulsing")
+
+
+func test_the_sun_going_out_above_the_horizon_is_no_sun_jump() -> void:
+	# The sun's strength fades to nothing at 5° (its levels follow it); then nothing is on levels.
+	var suns: Array[float] = [200.0, 50.0, 14.0, 0.0, 0.0, 0.0]
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:
+		return Vector4(suns[frame], 0.0, suns[frame], suns[frame] + 300.0), 5.0)
+	for index: int in sweep.frames.size():
+		sweep.frames[index].level_anchors = Vector2(1.0, maxf(suns[index], 0.001))
+	assert_eq(sweep.check().size(), 0)
+
+
+func test_the_sun_passing_over_a_lamps_pool_for_a_frame_is_not_pulsing() -> void:
+	# A gap lets the sun onto a dim pool for one frame: the light's mix changes, its grid with it.
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, index: int) -> Vector4:
+		if frame == 2 and index / SIDE < 10:
+			return Vector4(18.3, 1.4, 16.2, 400.0)
+		return Vector4(0.87, 1.4, 0.0, 400.0), 5.0)
+	for index: int in sweep.frames.size():
+		sweep.frames[index].level_anchors = Vector2(1.0, 16.2)
+	assert_does_not_have(_rules(sweep.check()), "pulsing")
+
+
+func test_the_whole_sunlit_field_crossing_a_level_on_the_suns_grid_is_a_sun_jump() -> void:
+	# The sun's grid follows the sun (+2 % a step); the field's levelled light jumps a level anyway.
+	var sun_at: Callable = func(frame: int) -> float: return 1100.0 * pow(1.02, frame)
+	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:
+		var sun: float = sun_at.call(frame)
+		return Vector4(sun * (1.0 if frame < 3 else 1.414), 0.0, sun, 1500.0), 20.0)
+	for index: int in sweep.frames.size():
+		var sun: float = sun_at.call(index)
+		sweep.frames[index].level_anchors = Vector2(1.0, sun * 0.7)
+	assert_eq(_at("00:30", sweep.check()), PackedStringArray([DaySweep.SUN_JUMP]))
+
+
 func test_a_large_change_not_made_by_the_sun_is_a_local_change_finding() -> void:
 	# Weak artificial light (under the pool's minimum) on levels, the whole field jumping.
 	var sweep: DaySweep = _sweep(_constant(6), func(frame: int, _index: int) -> Vector4:

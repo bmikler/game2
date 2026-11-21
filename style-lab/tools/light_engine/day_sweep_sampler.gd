@@ -50,6 +50,9 @@ func sample(engine: LightEngine, sweep: DaySweep) -> DaySweep.Frame:
 	frame.exposure = state.exposure
 	frame.open_lux = state.floor_light().get_luminance() / state.exposure
 	frame.source_lights = state.source_lights.duplicate()
+	var anchor_ev: float = engine.tuning_set().anchor_ev
+	frame.level_anchors = Vector2(LightStyle.lamps_anchor_lux(anchor_ev),
+			LightStyle.sun_anchor_lux(Vector3(sun_light.r, sun_light.g, sun_light.b), state.sun_direction.z, anchor_ev))
 	frame.data = image.get_data().to_float32_array()
 	sweep.frames.append(frame)
 	return frame

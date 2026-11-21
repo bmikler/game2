@@ -38,16 +38,16 @@ func _tuning(level_stops: float, seam_px: float, mode: TuningSet.StyleMode = Tun
 	return tuning
 
 
-## Runs the pass once: anchor 1 lux, exposure 1 unless given.
+## Runs the pass once: anchor 1 lux, exposure 1, the sun overhead unless given.
 func _styled(natural: Image, tuning: TuningSet, artificial: Image = null, origin: Vector2i = Vector2i.ZERO,
-		exposure: float = 1.0, anchor_lux: float = 1.0, sun_light: Vector3 = Vector3.ZERO) -> Image:
+		exposure: float = 1.0, anchor_lux: float = 1.0, sun_light: Vector3 = Vector3.ZERO, sun_height: float = 1.0) -> Image:
 	var style: LightStyle = LightStyle.new()
 	add_child_autofree(style)
 	var artificial_texture: Texture2D = ImageTexture.create_from_image(artificial) if artificial != null else null
 	style.set_input(ImageTexture.create_from_image(natural), artificial_texture, natural.get_size(), origin)
 	style.set_tuning(tuning)
 	style.set_exposure(exposure, anchor_lux)
-	style.set_sun(sun_light)
+	style.set_sun(sun_light, sun_height)
 	await RenderingServer.frame_post_draw
 	return style.image()
 
@@ -394,3 +394,54 @@ func test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sky_darkens() -> vo
 				if not is_equal_approx(dusk.get_pixel(x, row).r, night.get_pixel(x, row).r):
 					moved += 1
 		assert_eq(moved, 0, "mode %s" % mode)
+
+
+## Flat open ground in full sun, nothing else: the sun's share is its height (the cosine on the ground).
+func _sunny_ground(lux_on_ground: float, sun_height: float) -> Image:
+	return _uniform(Color(lux_on_ground, lux_on_ground, lux_on_ground, sun_height))
+
+
+func test_gate_with_smooth_sky_sunny_ground_keeps_its_level_through_the_day() -> void:
+	# Ticket 30: the sun on a flat street changes everywhere at once; with levels at fixed lux the
+	# whole sunny field crossed a level boundary in one frame. Its styled light must follow the sun
+	# smoothly: the same ratio to the unstyled light at every hour.
+	for mode: TuningSet.StyleMode in [TuningSet.StyleMode.SUM, TuningSet.StyleMode.PER_CHANNEL]:
+		var tuning: TuningSet = _tuning(0.5, 3.0, mode, 24.0, TuningSet.SkyStyle.SMOOTH)
+		var first_ratio: float = -1.0
+		for step: int in 12:
+			var sun_height: float = 0.2 + 0.06 * step
+			var intensity: float = 300.0 + 40.0 * step
+			var lux: float = intensity * sun_height
+			var styled: Image = await _styled(_sunny_ground(lux, sun_height), tuning, null, Vector2i.ZERO, 1.0, 1.0,
+					Vector3(intensity, intensity, intensity), sun_height)
+			var ratio: float = styled.get_pixel(WIDTH / 2, HEIGHT / 2).r / lux
+			if first_ratio < 0.0:
+				first_ratio = ratio
+			assert_almost_eq(ratio, first_ratio, 0.002, "mode %s, step %d (%.0f lux)" % [mode, step, lux])
+
+
+func test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sun_beside_it_changes() -> void:
+	# Ticket 30: the sun's levels follow the sun; a lamp's pool in the shade next to it keeps its
+	# bands (ticket 13) also when the lamp's light is summed with the sun's.
+	var lamp: Image = _gradient(func(x: int) -> float: return -1.1 + 0.02 * x)
+	var tuning: TuningSet = _tuning(0.5, 3.0, TuningSet.StyleMode.SUM, 24.0, TuningSet.SkyStyle.SMOOTH)
+	var before: Image = null
+	for intensity: float in [300.0, 410.0, 530.0]:
+		var sun_height: float = 0.5
+		var lux: float = intensity * sun_height
+		var natural: Image = _uniform(Color(0.0, 0.0, 0.0, 0.0))
+		for x: int in WIDTH:
+			for row: int in HEIGHT / 2:
+				natural.set_pixel(x, row, Color(lux, lux, lux, sun_height))
+		var styled: Image = await _styled(natural, tuning, lamp, Vector2i.ZERO, 1.0, 1.0,
+				Vector3(intensity, intensity, intensity), sun_height)
+		if before == null:
+			before = styled
+			continue
+		var moved: int = 0
+		# The shaded rows, past the seam's reach of the sunny ones.
+		for x: int in WIDTH:
+			for row: int in range(HEIGHT / 2 + 4, HEIGHT):
+				if not is_equal_approx(before.get_pixel(x, row).r, styled.get_pixel(x, row).r):
+					moved += 1
+		assert_eq(moved, 0, "sun %.0f lux" % intensity)
