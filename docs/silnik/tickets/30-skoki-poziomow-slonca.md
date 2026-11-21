@@ -2,7 +2,7 @@
 id: 30
 title: Skoki poziomów A′ słońca na całej nasłonecznionej Lokacji
 labels: [ready-for-agent]
-status: open
+status: closed
 assignee:
 blocked_by: [29]
 ---
@@ -29,7 +29,7 @@ zaczepiona o jego własne natężenie, a nie o stałe luksy), nie psując stoją
 - [x] Po usunięciu z `KNOWN` reguła „sun jump” znów łapie każdą dużą zmianę z przewagą słońca (do tej pory
   wyciszoną razem ze znanym skokiem).
 - [x] Bramka `test_gate_with_smooth_sky_a_lamps_levels_stay_while_the_sky_darkens` dalej zielona.
-- [ ] Człowiek ogląda poranek i popołudnie na Ulicy (przewijanie doby) i nie widzi błysków całej jezdni.
+- [x] Człowiek ogląda poranek i popołudnie na Ulicy (przewijanie doby) i nie widzi błysków całej jezdni.
 
 ## Jak sprawdzić
 
