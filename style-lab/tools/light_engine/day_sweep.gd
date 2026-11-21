@@ -103,6 +103,25 @@ class Finding:
 		return "%s %s: %s%s" % [DaySweep.clock(hour), rule, description, where]
 
 
+## What one frame step changed: the pixels whose level went up or down, and the counts the rules
+## compare them with.
+class Step:
+	extends RefCounted
+	var hour: float = 0.0
+	## Pixels with levelled light in either frame.
+	var lit: int = 0
+	## Pixels lit by sources without the sun in both frames, and those of them that changed level.
+	var source_lit: int = 0
+	var source_moved: PackedInt32Array = PackedInt32Array()
+	## Every pixel that changed level and its direction (Change), and how many were lit mostly by the sun.
+	var changed: PackedInt32Array = PackedInt32Array()
+	var directions: PackedByteArray = PackedByteArray()
+	var sunlit: int = 0
+	## The changed pixels whose light with levels (sun and sources) did not move the same way.
+	var unexplained: PackedInt32Array = PackedInt32Array()
+	var unexplained_directions: PackedByteArray = PackedByteArray()
+
+
 ## Sampled pixels per row and rows.
 var size: Vector2i = Vector2i.ZERO
 ## Every `stride`-th buffer pixel each way.
@@ -162,27 +181,30 @@ static func load_from(path: String) -> DaySweep:
 	return sweep
 
 
-## Every rule over the swept frames (the day wraps: the last frame is followed by the first).
+## Every rule over the swept frames (the day wraps: the last frame is followed by the first). One
+## pass over the pixels per frame step; pulsing then looks only at the pixels that changed.
 func check() -> Array[Finding]:
 	var findings: Array[Finding] = []
 	findings.append_array(check_monotonic())
-	var changes: Array[PackedByteArray] = []
-	for index: int in frames.size():
-		changes.append(level_changes(frames[index], frames[(index + 1) % frames.size()]))
-	for index: int in frames.size():
-		var first: Frame = frames[index]
-		var second: Frame = frames[(index + 1) % frames.size()]
+	var count: int = frames.size()
+	var steps: Array[Step] = []
+	for index: int in count:
+		var step: Step = _scan(frames[index], frames[(index + 1) % count])
+		steps.append(step)
 		var sources: SourceChange = source_change(index)
-		if sources != SourceChange.SWITCH:
-			var standing: Finding = check_sources_stand(first, second, changes[index], sources == SourceChange.RAMP)
-			if standing != null:
-				findings.append(standing)
-		if sources != SourceChange.SWITCH and not is_twilight(first, second):
-			var large: Finding = check_local(first, second, changes[index])
+		if sources == SourceChange.SWITCH:
+			continue
+		var standing: Finding = _sources_stand(step, sources == SourceChange.RAMP)
+		if standing != null:
+			findings.append(standing)
+		if not is_twilight(frames[index], frames[(index + 1) % count]):
+			var large: Finding = _large_change(step)
 			if large != null:
 				findings.append(large)
-	findings.append_array(check_pulsing(changes))
+	findings.append_array(_pulsing(steps))
 	return findings
+
+
 
 
 ## Exposure only falls from the darkest frame to the brightest and only rises after it, and the
@@ -229,13 +251,8 @@ func level_changes(first: Frame, second: Frame) -> PackedByteArray:
 	var changes: PackedByteArray = PackedByteArray()
 	changes.resize(first.pixel_count())
 	for index: int in changes.size():
-		var a: float = first.data[index * 4]
-		var b: float = second.data[index * 4]
-		var high: float = maxf(a, b)
-		if high < LEVELLED_MIN_LUX or absf(b - a) <= LEVEL_CHANGE * high \
-				or absf(b - a) <= VISIBLE_SHARE * maxf(first.data[index * 4 + 3], second.data[index * 4 + 3]):
-			continue
-		changes[index] = Change.UP if b > a else Change.DOWN
+		changes[index] = _change(first.data[index * 4], second.data[index * 4],
+				maxf(first.data[index * 4 + 3], second.data[index * 4 + 3]))
 	return changes
 
 
@@ -273,88 +290,111 @@ func is_twilight(first: Frame, second: Frame) -> bool:
 			or signf(first.sun_elevation) != signf(second.sun_elevation)
 
 
+## One pass over the pixels of a frame step: which changed level and the counts the rules need.
+func _scan(first: Frame, second: Frame) -> Step:
+	var step: Step = Step.new()
+	step.hour = second.hour
+	var one: PackedFloat32Array = first.data
+	var two: PackedFloat32Array = second.data
+	for index: int in first.pixel_count():
+		var at: int = index * 4
+		var a: float = one[at]
+		var b: float = two[at]
+		if maxf(a, b) < LEVELLED_MIN_LUX:
+			continue
+		step.lit += 1
+		var both_sources: bool = _source_lit(one[at + 1], one[at + 2]) and _source_lit(two[at + 1], two[at + 2])
+		if both_sources:
+			step.source_lit += 1
+		var change: Change = _change(a, b, maxf(one[at + 3], two[at + 3]))
+		if change == Change.NONE:
+			continue
+		if both_sources:
+			step.source_moved.append(index)
+		step.changed.append(index)
+		step.directions.append(change)
+		if maxf(one[at + 2], two[at + 2]) > maxf(one[at + 1], two[at + 1]):
+			step.sunlit += 1
+		if not _input_moved(one[at + 1] + one[at + 2], two[at + 1] + two[at + 2], change):
+			step.unexplained.append(index)
+			step.unexplained_directions.append(change)
+	return step
+
+
 ## Outside switching, the pixels the sources light (without the sun) keep their level: with constant
 ## light the bands of a lamp's pool stand still; a source ramping its light moves them (`ramp`).
-func check_sources_stand(first: Frame, second: Frame, changes: PackedByteArray, ramp: bool = false) -> Finding:
-	var moved: PackedInt32Array = PackedInt32Array()
-	var lit: int = 0
-	for index: int in changes.size():
-		if not _source_lit(first, index) or not _source_lit(second, index):
-			continue
-		lit += 1
-		if changes[index] != Change.NONE:
-			moved.append(index)
-	if moved.size() <= JITTER_SHARE * lit:
+func _sources_stand(step: Step, ramp: bool) -> Finding:
+	if step.source_moved.size() <= JITTER_SHARE * step.source_lit:
 		return null
-	var cause: String = "a source ramps its light over several frames (switch it at once)" if ramp 			else "constant source light; levels anchored to something that changes?"
-	return _finding("sources stand", second.hour, _place(moved), moved.size(),
-			"%d px lit by sources changed level, the bands crawl: %s" % [moved.size(), cause])
+	var cause: String = "a source ramps its light over several frames (switch it at once)" if ramp \
+			else "constant source light; levels anchored to something that changes?"
+	return _finding("sources stand", step.hour, _place(step.source_moved), step.source_moved.size(),
+			"%d px lit by sources changed level, the bands crawl: %s" % [step.source_moved.size(), cause])
 
 
 ## Outside switching and twilight a frame step changes the level of a small share of the levelled
-## pixels only.
-func check_local(first: Frame, second: Frame, changes: PackedByteArray) -> Finding:
-	var lit: int = 0
-	var changed: PackedInt32Array = PackedInt32Array()
-	var sunlit: int = 0
-	for index: int in changes.size():
-		if maxf(first.data[index * 4], second.data[index * 4]) >= LEVELLED_MIN_LUX:
-			lit += 1
-		if changes[index] != Change.NONE:
-			changed.append(index)
-			if maxf(first.data[index * 4 + 2], second.data[index * 4 + 2]) > maxf(first.data[index * 4 + 1], second.data[index * 4 + 1]):
-				sunlit += 1
-	if changed.size() < LARGE_AREA_MIN_PIXELS or changed.size() <= LARGE_AREA_SHARE * lit:
+## pixels only; a large change lit mostly by the sun is a sun jump.
+func _large_change(step: Step) -> Finding:
+	var changed: int = step.changed.size()
+	if changed < LARGE_AREA_MIN_PIXELS or changed <= LARGE_AREA_SHARE * step.lit:
 		return null
-	var share: float = 100.0 * changed.size() / maxf(lit, 1.0)
-	if sunlit >= SUN_JUMP_SHARE * changed.size():
-		return _finding(SUN_JUMP, second.hour, _place(changed), changed.size(),
+	var share: float = 100.0 * changed / maxf(step.lit, 1.0)
+	if step.sunlit >= SUN_JUMP_SHARE * changed:
+		return _finding(SUN_JUMP, step.hour, _place(step.changed), changed,
 				"%.0f %% of the levelled pixels, lit mostly by the sun, changed level in one step (the sun's light crossed a level boundary everywhere at once)" % share)
-	return _finding("local change", second.hour, _place(changed), changed.size(),
+	return _finding("local change", step.hour, _place(step.changed), changed,
 			"%.0f %% of the levelled pixels changed level in one step outside switching and twilight (a wave or a ramp?)" % share)
 
 
 ## A pixel going up and back down (or down and back up) within PULSE_FRAMES steps is pulsing, unless
 ## its light with levels (sun and sources) did the same: a thin shadow passing over it.
-func check_pulsing(changes: Array[PackedByteArray]) -> Array[Finding]:
+func _pulsing(steps: Array[Step]) -> Array[Finding]:
 	var findings: Array[Finding] = []
-	var count: int = changes.size()
+	var count: int = steps.size()
+	# Each step's level changes by pixel, to look ahead.
+	var by_pixel: Array[Dictionary] = []
+	for step: Step in steps:
+		var directions: Dictionary = {}
+		for position: int in step.changed.size():
+			directions[step.changed[position]] = step.directions[position]
+		by_pixel.append(directions)
 	for start: int in count:
+		var step: Step = steps[start]
 		var pulsing: PackedInt32Array = PackedInt32Array()
-		var lit: int = 0
-		var first: PackedByteArray = changes[start]
-		var before: Frame = frames[start]
-		var after: Frame = frames[(start + 1) % count]
-		for index: int in first.size():
-			if maxf(before.data[index * 4], after.data[index * 4]) >= LEVELLED_MIN_LUX:
-				lit += 1
-			var change: int = first[index]
-			if change == Change.NONE or _input_moved(before, after, index, change):
-				continue
-			var back: int = Change.DOWN if change == Change.UP else Change.UP
-			for step: int in range(1, PULSE_FRAMES):
-				var at: int = (start + step) % count
-				if changes[at][index] == back:
+		for position: int in step.unexplained.size():
+			var index: int = step.unexplained[position]
+			var back: int = Change.DOWN if step.unexplained_directions[position] == Change.UP else Change.UP
+			for ahead: int in range(1, PULSE_FRAMES):
+				var later: Dictionary = by_pixel[(start + ahead) % count]
+				if later.get(index, Change.NONE) == back:
 					pulsing.append(index)
 					break
-		if pulsing.size() > JITTER_SHARE * lit:
-			findings.append(_finding("pulsing", after.hour, _place(pulsing), pulsing.size(),
+		if pulsing.size() > JITTER_SHARE * step.lit:
+			findings.append(_finding("pulsing", step.hour, _place(pulsing), pulsing.size(),
 					"%d px change level and come back within %d steps while their light does not" % [pulsing.size(), PULSE_FRAMES]))
 	return findings
 
 
-## Whether the light with levels (the sun and the artificial light) moved the way the level did.
-func _input_moved(first: Frame, second: Frame, index: int, change: int) -> bool:
-	var a: float = first.data[index * 4 + 1] + first.data[index * 4 + 2]
-	var b: float = second.data[index * 4 + 1] + second.data[index * 4 + 2]
+## The level change from levelled light `a` to `b` in a pixel whose whole light is up to `total`.
+static func _change(a: float, b: float, total: float) -> Change:
+	var high: float = maxf(a, b)
+	var moved: float = absf(b - a)
+	if high < LEVELLED_MIN_LUX or moved <= LEVEL_CHANGE * high or moved <= VISIBLE_SHARE * total:
+		return Change.NONE
+	return Change.UP if b > a else Change.DOWN
+
+
+## Whether the light with levels (the sun and the artificial light) moved from `a` to `b` the way
+## the level did.
+static func _input_moved(a: float, b: float, change: Change) -> bool:
 	if absf(b - a) <= VISIBLE_SHARE * maxf(a, b):
 		return false
 	return (b > a) == (change == Change.UP)
 
 
-func _source_lit(frame: Frame, index: int) -> bool:
-	var artificial: float = frame.data[index * 4 + 1]
-	return artificial >= SOURCE_LIT_LUX and frame.data[index * 4 + 2] <= NO_SUN_SHARE * artificial
+## Lit by sources without the sun on the same levels (the sun would move them by itself).
+static func _source_lit(artificial: float, sun: float) -> bool:
+	return artificial >= SOURCE_LIT_LUX and sun <= NO_SUN_SHARE * artificial
 
 
 ## The Location-pixel box of sampled pixels.
